@@ -1,0 +1,32 @@
+spring.application.name=campusbrew-api
+
+# Server
+server.port=8080
+
+# MongoDB (Atlas - shared team database)
+spring.data.mongodb.uri=mongodb+srv://jefferusresuera_db_user:YT7MMuDD6uXTaLln@campusbrew.jedtmgm.mongodb.net/?appName=CampusBrew
+spring.data.mongodb.database=campusbrew
+
+# JWT
+jwt.secret=campusbrew-super-secret-key-make-this-very-long-for-security-2026
+jwt.expiration=86400000
+
+# Email (OTP sending)
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=YOUR_GMAIL@gmail.com
+spring.mail.password=YOUR_GMAIL_APP_PASSWORD
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+
+# CORS
+cors.allowed-origins=http://localhost:3000,http://localhost:8081
+
+# Disable Spring Security's default login page for now
+spring.security.user.name=admin
+spring.security.user.password=admin
+
+
+ 
+
+ 
