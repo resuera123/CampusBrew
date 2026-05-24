@@ -2,6 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { ActivityIndicator, View } from 'react-native';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { CartProvider } from './src/context/CartContext';
 import {
   AuthStack,
   CustomerStack,
@@ -42,9 +43,11 @@ function RootNavigator() {
 export default function App() {
   return (
     <AuthProvider>
-      <NavigationContainer>
-        <RootNavigator />
-      </NavigationContainer>
+      <CartProvider>
+        <NavigationContainer>
+          <RootNavigator />
+        </NavigationContainer>
+      </CartProvider>
     </AuthProvider>
   );
 }

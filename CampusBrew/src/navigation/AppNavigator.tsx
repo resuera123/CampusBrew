@@ -14,7 +14,12 @@ import AccountVerificationScreen from '../screens/auth/AccountVerificationScreen
 import VerifiedSuccessScreen from '../screens/auth/VerifiedSuccessScreen';
 
 // Customer screens
-import CustomerDashboardScreen from '../screens/customer/CustomerDashboardScreen';
+import HomeScreen from '../screens/customer/HomeScreen';
+import ShopMenuScreen from '../screens/customer/ShopMenuScreen';
+import CustomizeItemScreen from '../screens/customer/CustomizeItemScreen';
+import CheckoutScreen from '../screens/customer/CheckoutScreen';
+import OrderHistoryScreen from '../screens/customer/OrderHistoryScreen';
+import ReorderCartScreen from '../screens/customer/ReorderCartScreen';
 import OrdersPlaceholderScreen from '../screens/customer/OrdersPlaceholderScreen';
 import ProfileScreen from '../screens/customer/ProfileScreen';
 import EditProfileScreen from '../screens/customer/EditProfileScreen';
@@ -53,8 +58,8 @@ function CustomerHomeTabs() {
       tabBar={(props) => <BottomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
-      <Tab.Screen name="CustomerHome" component={CustomerDashboardScreen} />
-      <Tab.Screen name="Orders" component={OrdersPlaceholderScreen} />
+      <Tab.Screen name="CustomerHome" component={HomeScreen} />
+      <Tab.Screen name="Orders" component={OrderHistoryScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
@@ -64,6 +69,10 @@ export function CustomerStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="CustomerTabs" component={CustomerHomeTabs} />
+      <Stack.Screen name="ShopMenu" component={ShopMenuScreen} />
+      <Stack.Screen name="CustomizeItem" component={CustomizeItemScreen} />
+      <Stack.Screen name="Checkout" component={CheckoutScreen} />
+      <Stack.Screen name="ReorderCart" component={ReorderCartScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="AccountVerification" component={AccountVerificationScreen} />
       <Stack.Screen name="VerifiedSuccess" component={VerifiedSuccessScreen} />
