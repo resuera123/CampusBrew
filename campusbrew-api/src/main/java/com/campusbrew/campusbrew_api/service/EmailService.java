@@ -34,4 +34,17 @@ public class EmailService {
         );
         mailSender.send(message);
     }
+
+    public void sendVerificationEmail(String toEmail, String code) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("CampusBrew - CIT-U Account Verification");
+        message.setText(
+            "Your CIT-U verification code is: " + code + "\n\n" +
+            "Enter this code in the app to verify your student status and unlock Cash on Delivery.\n\n" +
+            "This code expires in 5 minutes.\n\n" +
+            "If you did not request this, please ignore this email."
+        );
+        mailSender.send(message);
+    }
 }

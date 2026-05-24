@@ -14,8 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.time.Instant;
-import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +26,8 @@ public class AuthService {
     private final JwtService jwtService;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
+
+    // ─── 1.1 Registration ───────────────────────────────────────
 
     public void register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -45,7 +47,6 @@ public class AuthService {
 
         userRepository.save(user);
 
-        // Generate and send OTP
         String otp = generateOtp();
         saveOtp(request.getEmail(), otp, OtpType.REGISTRATION);
         emailService.sendOtpEmail(request.getEmail(), otp);
@@ -64,15 +65,26 @@ public class AuthService {
             throw new RuntimeException("Invalid OTP");
         }
 
-        // Mark email as verified
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         user.setEmailVerified(true);
         userRepository.save(user);
 
-        // Clean up used OTP
         otpRepository.deleteByEmailAndType(request.getEmail(), OtpType.REGISTRATION);
     }
+
+    public void resendOtp(String email) {
+        userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Email not found"));
+
+        otpRepository.deleteByEmailAndType(email, OtpType.REGISTRATION);
+
+        String otp = generateOtp();
+        saveOtp(email, otp, OtpType.REGISTRATION);
+        emailService.sendOtpEmail(email, otp);
+    }
+
+    // ─── 1.2 Login ──────────────────────────────────────────────
 
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
@@ -97,19 +109,54 @@ public class AuthService {
                 .build();
     }
 
-    public void resendOtp(String email) {
-        userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Email not found"));
+    // ─── 1.3 Forgot / Reset Password ────────────────────────────
 
-        otpRepository.deleteByEmailAndType(email, OtpType.REGISTRATION);
+    public void forgotPassword(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("No account found with this email"));
 
-        String otp = generateOtp();
-        saveOtp(email, otp, OtpType.REGISTRATION);
-        emailService.sendOtpEmail(email, otp);
+        // Clean up any existing reset codes
+        otpRepository.deleteByEmailAndType(email, OtpType.PASSWORD_RESET);
+
+        String code = generateOtp();
+        saveOtp(email, code, OtpType.PASSWORD_RESET);
+        emailService.sendPasswordResetEmail(email, code);
     }
 
+    public void resetPassword(String email, String code, String newPassword) {
+        // Validate the code
+        Otp otp = otpRepository
+                .findByEmailAndTypeOrderByCreatedAtDesc(email, OtpType.PASSWORD_RESET)
+                .orElseThrow(() -> new RuntimeException("Reset code not found. Please request a new one."));
+
+        if (otp.getExpiresAt().isBefore(Instant.now())) {
+            throw new RuntimeException("Reset code has expired. Please request a new one.");
+        }
+
+        if (!otp.getCode().equals(code)) {
+            throw new RuntimeException("Invalid verification code");
+        }
+
+        // Validate new password
+        if (newPassword == null || newPassword.length() < 8) {
+            throw new RuntimeException("Password must be at least 8 characters");
+        }
+
+        // Update password
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(java.util.Date.from(Instant.now()));
+        userRepository.save(user);
+
+        // Clean up used code
+        otpRepository.deleteByEmailAndType(email, OtpType.PASSWORD_RESET);
+    }
+
+    // ─── Helpers ────────────────────────────────────────────────
+
     private String generateOtp() {
-        return String.format("%06d", new Random().nextInt(999999));
+        return String.format("%06d", new SecureRandom().nextInt(999999));
     }
 
     private void saveOtp(String email, String code, OtpType type) {
@@ -117,7 +164,7 @@ public class AuthService {
                 .email(email)
                 .code(code)
                 .type(type)
-                .expiresAt(Instant.now().plusSeconds(300))
+                .expiresAt(Instant.now().plusSeconds(300)) // 5 minutes
                 .createdAt(Instant.now())
                 .build();
         otpRepository.save(otp);

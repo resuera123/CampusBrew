@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 
@@ -8,8 +9,7 @@ export default function ProfileScreen({ navigation }: any) {
   const isVerified = user?.verificationStatus === 'VERIFIED';
 
   return (
-    <View style={styles.container}>
-      {/* Top Bar */}
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#000000" />
@@ -19,7 +19,6 @@ export default function ProfileScreen({ navigation }: any) {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Avatar */}
         <View style={styles.avatarSection}>
           <View style={styles.avatar}>
             <Ionicons name="person" size={48} color="#94353E" />
@@ -28,7 +27,6 @@ export default function ProfileScreen({ navigation }: any) {
           <Text style={styles.phone}>+63 912 345 6789</Text>
         </View>
 
-        {/* Verification Status */}
         <View style={styles.verificationSection}>
           <View style={styles.verificationRow}>
             <Text style={styles.verificationLabel}>Verification Status</Text>
@@ -45,31 +43,21 @@ export default function ProfileScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        {/* Edit Profile Button — outlined per wireframe */}
-        <TouchableOpacity
-          style={styles.outlinedButton}
-          onPress={() => navigation.navigate('EditProfile')}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={styles.outlinedButton} onPress={() => navigation.navigate('EditProfile')} activeOpacity={0.7}>
           <Text style={styles.outlinedButtonText}>Edit Profile</Text>
         </TouchableOpacity>
 
-        {/* Logout */}
-        <TouchableOpacity
-          style={[styles.outlinedButton, { marginTop: 16, borderColor: '#E8E8E8' }]}
-          onPress={logout}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={[styles.outlinedButton, { marginTop: 16, borderColor: '#E8E8E8' }]} onPress={logout} activeOpacity={0.7}>
           <Ionicons name="log-out-outline" size={20} color="#94353E" style={{ marginRight: 8 }} />
           <Text style={styles.outlinedButtonText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
   topBar: { height: 56, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E8E8E8', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 },
   backButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   topBarTitle: { fontSize: 18, fontWeight: '600', color: '#000000' },

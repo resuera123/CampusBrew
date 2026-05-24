@@ -7,6 +7,7 @@ import {
   ScrollView,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS, SIZES } from '../../constants/theme';
@@ -30,12 +31,6 @@ const QUICK_ACCESS = [
     subtitle: 'See delivery status',
     route: 'OrderTracking',
   },
-  {
-    icon: 'person-outline' as const,
-    title: 'My Profile',
-    subtitle: 'Manage account',
-    route: 'Profile',
-  },
 ];
 
 export default function CustomerDashboardScreen({ navigation }: any) {
@@ -55,10 +50,9 @@ export default function CustomerDashboardScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
 
-      {/* Top Bar — matches wireframe: title centered, menu left, bell right */}
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.topBarIcon}>
           <Ionicons name="menu" size={24} color={COLORS.text} />
@@ -69,13 +63,11 @@ export default function CustomerDashboardScreen({ navigation }: any) {
         </TouchableOpacity>
       </View>
 
-      {/* Content */}
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Welcome Section */}
         <View style={styles.welcomeSection}>
           <Text style={styles.welcomeText}>
             Welcome back, {user?.fullName || 'User'}!
@@ -85,7 +77,6 @@ export default function CustomerDashboardScreen({ navigation }: any) {
           </View>
         </View>
 
-        {/* Quick Access */}
         <View style={styles.quickAccessSection}>
           <Text style={styles.sectionTitle}>Quick Access</Text>
 
@@ -95,13 +86,9 @@ export default function CustomerDashboardScreen({ navigation }: any) {
                 key={index}
                 style={styles.quickAccessCard}
                 onPress={() => {
-                  // Navigate to the respective screen
-                  // Some screens may not exist yet — safe to add later
                   try {
                     navigation.navigate(item.route);
-                  } catch {
-                    // Screen not yet implemented
-                  }
+                  } catch {}
                 }}
                 activeOpacity={0.7}
               >
@@ -120,116 +107,27 @@ export default function CustomerDashboardScreen({ navigation }: any) {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.backgroundSecondary,
-  },
-
-  // Top Bar — white bg, border bottom, per wireframe
-  topBar: {
-    height: 56,
-    backgroundColor: COLORS.background,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-  },
-  topBarIcon: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  topBarTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-
-  // Content
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 24,
-  },
-
-  // Welcome
-  welcomeSection: {
-    marginBottom: 32,
-  },
-  welcomeText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 8,
-  },
-  badge: {
-    alignSelf: 'flex-start',
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLORS.white,
-  },
-
-  // Quick Access
+  container: { flex: 1, backgroundColor: COLORS.backgroundSecondary },
+  topBar: { height: 56, backgroundColor: COLORS.background, borderBottomWidth: 1, borderBottomColor: COLORS.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 },
+  topBarIcon: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
+  topBarTitle: { fontSize: 18, fontWeight: '600', color: COLORS.text },
+  content: { flex: 1 },
+  contentContainer: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 24 },
+  welcomeSection: { marginBottom: 32 },
+  welcomeText: { fontSize: 20, fontWeight: '600', color: COLORS.text, marginBottom: 8 },
+  badge: { alignSelf: 'flex-start', backgroundColor: COLORS.primaryLight, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
+  badgeText: { fontSize: 12, fontWeight: '600', color: COLORS.white },
   quickAccessSection: {},
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 16,
-  },
-  quickAccessList: {
-    gap: 12,
-  },
-  quickAccessCard: {
-    backgroundColor: COLORS.background,
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    // Subtle shadow per wireframe
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  quickAccessIcon: {
-    width: 48,
-    height: 48,
-    backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quickAccessTextContainer: {
-    flex: 1,
-  },
-  quickAccessTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 2,
-  },
-  quickAccessSubtitle: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-  },
+  sectionTitle: { fontSize: 16, fontWeight: '600', color: COLORS.text, marginBottom: 16 },
+  quickAccessList: { gap: 12 },
+  quickAccessCard: { backgroundColor: COLORS.background, borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1 },
+  quickAccessIcon: { width: 48, height: 48, backgroundColor: COLORS.backgroundSecondary, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  quickAccessTextContainer: { flex: 1 },
+  quickAccessTitle: { fontSize: 16, fontWeight: '600', color: COLORS.text, marginBottom: 2 },
+  quickAccessSubtitle: { fontSize: 14, color: COLORS.textSecondary },
 });

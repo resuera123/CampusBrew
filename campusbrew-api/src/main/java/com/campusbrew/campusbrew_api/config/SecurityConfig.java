@@ -28,6 +28,10 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
+                // Verification and user endpoints accept JWT manually in controller,
+                // so we permit them here and validate the token in the controller itself.
+                .requestMatchers("/api/verification/**").permitAll()
+                .requestMatchers("/api/users/**").permitAll()
                 .anyRequest().authenticated()
             );
         return http.build();
@@ -40,11 +44,10 @@ public class SecurityConfig {
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
-        return source -> {
-            UrlBasedCorsConfigurationSource urlSource = new UrlBasedCorsConfigurationSource();
-            urlSource.registerCorsConfiguration("/**", config);
-            return urlSource.getCorsConfiguration(source);
-        };
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 
     @Bean

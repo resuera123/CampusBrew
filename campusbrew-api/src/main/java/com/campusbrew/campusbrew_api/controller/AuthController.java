@@ -1,9 +1,6 @@
 package com.campusbrew.campusbrew_api.controller;
 
-import com.campusbrew.campusbrew_api.dto.AuthResponse;
-import com.campusbrew.campusbrew_api.dto.LoginRequest;
-import com.campusbrew.campusbrew_api.dto.OtpRequest;
-import com.campusbrew.campusbrew_api.dto.RegisterRequest;
+import com.campusbrew.campusbrew_api.dto.*;
 import com.campusbrew.campusbrew_api.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -66,6 +63,30 @@ public class AuthController {
             return ResponseEntity.ok(Map.of("message", "OTP resent successfully"));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ─── 1.3 Forgot / Reset Password ────────────────────────────
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        try {
+            authService.forgotPassword(request.getEmail());
+            return ResponseEntity.ok(Map.of("message", "Verification code sent to your email"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        try {
+            authService.resetPassword(request.getEmail(), request.getCode(), request.getNewPassword());
+            return ResponseEntity.ok(Map.of("message", "Password reset successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
         }
     }
