@@ -1,53 +1,49 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ActivityIndicator, View } from 'react-native';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
+import {
+  AuthStack,
+  CustomerStack,
+  DeliveryStack,
+  ShopStack,
+} from './src/navigation/AppNavigator';
+import { COLORS } from './src/constants/theme';
 
-import LoginScreen from './src/screens/auth/LoginScreen';
-import SignUpScreen from './src/screens/auth/SignUpScreen';
-import OTPVerificationScreen from './src/screens/auth/OTPVerificationScreen';
-
-const Stack = createStackNavigator();
-
-function AuthNavigator() {
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="SignUp" component={SignUpScreen} />
-      <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
-    </Stack.Navigator>
-  );
-}
-
-function AppNavigator() {
+function RootNavigator() {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#8B1A1A" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background }}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
 
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {user ? (
-        // Placeholder until we build the main app screens
-        <Stack.Screen name="Auth" component={AuthNavigator} />
-      ) : (
-        <Stack.Screen name="Auth" component={AuthNavigator} />
-      )}
-    </Stack.Navigator>
-  );
+  // Not logged in → show auth screens
+  if (!user) {
+    return <AuthStack />;
+  }
+
+  // Logged in → route to role-specific dashboard
+  // Per SDD 1.2: "Routes to role-specific dashboard"
+  switch (user.role) {
+    case 'DELIVERY_PERSONNEL':
+      return <DeliveryStack />;
+    case 'SHOP_OPERATOR':
+      return <ShopStack />;
+    case 'CUSTOMER':
+    default:
+      return <CustomerStack />;
+  }
 }
 
 export default function App() {
   return (
     <AuthProvider>
       <NavigationContainer>
-        <AuthNavigator />
+        <RootNavigator />
       </NavigationContainer>
     </AuthProvider>
   );

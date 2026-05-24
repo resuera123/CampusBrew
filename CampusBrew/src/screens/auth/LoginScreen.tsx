@@ -10,7 +10,9 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
+import { COLORS, SIZES } from '../../constants/theme';
 
 export default function LoginScreen({ navigation }: any) {
   const { login } = useAuth();
@@ -43,20 +45,20 @@ export default function LoginScreen({ navigation }: any) {
         {/* Logo */}
         <View style={styles.logoContainer}>
           <View style={styles.logoCircle}>
-            <Text style={styles.logoText}>☕</Text>
+            <Ionicons name="cafe" size={SIZES.logoIconSize} color={COLORS.white} />
           </View>
-          <Text style={styles.appName}>CampusBrew</Text>
           <Text style={styles.tagline}>CIT-U Campus Beverage Delivery</Text>
         </View>
 
         {/* Form */}
         <View style={styles.form}>
+          {/* Email Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.inputIcon}>✉</Text>
+            <Ionicons name="mail-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Email"
-              placeholderTextColor="#999"
+              placeholderTextColor={COLORS.textSecondary}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -64,42 +66,56 @@ export default function LoginScreen({ navigation }: any) {
             />
           </View>
 
+          {/* Password Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.inputIcon}>🔒</Text>
+            <Ionicons name="lock-closed-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Password"
-              placeholderTextColor="#999"
+              placeholderTextColor={COLORS.textSecondary}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Text style={styles.inputIcon}>{showPassword ? '🙈' : '👁'}</Text>
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={COLORS.textSecondary}
+              />
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Log In</Text>
-            )}
-          </TouchableOpacity>
+          {/* Log In Button — pill shape per wireframe */}
+          <View style={{ paddingTop: 16 }}>
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleLogin}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              {loading ? (
+                <ActivityIndicator color={COLORS.white} />
+              ) : (
+                <Text style={styles.buttonText}>Log In</Text>
+              )}
+            </TouchableOpacity>
+          </View>
 
+          {/* Forgot Password */}
           <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
             <Text style={styles.forgotText}>Forgot Password?</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-            <Text style={styles.signupText}>
-              Don't have an account? <Text style={styles.signupLink}>Sign Up</Text>
-            </Text>
-          </TouchableOpacity>
+          {/* Sign Up Link */}
+          <View style={{ paddingTop: 16 }}>
+            <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+              <Text style={styles.signupText}>
+                Don't have an account?{' '}
+                <Text style={styles.signupLink}>Sign Up</Text>
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -107,32 +123,92 @@ export default function LoginScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
-  logoContainer: { alignItems: 'center', marginBottom: 40 },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  inner: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: SIZES.screenPadding,
+  },
+
+  // Logo section
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 48,
+  },
   logoCircle: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: '#8B1A1A', justifyContent: 'center', alignItems: 'center',
-    marginBottom: 12,
+    width: SIZES.logoSize,
+    height: SIZES.logoSize,
+    borderRadius: SIZES.logoSize / 2,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
   },
-  logoText: { fontSize: 36 },
-  appName: { fontSize: 24, fontWeight: 'bold', color: '#8B1A1A' },
-  tagline: { fontSize: 13, color: '#666', marginTop: 4 },
-  form: { gap: 16 },
+  tagline: {
+    fontSize: SIZES.captionSize,
+    color: COLORS.textSecondary,
+  },
+
+  // Form
+  form: {
+    gap: SIZES.formGap,
+  },
+
+  // Input fields — matches wireframe: white bg, #E8E8E8 border, 8px radius
   inputContainer: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 8,
-    paddingHorizontal: 12, backgroundColor: '#fafafa',
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: SIZES.inputHeight,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: SIZES.inputBorderRadius,
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 16,
   },
-  inputIcon: { fontSize: 16, marginRight: 8 },
-  input: { flex: 1, height: 48, color: '#333', fontSize: 15 },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    height: SIZES.inputHeight,
+    fontSize: SIZES.inputFontSize,
+    color: COLORS.text,
+  },
+
+  // Button — pill shape (borderRadius: 24) per wireframe
   button: {
-    backgroundColor: '#8B1A1A', borderRadius: 8,
-    height: 48, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    borderRadius: SIZES.buttonBorderRadius,
+    height: SIZES.buttonHeight,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  buttonDisabled: { opacity: 0.7 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  forgotText: { color: '#8B1A1A', textAlign: 'center', fontSize: 14 },
-  signupText: { textAlign: 'center', color: '#666', fontSize: 14 },
-  signupLink: { color: '#8B1A1A', fontWeight: '600' },
+  buttonDisabled: {
+    backgroundColor: COLORS.border,
+  },
+  buttonText: {
+    color: COLORS.white,
+    fontSize: SIZES.buttonFontSize,
+    fontWeight: '600',
+  },
+
+  // Links
+  forgotText: {
+    color: COLORS.primary,
+    textAlign: 'center',
+    fontSize: SIZES.captionSize,
+    fontWeight: '600',
+  },
+  signupText: {
+    textAlign: 'center',
+    color: COLORS.textSecondary,
+    fontSize: SIZES.captionSize,
+  },
+  signupLink: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
 });

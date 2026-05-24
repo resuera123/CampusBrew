@@ -1,30 +1,48 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ActivityIndicator, Alert,
-  KeyboardAvoidingView, Platform, ScrollView,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Modal,
+  FlatList,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AuthService } from '../../services/AuthService';
+import { COLORS, SIZES } from '../../constants/theme';
 
 type Role = 'CUSTOMER' | 'DELIVERY_PERSONNEL' | 'SHOP_OPERATOR';
+
+const ROLE_OPTIONS: { label: string; value: Role }[] = [
+  { label: 'Student Customer', value: 'CUSTOMER' },
+  { label: 'Delivery Personnel', value: 'DELIVERY_PERSONNEL' },
+  { label: 'Shop Operator', value: 'SHOP_OPERATOR' },
+];
 
 export default function SignUpScreen({ navigation }: any) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<Role>('CUSTOMER');
+  const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showRolePicker, setShowRolePicker] = useState(false);
 
-  const roles: { label: string; value: Role }[] = [
-    { label: 'Customer', value: 'CUSTOMER' },
-    { label: 'Delivery Personnel', value: 'DELIVERY_PERSONNEL' },
-    { label: 'Shop Operator', value: 'SHOP_OPERATOR' },
-  ];
+  const selectedRoleLabel = ROLE_OPTIONS.find((r) => r.value === role)?.label;
 
   const handleSignUp = async () => {
     if (!fullName || !email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+    if (!role) {
+      Alert.alert('Error', 'Please select a role');
       return;
     }
     if (password.length < 8) {
@@ -51,30 +69,32 @@ export default function SignUpScreen({ navigation }: any) {
         {/* Logo */}
         <View style={styles.logoContainer}>
           <View style={styles.logoCircle}>
-            <Text style={styles.logoText}>☕</Text>
+            <Ionicons name="cafe" size={36} color={COLORS.white} />
           </View>
           <Text style={styles.title}>Create your account</Text>
         </View>
 
         {/* Form */}
         <View style={styles.form}>
+          {/* Full Name */}
           <View style={styles.inputContainer}>
-            <Text style={styles.inputIcon}>👤</Text>
+            <Ionicons name="person-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Full Name"
-              placeholderTextColor="#999"
+              placeholderTextColor={COLORS.textSecondary}
               value={fullName}
               onChangeText={setFullName}
             />
           </View>
 
+          {/* Email */}
           <View style={styles.inputContainer}>
-            <Text style={styles.inputIcon}>✉</Text>
+            <Ionicons name="mail-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Email"
-              placeholderTextColor="#999"
+              placeholderTextColor={COLORS.textSecondary}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -82,94 +102,256 @@ export default function SignUpScreen({ navigation }: any) {
             />
           </View>
 
+          {/* Password */}
           <View style={styles.inputContainer}>
-            <Text style={styles.inputIcon}>🔒</Text>
+            <Ionicons name="lock-closed-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Password (min 8 characters)"
-              placeholderTextColor="#999"
+              placeholder="Password"
+              placeholderTextColor={COLORS.textSecondary}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Text style={styles.inputIcon}>{showPassword ? '🙈' : '👁'}</Text>
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={COLORS.textSecondary}
+              />
             </TouchableOpacity>
           </View>
 
-          {/* Role Selector */}
-          <Text style={styles.roleLabel}>Select Role</Text>
-          <View style={styles.roleContainer}>
-            {roles.map((r) => (
-              <TouchableOpacity
-                key={r.value}
-                style={[styles.roleButton, role === r.value && styles.roleButtonActive]}
-                onPress={() => setRole(r.value)}
-              >
-                <Text style={[styles.roleText, role === r.value && styles.roleTextActive]}>
-                  {r.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
+          {/* Role Selector — custom dropdown */}
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleSignUp}
-            disabled={loading}
+            style={styles.selectContainer}
+            onPress={() => setShowRolePicker(true)}
+            activeOpacity={0.7}
           >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Sign Up</Text>
-            )}
+            <Text style={[styles.selectText, !role && styles.selectPlaceholder]}>
+              {selectedRoleLabel || 'Select Role'}
+            </Text>
+            <Ionicons name="chevron-down" size={20} color={COLORS.textSecondary} />
           </TouchableOpacity>
 
+          {/* Sign Up Button */}
+          <View style={{ paddingTop: 16 }}>
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleSignUp}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              {loading ? (
+                <ActivityIndicator color={COLORS.white} />
+              ) : (
+                <Text style={styles.buttonText}>Sign Up</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Login Link */}
           <TouchableOpacity onPress={() => navigation.navigate('Login')}>
             <Text style={styles.loginText}>
-              Already have an account? <Text style={styles.loginLink}>Log In</Text>
+              Already have an account?{' '}
+              <Text style={styles.loginLink}>Log In</Text>
             </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Role Picker Modal */}
+      <Modal
+        visible={showRolePicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRolePicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowRolePicker(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Role</Text>
+            <FlatList
+              data={ROLE_OPTIONS}
+              keyExtractor={(item) => item.value}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.modalOption,
+                    role === item.value && styles.modalOptionActive,
+                  ]}
+                  onPress={() => {
+                    setRole(item.value);
+                    setShowRolePicker(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      role === item.value && styles.modalOptionTextActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                  {role === item.value && (
+                    <Ionicons name="checkmark" size={20} color={COLORS.primary} />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  inner: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 40 },
-  logoContainer: { alignItems: 'center', marginBottom: 32 },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  inner: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: SIZES.screenPadding,
+    paddingVertical: 40,
+  },
+
+  // Logo
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
   logoCircle: {
-    width: 72, height: 72, borderRadius: 36,
-    backgroundColor: '#8B1A1A', justifyContent: 'center',
-    alignItems: 'center', marginBottom: 12,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  logoText: { fontSize: 32 },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#333' },
-  form: { gap: 14 },
+  title: {
+    fontSize: SIZES.headingSize,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+
+  // Form
+  form: {
+    gap: SIZES.formGap,
+  },
+
+  // Input fields
   inputContainer: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 8,
-    paddingHorizontal: 12, backgroundColor: '#fafafa',
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: SIZES.inputHeight,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: SIZES.inputBorderRadius,
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 16,
   },
-  inputIcon: { fontSize: 16, marginRight: 8 },
-  input: { flex: 1, height: 48, color: '#333', fontSize: 15 },
-  roleLabel: { fontSize: 14, color: '#555', fontWeight: '500' },
-  roleContainer: { flexDirection: 'row', gap: 8 },
-  roleButton: {
-    flex: 1, paddingVertical: 10, borderRadius: 8,
-    borderWidth: 1, borderColor: '#ddd', alignItems: 'center',
+  inputIcon: {
+    marginRight: 12,
   },
-  roleButtonActive: { backgroundColor: '#8B1A1A', borderColor: '#8B1A1A' },
-  roleText: { fontSize: 12, color: '#555' },
-  roleTextActive: { color: '#fff', fontWeight: '600' },
+  input: {
+    flex: 1,
+    height: SIZES.inputHeight,
+    fontSize: SIZES.inputFontSize,
+    color: COLORS.text,
+  },
+
+  // Custom select / dropdown trigger
+  selectContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: SIZES.inputHeight,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: SIZES.inputBorderRadius,
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 16,
+  },
+  selectText: {
+    fontSize: SIZES.inputFontSize,
+    color: COLORS.text,
+  },
+  selectPlaceholder: {
+    color: COLORS.textSecondary,
+  },
+
+  // Button
   button: {
-    backgroundColor: '#8B1A1A', borderRadius: 8,
-    height: 48, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    borderRadius: SIZES.buttonBorderRadius,
+    height: SIZES.buttonHeight,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  buttonDisabled: { opacity: 0.7 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  loginText: { textAlign: 'center', color: '#666', fontSize: 14 },
-  loginLink: { color: '#8B1A1A', fontWeight: '600' },
+  buttonDisabled: {
+    backgroundColor: COLORS.border,
+  },
+  buttonText: {
+    color: COLORS.white,
+    fontSize: SIZES.buttonFontSize,
+    fontWeight: '600',
+  },
+
+  // Links
+  loginText: {
+    textAlign: 'center',
+    color: COLORS.textSecondary,
+    fontSize: SIZES.captionSize,
+  },
+  loginLink: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  modalContent: {
+    backgroundColor: COLORS.background,
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  modalOptionActive: {
+    backgroundColor: COLORS.backgroundSecondary,
+  },
+  modalOptionText: {
+    fontSize: SIZES.bodySize,
+    color: COLORS.text,
+  },
+  modalOptionTextActive: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
 });

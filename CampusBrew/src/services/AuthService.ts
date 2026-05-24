@@ -21,6 +21,7 @@ export interface AuthResponse {
 }
 
 export const AuthService = {
+  // ─── 1.1 Registration ───
   async register(data: RegisterRequest): Promise<{ message: string }> {
     const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
       method: 'POST',
@@ -43,17 +44,6 @@ export const AuthService = {
     return json;
   },
 
-  async login(data: LoginRequest): Promise<AuthResponse> {
-    const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Login failed');
-    return json;
-  },
-
   async resendOtp(email: string): Promise<{ message: string }> {
     const res = await fetch(`${API_BASE_URL}/api/auth/resend-otp`, {
       method: 'POST',
@@ -65,6 +55,71 @@ export const AuthService = {
     return json;
   },
 
+  // ─── 1.2 Login ───
+  async login(data: LoginRequest): Promise<AuthResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Login failed');
+    return json;
+  },
+
+  // ─── 1.3 Forgot / Reset Password ───
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Failed to send reset code');
+    return json;
+  },
+
+  async resetPassword(email: string, code: string, newPassword: string): Promise<{ message: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code, newPassword }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Password reset failed');
+    return json;
+  },
+
+  // ─── 1.4 Account Verification ───
+  async sendVerificationOtp(schoolEmail: string, token: string): Promise<{ message: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/verification/send-otp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ schoolEmail }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Failed to send verification OTP');
+    return json;
+  },
+
+  async verifyAccount(schoolEmail: string, otp: string, studentId: string, token: string): Promise<{ message: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/verification/verify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ schoolEmail, otp, studentId }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Verification failed');
+    return json;
+  },
+
+  // ─── Utility ───
   async ping(): Promise<boolean> {
     try {
       const res = await fetch(`${API_BASE_URL}/api/auth/ping`);
