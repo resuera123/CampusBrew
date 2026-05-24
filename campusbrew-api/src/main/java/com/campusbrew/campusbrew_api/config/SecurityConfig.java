@@ -32,6 +32,8 @@ public class SecurityConfig {
                 // so we permit them here and validate the token in the controller itself.
                 .requestMatchers("/api/verification/**").permitAll()
                 .requestMatchers("/api/users/**").permitAll()
+                .requestMatchers("/api/shops/**").permitAll()
+                .requestMatchers("/api/orders/**").permitAll()
                 .anyRequest().authenticated()
             );
         return http.build();
