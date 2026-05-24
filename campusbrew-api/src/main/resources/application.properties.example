@@ -4,18 +4,20 @@ spring.application.name=campusbrew-api
 server.port=8080
 
 # MongoDB (Atlas - shared team database)
-spring.data.mongodb.uri=mongodb+srv://jefferusresuera_db_user:YT7MMuDD6uXTaLln@campusbrew.jedtmgm.mongodb.net/?appName=CampusBrew
+# Replace with your team's actual Atlas URI in application.properties (gitignored)
+spring.data.mongodb.uri=mongodb+srv://<atlas-user>:<atlas-password>@<cluster-host>/?appName=CampusBrew
 spring.data.mongodb.database=campusbrew
 
 # JWT
-jwt.secret=campusbrew-super-secret-key-make-this-very-long-for-security-2026
+# Generate a strong random string (e.g. `openssl rand -base64 48`) for your local application.properties
+jwt.secret=<generate-a-long-random-secret>
 jwt.expiration=86400000
 
 # Email (OTP sending)
 spring.mail.host=smtp.gmail.com
 spring.mail.port=587
-spring.mail.username=YOUR_GMAIL@gmail.com
-spring.mail.password=YOUR_GMAIL_APP_PASSWORD
+spring.mail.username=<your-gmail-address>
+spring.mail.password=<your-gmail-app-password>
 spring.mail.properties.mail.smtp.auth=true
 spring.mail.properties.mail.smtp.starttls.enable=true
 
@@ -25,8 +27,3 @@ cors.allowed-origins=http://localhost:3000,http://localhost:8081
 # Disable Spring Security's default login page for now
 spring.security.user.name=admin
 spring.security.user.password=admin
-
-
- 
-
- 
