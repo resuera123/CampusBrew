@@ -32,6 +32,8 @@ public class Order {
     private List<OrderItem> items;
 
     private String deliveryLocation;
+    /** Free-text notes from the customer to the rider (gate code, building, etc.). */
+    private String dasherInstructions;
 
     private PaymentMethod paymentMethod;
     private PaymentStatus paymentStatus;
@@ -41,6 +43,11 @@ public class Order {
     private double deliveryFee;
     private double platformCommission;
     private double totalAmount;
+
+    private List<StatusHistoryEntry> statusHistory;
+
+    /** When the shop marked the order Ready for Pickup. Drives the 10-min auto-cancel. */
+    private Date readyAt;
 
     private Date createdAt;
     private Date updatedAt;

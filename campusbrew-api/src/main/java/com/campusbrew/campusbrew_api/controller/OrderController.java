@@ -34,6 +34,18 @@ public class OrderController {
         }
     }
 
+    @GetMapping("/{orderId}")
+    public ResponseEntity<?> getOrder(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable String orderId) {
+        try {
+            String userId = userIdFrom(authHeader);
+            return ResponseEntity.ok(orderService.getOrderForUser(userId, orderId));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @GetMapping("/history")
     public ResponseEntity<?> getOrderHistory(
             @RequestHeader("Authorization") String authHeader,

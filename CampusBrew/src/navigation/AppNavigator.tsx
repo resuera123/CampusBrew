@@ -19,16 +19,28 @@ import ShopMenuScreen from '../screens/customer/ShopMenuScreen';
 import CustomizeItemScreen from '../screens/customer/CustomizeItemScreen';
 import CheckoutScreen from '../screens/customer/CheckoutScreen';
 import OrderHistoryScreen from '../screens/customer/OrderHistoryScreen';
+import OrderTrackingScreen from '../screens/customer/OrderTrackingScreen';
+import NotificationScreen from '../screens/customer/NotificationScreen';
 import ReorderCartScreen from '../screens/customer/ReorderCartScreen';
 import OrdersPlaceholderScreen from '../screens/customer/OrdersPlaceholderScreen';
 import ProfileScreen from '../screens/customer/ProfileScreen';
 import EditProfileScreen from '../screens/customer/EditProfileScreen';
 
-// Delivery screens (placeholders)
-import DeliveryDashboardPlaceholder from '../screens/delivery/DeliveryDashboardPlaceholder';
+// Delivery screens
+import DeliveryDashboardScreen from '../screens/delivery/DeliveryDashboardScreen';
+import ScheduleSettingsScreen from '../screens/delivery/ScheduleSettingsScreen';
+import AssignedDeliveryScreen from '../screens/delivery/AssignedDeliveryScreen';
+import DeliveryTabScreen from '../screens/delivery/DeliveryTabScreen';
+import DeliveryHistoryScreen from '../screens/delivery/DeliveryHistoryScreen';
 
-// Shop screens (placeholders)
-import ShopDashboardPlaceholder from '../screens/shop/ShopDashboardPlaceholder';
+// Shop screens
+import ShopDashboardScreen from '../screens/shop/ShopDashboardScreen';
+import OrderQueueScreen from '../screens/shop/OrderQueueScreen';
+import MenuManagementScreen from '../screens/shop/MenuManagementScreen';
+import ItemAvailabilityScreen from '../screens/shop/ItemAvailabilityScreen';
+import ShopProfileScreen from '../screens/shop/ShopProfileScreen';
+import EditShopProfileScreen from '../screens/shop/EditShopProfileScreen';
+import ShopOrderHistoryScreen from '../screens/shop/ShopOrderHistoryScreen';
 
 // Bottom tab bar
 import BottomTabBar from '../components/BottomTabBar';
@@ -73,6 +85,8 @@ export function CustomerStack() {
       <Stack.Screen name="CustomizeItem" component={CustomizeItemScreen} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
       <Stack.Screen name="ReorderCart" component={ReorderCartScreen} />
+      <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
+      <Stack.Screen name="Notifications" component={NotificationScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="AccountVerification" component={AccountVerificationScreen} />
       <Stack.Screen name="VerifiedSuccess" component={VerifiedSuccessScreen} />
@@ -88,8 +102,8 @@ function DeliveryHomeTabs() {
       tabBar={(props) => <BottomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
-      <Tab.Screen name="DeliveryDashboard" component={DeliveryDashboardPlaceholder} />
-      <Tab.Screen name="DeliveryOrders" component={OrdersPlaceholderScreen} />
+      <Tab.Screen name="DeliveryDashboard" component={DeliveryDashboardScreen} />
+      <Tab.Screen name="DeliveryOrders" component={DeliveryTabScreen} />
       <Tab.Screen name="DeliveryProfile" component={ProfileScreen} />
     </Tab.Navigator>
   );
@@ -99,6 +113,9 @@ export function DeliveryStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="DeliveryTabs" component={DeliveryHomeTabs} />
+      <Stack.Screen name="ScheduleSettings" component={ScheduleSettingsScreen} />
+      <Stack.Screen name="DeliveryHistory" component={DeliveryHistoryScreen} />
+      <Stack.Screen name="AssignedDelivery" component={AssignedDeliveryScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="AccountVerification" component={AccountVerificationScreen} />
       <Stack.Screen name="VerifiedSuccess" component={VerifiedSuccessScreen} />
@@ -114,9 +131,9 @@ function ShopHomeTabs() {
       tabBar={(props) => <BottomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
-      <Tab.Screen name="ShopDashboard" component={ShopDashboardPlaceholder} />
-      <Tab.Screen name="ShopOrders" component={OrdersPlaceholderScreen} />
-      <Tab.Screen name="ShopProfile" component={ProfileScreen} />
+      <Tab.Screen name="ShopDashboard" component={ShopDashboardScreen} />
+      <Tab.Screen name="ShopOrders" component={OrderQueueScreen} />
+      <Tab.Screen name="ShopProfile" component={ShopProfileScreen} />
     </Tab.Navigator>
   );
 }
@@ -125,7 +142,11 @@ export function ShopStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="ShopTabs" component={ShopHomeTabs} />
-      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="OrderQueue" component={OrderQueueScreen} />
+      <Stack.Screen name="MenuManagement" component={MenuManagementScreen} />
+      <Stack.Screen name="ItemAvailability" component={ItemAvailabilityScreen} />
+      <Stack.Screen name="ShopOrderHistory" component={ShopOrderHistoryScreen} />
+      <Stack.Screen name="EditShopProfile" component={EditShopProfileScreen} />
       <Stack.Screen name="AccountVerification" component={AccountVerificationScreen} />
       <Stack.Screen name="VerifiedSuccess" component={VerifiedSuccessScreen} />
     </Stack.Navigator>

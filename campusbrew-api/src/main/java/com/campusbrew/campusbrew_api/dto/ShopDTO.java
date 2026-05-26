@@ -2,6 +2,7 @@ package com.campusbrew.campusbrew_api.dto;
 
 import com.campusbrew.campusbrew_api.model.OperatingHours;
 import com.campusbrew.campusbrew_api.model.Shop;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Data;
 
@@ -15,7 +16,10 @@ public class ShopDTO {
     private String location;
     private String shopImage;
     private double rating;
+
+    @JsonProperty("isOpen")
     private boolean isOpen;
+
     private String estimatedPrepTime;
 
     public static ShopDTO fromShop(Shop shop) {

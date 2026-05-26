@@ -6,6 +6,7 @@ export type PaymentStatus =
   | 'PAID_GCASH'
   | 'PENDING_COD'
   | 'PAID_COD'
+  | 'REFUND_PENDING'
   | 'REFUNDED';
 export type OrderStatus =
   | 'PLACED'
@@ -28,6 +29,11 @@ export interface OrderItem {
   totalPrice: number;
 }
 
+export interface StatusHistoryEntry {
+  status: OrderStatus;
+  timestamp: string;
+}
+
 export interface CreateOrderItem {
   menuItemId: string;
   quantity: number;
@@ -41,17 +47,21 @@ export interface CreateOrderRequest {
   shopId: string;
   items: CreateOrderItem[];
   deliveryLocation: string;
+  dasherInstructions?: string;
   paymentMethod: PaymentMethod;
 }
 
 export interface Order {
   id: string;
   customerId: string;
+  customerName?: string;
   shopId: string;
   shopName?: string;
   deliveryPersonnelId?: string;
+  deliveryPersonnelName?: string;
   items: OrderItem[];
   deliveryLocation: string;
+  dasherInstructions?: string;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   orderStatus: OrderStatus;
@@ -60,6 +70,8 @@ export interface Order {
   platformCommission: number;
   totalAmount: number;
   paymentUrl?: string;
+  statusHistory?: StatusHistoryEntry[];
+  readyAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -128,6 +140,15 @@ export const OrderService = {
     });
     const json = await safeJson(res);
     if (!res.ok) throw new Error(json.error || 'Failed to place order');
+    return json;
+  },
+
+  async getOrderById(orderId: string, token: string): Promise<Order> {
+    const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}`, {
+      headers: authHeaders(token),
+    });
+    const json = await safeJson(res);
+    if (!res.ok) throw new Error(json.error || 'Failed to load order');
     return json;
   },
 

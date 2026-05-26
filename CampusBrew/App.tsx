@@ -1,14 +1,18 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { ActivityIndicator, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { CartProvider } from './src/context/CartContext';
+import { SocketProvider } from './src/context/SocketContext';
+import { NotificationsProvider } from './src/context/NotificationsContext';
 import {
   AuthStack,
   CustomerStack,
   DeliveryStack,
   ShopStack,
 } from './src/navigation/AppNavigator';
+import IncomingOrderModal from './src/screens/delivery/IncomingOrderModal';
 import { COLORS } from './src/constants/theme';
 
 function RootNavigator() {
@@ -42,12 +46,19 @@ function RootNavigator() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <CartProvider>
-        <NavigationContainer>
-          <RootNavigator />
-        </NavigationContainer>
-      </CartProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <SocketProvider>
+          <NotificationsProvider>
+            <CartProvider>
+              <NavigationContainer>
+                <RootNavigator />
+                <IncomingOrderModal />
+              </NavigationContainer>
+            </CartProvider>
+          </NotificationsProvider>
+        </SocketProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }

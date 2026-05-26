@@ -2,6 +2,8 @@ package com.campusbrew.campusbrew_api.controller;
 
 import com.campusbrew.campusbrew_api.dto.MenuItemDTO;
 import com.campusbrew.campusbrew_api.dto.ShopDTO;
+import com.campusbrew.campusbrew_api.dto.UpdateShopDTO;
+import com.campusbrew.campusbrew_api.service.JwtService;
 import com.campusbrew.campusbrew_api.service.ShopService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,12 +19,23 @@ import java.util.Map;
 public class ShopController {
 
     private final ShopService shopService;
+    private final JwtService jwtService;
 
     @GetMapping
     public ResponseEntity<?> getAllShops(@RequestParam(value = "openOnly", defaultValue = "false") boolean openOnly) {
         try {
             List<ShopDTO> shops = openOnly ? shopService.getAllActiveShops() : shopService.getAllShops();
             return ResponseEntity.ok(shops);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getMyShop(@RequestHeader("Authorization") String authHeader) {
+        try {
+            String userId = jwtService.extractUserId(authHeader.replace("Bearer ", ""));
+            return ResponseEntity.ok(shopService.getMyShop(userId));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         }
@@ -51,6 +64,19 @@ public class ShopController {
     public ResponseEntity<?> searchItems(@RequestParam("q") String query) {
         try {
             return ResponseEntity.ok(shopService.searchItems(query));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateShop(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable String id,
+            @RequestBody UpdateShopDTO dto) {
+        try {
+            String userId = jwtService.extractUserId(authHeader.replace("Bearer ", ""));
+            return ResponseEntity.ok(shopService.updateShop(userId, id, dto));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         }

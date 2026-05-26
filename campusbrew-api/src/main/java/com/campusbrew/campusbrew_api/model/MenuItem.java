@@ -1,5 +1,6 @@
 package com.campusbrew.campusbrew_api.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,6 +27,8 @@ public class MenuItem {
     private String description;
     private String category;
     private String image;
+
+    @JsonProperty("isAvailable")
     private boolean isAvailable;
     private String stockStatus;
     private CustomizationOptions customizationOptions;

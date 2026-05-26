@@ -15,10 +15,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../constants/theme';
 import { ShopService, Shop, MenuItem } from '../../services/ShopService';
+import { useCart } from '../../context/CartContext';
+import { useNotifications } from '../../context/NotificationsContext';
+import CurrentOrderBanner from './CurrentOrderBanner';
 
 const CATEGORIES = ['All', 'Coffee', 'Milk Tea', 'Fruit Tea', 'Smoothie'];
 
 export default function HomeScreen({ navigation }: any) {
+  const { items: cartItems } = useCart();
+  const cartCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
+  const { unreadCount } = useNotifications();
   const [shops, setShops] = useState<Shop[]>([]);
   const [popular, setPopular] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,8 +93,27 @@ export default function HomeScreen({ navigation }: any) {
 
       <View style={styles.topBar}>
         <Text style={styles.topBarTitle}>CIT-U Campus Beverage Delivery</Text>
-        <TouchableOpacity style={styles.topBarIcon}>
+        <TouchableOpacity
+          style={styles.topBarIcon}
+          onPress={() => navigation.navigate('Notifications')}
+        >
           <Ionicons name="notifications-outline" size={22} color={COLORS.text} />
+          {unreadCount > 0 && (
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.topBarIcon}
+          onPress={() => navigation.navigate('Checkout')}
+        >
+          <Ionicons name="bag-outline" size={22} color={COLORS.text} />
+          {cartCount > 0 && (
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>{cartCount}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -233,6 +258,8 @@ export default function HomeScreen({ navigation }: any) {
           </>
         )}
       </ScrollView>
+
+      <CurrentOrderBanner navigation={navigation} />
     </SafeAreaView>
   );
 }
@@ -251,9 +278,22 @@ const styles = StyleSheet.create({
   },
   topBarTitle: { fontSize: 14, fontWeight: '600', color: COLORS.text, flex: 1 },
   topBarIcon: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
+  cartBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  cartBadgeText: { color: COLORS.white, fontSize: 10, fontWeight: '700' },
 
   content: { flex: 1 },
-  contentContainer: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 },
+  contentContainer: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 120 },
 
   searchContainer: {
     flexDirection: 'row',

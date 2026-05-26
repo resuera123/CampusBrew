@@ -15,7 +15,7 @@ const TAB_CONFIG: Record<string, { icon: string; iconFocused: string; label: str
   Profile: { icon: 'person-outline', iconFocused: 'person', label: 'Profile' },
   // Delivery role tabs
   DeliveryDashboard: { icon: 'home-outline', iconFocused: 'home', label: 'Home' },
-  DeliveryOrders: { icon: 'bag-outline', iconFocused: 'bag', label: 'Orders' },
+  DeliveryOrders: { icon: 'bicycle-outline', iconFocused: 'bicycle', label: 'Delivery' },
   DeliveryProfile: { icon: 'person-outline', iconFocused: 'person', label: 'Profile' },
   // Shop role tabs
   ShopDashboard: { icon: 'home-outline', iconFocused: 'home', label: 'Home' },

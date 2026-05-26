@@ -5,5 +5,6 @@ public enum PaymentStatus {
     PAID_GCASH,
     PENDING_COD,
     PAID_COD,
+    REFUND_PENDING,
     REFUNDED
 }

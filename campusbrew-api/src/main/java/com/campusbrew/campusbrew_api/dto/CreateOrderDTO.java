@@ -10,5 +10,6 @@ public class CreateOrderDTO {
     private String shopId;
     private List<CreateOrderItemDTO> items;
     private String deliveryLocation;
+    private String dasherInstructions;
     private PaymentMethod paymentMethod;
 }

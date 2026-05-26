@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
-import { OrderService, Order } from '../../services/OrderService';
+import { OrderService, Order, OrderStatus } from '../../services/OrderService';
 
 function formatDate(iso?: string) {
   if (!iso) return '';
@@ -49,7 +49,12 @@ export default function OrderHistoryScreen({ navigation }: any) {
     try {
       setError(null);
       const page = await OrderService.getHistory(token, 0);
-      setOrders(page.content || []);
+      // Belt-and-suspenders: backend already sorts by createdAt DESC, but force it
+      // client-side too so the newest order is guaranteed to be on top.
+      const list = (page.content || []).slice().sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+      setOrders(list);
     } catch (e: any) {
       setError(e.message || 'Could not load orders');
     } finally {
@@ -119,13 +124,21 @@ export default function OrderHistoryScreen({ navigation }: any) {
                 const itemSummary = order.items.map((i) => i.itemName).join(', ');
                 const isReordering = reorderingId === order.id;
                 return (
-                  <View key={order.id} style={styles.orderCard}>
+                  <TouchableOpacity
+                    key={order.id}
+                    style={styles.orderCard}
+                    activeOpacity={0.85}
+                    onPress={() => navigation.navigate('OrderTracking', { orderId: order.id })}
+                  >
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                       <Text style={styles.orderDate}>{formatDate(order.createdAt)}</Text>
                       <Text style={styles.orderTotal}>₱{order.totalAmount.toFixed(0)}</Text>
                     </View>
                     <Text style={styles.orderShop}>{order.shopName || 'Shop'}</Text>
                     <Text style={styles.orderItems} numberOfLines={2}>{itemSummary}</Text>
+                    <View style={styles.badgeRow}>
+                      <StatusBadge status={order.orderStatus} />
+                    </View>
                     <TouchableOpacity
                       style={styles.reorderBtn}
                       onPress={() => handleReorder(order.id)}
@@ -138,7 +151,7 @@ export default function OrderHistoryScreen({ navigation }: any) {
                         <Text style={styles.reorderText}>Reorder</Text>
                       )}
                     </TouchableOpacity>
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
             </View>
@@ -146,6 +159,24 @@ export default function OrderHistoryScreen({ navigation }: any) {
         </ScrollView>
       )}
     </SafeAreaView>
+  );
+}
+
+function StatusBadge({ status }: { status: OrderStatus }) {
+  const map: Record<OrderStatus, { bg: string; fg: string; label: string }> = {
+    PLACED:           { bg: '#FFF4D6', fg: '#7A5A00', label: 'Placed' },
+    PREPARING:        { bg: '#FCE4E6', fg: '#8A2C33', label: 'Preparing' },
+    READY_FOR_PICKUP: { bg: '#E0F0FF', fg: '#0A66B5', label: 'Ready' },
+    ASSIGNED:         { bg: '#E0F0FF', fg: '#0A66B5', label: 'Rider assigned' },
+    OUT_FOR_DELIVERY: { bg: '#E0F0FF', fg: '#0A66B5', label: 'On the way' },
+    DELIVERED:        { bg: '#E6F4EA', fg: '#1E8E3E', label: 'Completed' },
+    CANCELLED:        { bg: '#FCE8E8', fg: '#D93025', label: 'Cancelled' },
+  };
+  const s = map[status] ?? { bg: '#F5F5F5', fg: '#666', label: status };
+  return (
+    <View style={[styles.statusPill, { backgroundColor: s.bg }]}>
+      <Text style={[styles.statusPillText, { color: s.fg }]}>{s.label}</Text>
+    </View>
   );
 }
 
@@ -182,6 +213,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   reorderText: { color: COLORS.primary, fontWeight: '600' },
+  badgeRow: { flexDirection: 'row', marginTop: 8 },
+  statusPill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusPillText: { fontSize: SIZES.smallSize, fontWeight: '700' },
 
   emptyBlock: { paddingVertical: 48, alignItems: 'center', gap: 12 },
   emptyText: { color: COLORS.textSecondary, fontSize: 14 },

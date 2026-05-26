@@ -12,4 +12,6 @@ public interface ShopRepository extends MongoRepository<Shop, String> {
     List<Shop> findByIsOpenTrue();
 
     List<Shop> findByShopNameContainingIgnoreCase(String query);
+
+    List<Shop> findByOperatorId(String operatorId);
 }

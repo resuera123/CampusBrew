@@ -26,6 +26,7 @@ export default function CheckoutScreen({ navigation }: any) {
   const isVerified = user?.verificationStatus === 'VERIFIED';
 
   const [deliveryLocation, setDeliveryLocation] = useState('');
+  const [dasherInstructions, setDasherInstructions] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('GCASH');
   const [placing, setPlacing] = useState(false);
 
@@ -55,6 +56,7 @@ export default function CheckoutScreen({ navigation }: any) {
         {
           shopId,
           deliveryLocation: deliveryLocation.trim(),
+          dasherInstructions: dasherInstructions.trim() || undefined,
           paymentMethod,
           items: items.map((i) => ({
             menuItemId: i.menuItemId,
@@ -69,11 +71,10 @@ export default function CheckoutScreen({ navigation }: any) {
       );
 
       clearCart();
-      Alert.alert(
-        'Order placed',
-        `Your order has been placed. Total: ₱${order.totalAmount.toFixed(2)}.`,
-        [{ text: 'OK', onPress: () => navigation.navigate('CustomerTabs', { screen: 'CustomerHome' }) }],
-      );
+      // Route straight into the tracking screen. `replace` so the back stack
+      // doesn't return to the now-empty checkout. Alert.alert success callback
+      // is unreliable on Expo Web (silently drops onPress).
+      navigation.replace('OrderTracking', { orderId: order.id });
     } catch (e: any) {
       Alert.alert('Could not place order', e.message || 'Try again.');
     } finally {
@@ -141,6 +142,21 @@ export default function CheckoutScreen({ navigation }: any) {
             placeholderTextColor={COLORS.textSecondary}
             value={deliveryLocation}
             onChangeText={setDeliveryLocation}
+          />
+        </View>
+
+        {/* Dasher Instructions */}
+        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Dasher Instructions</Text>
+        <View style={[styles.locationInput, { alignItems: 'flex-start', minHeight: 72 }]}>
+          <Ionicons name="chatbubble-ellipses-outline" size={18} color={COLORS.primary} style={{ marginRight: 8, marginTop: 4 }} />
+          <TextInput
+            style={{ flex: 1, fontSize: SIZES.inputFontSize, color: COLORS.text, minHeight: 60, textAlignVertical: 'top' }}
+            placeholder="Optional — gate code, building entry, allergies, leave at door, etc."
+            placeholderTextColor={COLORS.textSecondary}
+            value={dasherInstructions}
+            onChangeText={setDasherInstructions}
+            multiline
+            maxLength={250}
           />
         </View>
 

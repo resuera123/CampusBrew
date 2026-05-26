@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 export default function ProfileScreen({ navigation }: any) {
   const { user, logout } = useAuth();
   const isVerified = user?.verificationStatus === 'VERIFIED';
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -47,11 +49,25 @@ export default function ProfileScreen({ navigation }: any) {
           <Text style={styles.outlinedButtonText}>Edit Profile</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.outlinedButton, { marginTop: 16, borderColor: '#E8E8E8' }]} onPress={logout} activeOpacity={0.7}>
+        <TouchableOpacity style={[styles.outlinedButton, { marginTop: 16, borderColor: '#E8E8E8' }]} onPress={() => setLogoutOpen(true)} activeOpacity={0.7}>
           <Ionicons name="log-out-outline" size={20} color="#94353E" style={{ marginRight: 8 }} />
           <Text style={styles.outlinedButtonText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <ConfirmDialog
+        visible={logoutOpen}
+        title="Log out?"
+        message="You'll be signed out and returned to the login screen."
+        confirmLabel="Log out"
+        destructive
+        icon="log-out-outline"
+        onCancel={() => setLogoutOpen(false)}
+        onConfirm={() => {
+          setLogoutOpen(false);
+          logout();
+        }}
+      />
     </SafeAreaView>
   );
 }

@@ -4,11 +4,16 @@ import com.campusbrew.campusbrew_api.dto.AuthResponse;
 import com.campusbrew.campusbrew_api.dto.LoginRequest;
 import com.campusbrew.campusbrew_api.dto.OtpRequest;
 import com.campusbrew.campusbrew_api.dto.RegisterRequest;
+import com.campusbrew.campusbrew_api.model.DeliveryPersonnel;
 import com.campusbrew.campusbrew_api.model.Otp;
 import com.campusbrew.campusbrew_api.model.OtpType;
+import com.campusbrew.campusbrew_api.model.Shop;
 import com.campusbrew.campusbrew_api.model.User;
+import com.campusbrew.campusbrew_api.model.UserRole;
 import com.campusbrew.campusbrew_api.model.VerificationStatus;
+import com.campusbrew.campusbrew_api.repository.DeliveryPersonnelRepository;
 import com.campusbrew.campusbrew_api.repository.OtpRepository;
+import com.campusbrew.campusbrew_api.repository.ShopRepository;
 import com.campusbrew.campusbrew_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,6 +28,8 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final OtpRepository otpRepository;
+    private final ShopRepository shopRepository;
+    private final DeliveryPersonnelRepository deliveryPersonnelRepository;
     private final JwtService jwtService;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
@@ -45,7 +52,34 @@ public class AuthService {
                 .updatedAt(java.util.Date.from(Instant.now()))
                 .build();
 
-        userRepository.save(user);
+        User saved = userRepository.save(user);
+
+        // Auto-provision a blank Shop for SHOP_OPERATOR users so they have something
+        // to manage in the dashboard. They fill in the details via Edit Shop Profile.
+        if (saved.getRole() == UserRole.SHOP_OPERATOR) {
+            Shop shop = Shop.builder()
+                    .operatorId(saved.getId())
+                    .shopName(saved.getFullName() != null ? saved.getFullName() + "'s Shop" : "Untitled Shop")
+                    .description("")
+                    .location("")
+                    .isOpen(false)
+                    .rating(0.0)
+                    .build();
+            shopRepository.save(shop);
+        }
+
+        // Auto-provision a DeliveryPersonnel profile so Module 3 has a record to toggle.
+        if (saved.getRole() == UserRole.DELIVERY_PERSONNEL) {
+            DeliveryPersonnel dp = DeliveryPersonnel.builder()
+                    .userId(saved.getId())
+                    .isActive(false)
+                    .totalDeliveries(0)
+                    .incentiveActive(false)
+                    .createdAt(java.util.Date.from(Instant.now()))
+                    .updatedAt(java.util.Date.from(Instant.now()))
+                    .build();
+            deliveryPersonnelRepository.save(dp);
+        }
 
         String otp = generateOtp();
         saveOtp(request.getEmail(), otp, OtpType.REGISTRATION);

@@ -24,6 +24,17 @@ spring.mail.properties.mail.smtp.starttls.enable=true
 # CORS
 cors.allowed-origins=http://localhost:3000,http://localhost:8081
 
+# Socket.IO (Module 3 real-time delivery dispatch + tracking)
+socketio.host=0.0.0.0
+socketio.port=9092
+
+# Delivery assignment defaults (Module 3 Wave C)
+delivery.campus.longitude=123.881
+delivery.campus.latitude=10.2945
+delivery.dispatch.timeoutSeconds=60
+delivery.dispatch.searchRadiusKm=5
+delivery.orderExpiry.minutes=10
+
 # Disable Spring Security's default login page for now
 spring.security.user.name=admin
 spring.security.user.password=admin
