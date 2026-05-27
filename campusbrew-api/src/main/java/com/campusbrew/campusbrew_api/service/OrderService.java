@@ -19,7 +19,12 @@ import java.util.*;
 @RequiredArgsConstructor
 public class OrderService {
 
-    private static final double DELIVERY_FEE = 10.0;
+    /**
+     * Total delivery charge paid by the customer. The platform keeps
+     * {@link #PLATFORM_COMMISSION} from this fee and the dasher gets the rest
+     * (or the full fee if their incentive is unlocked).
+     */
+    private static final double DELIVERY_FEE = 15.0;
     private static final double PLATFORM_COMMISSION = 5.0;
 
     private final OrderRepository orderRepository;
@@ -88,7 +93,8 @@ public class OrderService {
                     .build());
         }
 
-        double total = subtotal + DELIVERY_FEE + PLATFORM_COMMISSION;
+        // PLATFORM_COMMISSION is the platform's cut from DELIVERY_FEE, not a separate charge.
+        double total = subtotal + DELIVERY_FEE;
         Date now = Date.from(Instant.now());
 
         Order order = Order.builder()

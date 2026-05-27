@@ -23,9 +23,11 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     // JWT travels as URL query param so the backend AuthorizationListener can validate it.
+    // Allow polling as a fallback — websocket-only fails fast on networks that block
+    // ws:// (some campus Wi-Fi setups) and on Expo Web where ws upgrade can race.
     const next = io(SOCKET_BASE_URL, {
       query: { token },
-      transports: ['websocket'],
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,

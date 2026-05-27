@@ -30,6 +30,16 @@ public class DeliveryPersonnelController {
         }
     }
 
+    @GetMapping("/earnings/total")
+    public ResponseEntity<?> getMyEarningsTotal(@RequestHeader("Authorization") String authHeader) {
+        try {
+            String userId = userIdFrom(authHeader);
+            return ResponseEntity.ok(deliveryPersonnelService.getMyEarningsTotal(userId));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PutMapping("/availability")
     public ResponseEntity<?> setAvailability(
             @RequestHeader("Authorization") String authHeader,

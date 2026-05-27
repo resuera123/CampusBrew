@@ -17,8 +17,9 @@ import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { OrderService, PaymentMethod } from '../../services/OrderService';
 
-const DELIVERY_FEE = 10;
-const PLATFORM_COMMISSION = 5;
+// Customer-visible delivery charge. Backend's PLATFORM_COMMISSION (₱5) is
+// taken from this amount — not shown as a separate line on checkout.
+const DELIVERY_FEE = 15;
 
 export default function CheckoutScreen({ navigation }: any) {
   const { items, shopId, shopName, subtotal, clearCart, removeItem } = useCart();
@@ -30,7 +31,7 @@ export default function CheckoutScreen({ navigation }: any) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('GCASH');
   const [placing, setPlacing] = useState(false);
 
-  const total = subtotal + (items.length > 0 ? DELIVERY_FEE + PLATFORM_COMMISSION : 0);
+  const total = subtotal + (items.length > 0 ? DELIVERY_FEE : 0);
 
   const handleConfirm = async () => {
     if (items.length === 0 || !shopId) {
@@ -199,7 +200,6 @@ export default function CheckoutScreen({ navigation }: any) {
         <View style={styles.summary}>
           <Row label="Subtotal" value={`₱${subtotal.toFixed(0)}`} />
           <Row label="Delivery Fee" value={`₱${(items.length > 0 ? DELIVERY_FEE : 0).toFixed(0)}`} />
-          <Row label="Platform Commission" value={`₱${(items.length > 0 ? PLATFORM_COMMISSION : 0).toFixed(0)}`} />
           <View style={styles.divider} />
           <Row label="Total" value={`₱${total.toFixed(0)}`} bold />
         </View>

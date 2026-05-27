@@ -76,7 +76,15 @@ public class DeliveryFulfillmentService {
         applyTransition(order, OrderStatus.DELIVERED);
         Order saved = orderRepository.save(order);
 
-        // Log transaction (Module 4 extends fields like incentive bonuses).
+        // Incentive: deliveries 1-9 → ₱5 commission / ₱10 dasher earnings,
+        // delivery 10+ → commission waived, dasher keeps the full delivery fee.
+        // Check is on the post-increment count so the 10th delivery itself unlocks.
+        DeliveryPersonnel dp = deliveryPersonnelRepository.findByUserId(dpUserId).orElse(null);
+        int newTotal = (dp == null ? 0 : dp.getTotalDeliveries()) + 1;
+        boolean incentiveActive = newTotal >= 10;
+        double txCommission = incentiveActive ? 0.0 : saved.getPlatformCommission();
+        double txDpEarnings = saved.getDeliveryFee() - txCommission;
+
         Transaction tx = Transaction.builder()
                 .orderId(saved.getId())
                 .customerId(saved.getCustomerId())
@@ -84,21 +92,22 @@ public class DeliveryFulfillmentService {
                 .shopId(saved.getShopId())
                 .beverageCost(saved.getBeverageSubtotal())
                 .deliveryFee(saved.getDeliveryFee())
-                .platformCommission(saved.getPlatformCommission())
-                .dpEarnings(saved.getDeliveryFee() - saved.getPlatformCommission())
+                .platformCommission(txCommission)
+                .dpEarnings(txDpEarnings)
                 .paymentMethod(saved.getPaymentMethod())
                 .status(TransactionStatus.COMPLETED)
                 .createdAt(Date.from(Instant.now()))
                 .build();
         transactionRepository.save(tx);
 
-        // Free up the DP and bump their lifetime counter (Module 4 hooks incentives here).
-        deliveryPersonnelRepository.findByUserId(dpUserId).ifPresent(dp -> {
+        // Free up the DP, bump lifetime counter, flip incentiveActive on the doc.
+        if (dp != null) {
             dp.setCurrentOrderId(null);
-            dp.setTotalDeliveries(dp.getTotalDeliveries() + 1);
+            dp.setTotalDeliveries(newTotal);
+            dp.setIncentiveActive(incentiveActive);
             dp.setUpdatedAt(Date.from(Instant.now()));
             deliveryPersonnelRepository.save(dp);
-        });
+        }
 
         Map<String, Object> payload = statusPayload(saved);
         socketService.emitToUser(saved.getCustomerId(), "order:delivered", payload);

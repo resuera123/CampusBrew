@@ -1,11 +1,13 @@
 package com.campusbrew.campusbrew_api.service;
 
 import com.campusbrew.campusbrew_api.dto.DeliveryPersonnelDTO;
+import com.campusbrew.campusbrew_api.dto.EarningsTotalDTO;
 import com.campusbrew.campusbrew_api.model.DaySchedule;
 import com.campusbrew.campusbrew_api.model.DeliveryPersonnel;
 import com.campusbrew.campusbrew_api.model.User;
 import com.campusbrew.campusbrew_api.model.UserRole;
 import com.campusbrew.campusbrew_api.repository.DeliveryPersonnelRepository;
+import com.campusbrew.campusbrew_api.repository.TransactionRepository;
 import com.campusbrew.campusbrew_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
@@ -21,6 +23,7 @@ public class DeliveryPersonnelService {
 
     private final DeliveryPersonnelRepository deliveryPersonnelRepository;
     private final UserRepository userRepository;
+    private final TransactionRepository transactionRepository;
 
     public DeliveryPersonnelDTO getMyProfile(String userId) {
         return DeliveryPersonnelDTO.fromEntity(requireProfile(userId));
@@ -59,6 +62,25 @@ public class DeliveryPersonnelService {
      * user is a DELIVERY_PERSONNEL but the doc is missing (covers accounts that
      * pre-date Wave A's auto-provision).
      */
+    /**
+     * Lifetime earnings for the dasher. Sums {@code dpEarnings} from every
+     * completed Transaction. Per the incentive rule, each row already encodes
+     * the right per-delivery payout (₱10 pre-incentive, ₱15 post-incentive).
+     */
+    public EarningsTotalDTO getMyEarningsTotal(String userId) {
+        DeliveryPersonnel dp = requireProfile(userId);
+        double total = transactionRepository
+                .findByDeliveryPersonnelIdOrderByCreatedAtDesc(userId)
+                .stream()
+                .mapToDouble(t -> t.getDpEarnings())
+                .sum();
+        return EarningsTotalDTO.builder()
+                .totalEarnings(Math.round(total * 100.0) / 100.0)
+                .totalDeliveries(dp.getTotalDeliveries())
+                .incentiveActive(dp.isIncentiveActive())
+                .build();
+    }
+
     private DeliveryPersonnel requireProfile(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));

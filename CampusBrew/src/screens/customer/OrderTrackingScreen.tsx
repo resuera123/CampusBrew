@@ -205,11 +205,17 @@ export default function OrderTrackingScreen({ route, navigation }: any) {
 
         <Text style={styles.sectionTitle}>Delivery</Text>
         <View style={styles.metaCard}>
-          <Text style={styles.metaRow}>📍 {order.deliveryLocation}</Text>
-          <Text style={styles.metaRow}>
-            💳 {order.paymentMethod === 'COD' ? 'Cash on Delivery' : 'GCash'}
-            {order.paymentStatus ? ` · ${formatPaymentStatus(order.paymentStatus)}` : ''}
-          </Text>
+          <View style={styles.metaRow}>
+            <Ionicons name="location-outline" size={16} color={COLORS.primary} />
+            <Text style={styles.metaText}>{order.deliveryLocation}</Text>
+          </View>
+          <View style={styles.metaRow}>
+            <Ionicons name="card-outline" size={16} color={COLORS.primary} />
+            <Text style={styles.metaText}>
+              {order.paymentMethod === 'COD' ? 'Cash on Delivery' : 'GCash'}
+              {order.paymentStatus ? ` · ${formatPaymentStatus(order.paymentStatus)}` : ''}
+            </Text>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -356,5 +362,6 @@ const styles = StyleSheet.create({
   itemMods: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, marginTop: 1 },
   itemPrice: { fontSize: SIZES.captionSize, color: COLORS.text },
   metaCard: { backgroundColor: COLORS.white, borderRadius: 12, padding: 14 },
-  metaRow: { fontSize: SIZES.captionSize, color: COLORS.text, paddingVertical: 4 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
+  metaText: { flex: 1, fontSize: SIZES.captionSize, color: COLORS.text },
 });

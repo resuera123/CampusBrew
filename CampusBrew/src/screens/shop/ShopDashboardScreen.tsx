@@ -24,6 +24,8 @@ export default function ShopDashboardScreen({ navigation }: any) {
   const [pendingCount, setPendingCount] = useState(0);
   const [preparingCount, setPreparingCount] = useState(0);
   const [readyCount, setReadyCount] = useState(0);
+  const [totalSales, setTotalSales] = useState(0);
+  const [totalOrders, setTotalOrders] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,14 +36,19 @@ export default function ShopDashboardScreen({ navigation }: any) {
       setError(null);
       const myShop = await ShopService.getMyShop(token);
       setShop(myShop);
-      const [placed, preparing, ready] = await Promise.all([
+      const [placed, preparing, ready, sales] = await Promise.all([
         ShopOrderService.getQueue(myShop.id, ['PLACED'], token),
         ShopOrderService.getQueue(myShop.id, ['PREPARING'], token),
-        ShopOrderService.getQueue(myShop.id, ['READY_FOR_PICKUP'], token),
+        // "Ready" from the shop's POV = waiting for or being picked up by a rider.
+        // Once the rider has the order in hand (OUT_FOR_DELIVERY) the shop is done with it.
+        ShopOrderService.getQueue(myShop.id, ['READY_FOR_PICKUP', 'ASSIGNED'], token),
+        ShopService.getMySalesTotal(token),
       ]);
       setPendingCount(placed.length);
       setPreparingCount(preparing.length);
       setReadyCount(ready.length);
+      setTotalSales(sales.totalSales);
+      setTotalOrders(sales.totalOrders);
     } catch (e: any) {
       setError(e.message || 'Could not load shop dashboard');
     } finally {
@@ -53,15 +60,26 @@ export default function ShopDashboardScreen({ navigation }: any) {
   useFocusEffect(
     useCallback(() => {
       load();
+      // Belt-and-suspenders poll. The socket listener below catches every event,
+      // but if one is ever missed (reconnect blip, etc.) this guarantees we never
+      // sit on stale Pending/Preparing/Ready counts for more than 10s.
+      const interval = setInterval(load, 10_000);
+      return () => clearInterval(interval);
     }, [load]),
   );
 
-  // Realtime: refresh the counts whenever any order tied to this shop changes status.
+  // Realtime: refresh on any order event that could touch this shop's counts.
   useEffect(() => {
     if (!socket) return;
     const onAny = () => load();
     socket.on('order:statusUpdate', onAny);
-    return () => { socket.off('order:statusUpdate', onAny); };
+    socket.on('order:assigned', onAny);
+    socket.on('order:delivered', onAny);
+    return () => {
+      socket.off('order:statusUpdate', onAny);
+      socket.off('order:assigned', onAny);
+      socket.off('order:delivered', onAny);
+    };
   }, [socket, load]);
 
   if (loading) {
@@ -99,6 +117,19 @@ export default function ShopDashboardScreen({ navigation }: any) {
         </View>
 
         {error && <Text style={styles.errorText}>{error}</Text>}
+
+        <View style={styles.salesCard}>
+          <View style={styles.salesIconWrap}>
+            <Ionicons name="trending-up-outline" size={22} color={COLORS.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.salesLabel}>Total Sales</Text>
+            <Text style={styles.salesValue}>₱{totalSales.toFixed(2)}</Text>
+            <Text style={styles.salesSubtitle}>
+              {totalOrders} order{totalOrders !== 1 ? 's' : ''} delivered · beverages only
+            </Text>
+          </View>
+        </View>
 
         <View style={styles.statRow}>
           <StatCard
@@ -221,6 +252,28 @@ const styles = StyleSheet.create({
   statusTextOpen: { color: '#1E8E3E' },
   statusTextClosed: { color: '#D93025' },
   errorText: { color: '#D93025', marginBottom: 12 },
+  salesCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.gold,
+  },
+  salesIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.backgroundSecondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  salesLabel: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, fontWeight: '600' },
+  salesValue: { fontSize: 22, fontWeight: '700', color: COLORS.text, marginTop: 2 },
+  salesSubtitle: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, marginTop: 2 },
   statRow: { flexDirection: 'row', gap: 10, marginBottom: 24 },
   statCard: {
     flex: 1,

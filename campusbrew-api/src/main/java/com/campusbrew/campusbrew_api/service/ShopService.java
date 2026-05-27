@@ -1,13 +1,17 @@
 package com.campusbrew.campusbrew_api.service;
 
 import com.campusbrew.campusbrew_api.dto.MenuItemDTO;
+import com.campusbrew.campusbrew_api.dto.SalesTotalDTO;
 import com.campusbrew.campusbrew_api.dto.ShopDTO;
 import com.campusbrew.campusbrew_api.dto.UpdateShopDTO;
 import com.campusbrew.campusbrew_api.model.MenuItem;
+import com.campusbrew.campusbrew_api.model.Order;
+import com.campusbrew.campusbrew_api.model.OrderStatus;
 import com.campusbrew.campusbrew_api.model.Shop;
 import com.campusbrew.campusbrew_api.model.User;
 import com.campusbrew.campusbrew_api.model.UserRole;
 import com.campusbrew.campusbrew_api.repository.MenuItemRepository;
+import com.campusbrew.campusbrew_api.repository.OrderRepository;
 import com.campusbrew.campusbrew_api.repository.ShopRepository;
 import com.campusbrew.campusbrew_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +27,7 @@ public class ShopService {
     private final ShopRepository shopRepository;
     private final MenuItemRepository menuItemRepository;
     private final UserRepository userRepository;
+    private final OrderRepository orderRepository;
 
     public List<ShopDTO> getAllActiveShops() {
         return shopRepository.findByIsOpenTrue().stream()
@@ -86,6 +91,37 @@ public class ShopService {
     public MenuItem requireMenuItem(String menuItemId) {
         return menuItemRepository.findById(menuItemId)
                 .orElseThrow(() -> new RuntimeException("Menu item not found: " + menuItemId));
+    }
+
+    /**
+     * Lifetime sales total for the operator's shop. Sums beverageSubtotal (not
+     * totalAmount — delivery fee + platform commission are not the shop's revenue)
+     * across every DELIVERED order. Verified by operator role + ownership.
+     */
+    public SalesTotalDTO getMySalesTotal(String operatorUserId) {
+        Shop shop = requireOwnedShopByUser(operatorUserId);
+        List<Order> delivered = orderRepository.findByShopIdOrderByCreatedAtDesc(shop.getId()).stream()
+                .filter(o -> o.getOrderStatus() == OrderStatus.DELIVERED)
+                .toList();
+        double total = delivered.stream().mapToDouble(Order::getBeverageSubtotal).sum();
+        return SalesTotalDTO.builder()
+                .totalSales(round(total))
+                .totalOrders(delivered.size())
+                .build();
+    }
+
+    private Shop requireOwnedShopByUser(String operatorUserId) {
+        User user = userRepository.findById(operatorUserId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (user.getRole() != UserRole.SHOP_OPERATOR) {
+            throw new RuntimeException("Only shop operators can read sales totals");
+        }
+        return shopRepository.findByOperatorId(operatorUserId).stream().findFirst()
+                .orElseThrow(() -> new RuntimeException("No shop is registered to this operator"));
+    }
+
+    private double round(double v) {
+        return Math.round(v * 100.0) / 100.0;
     }
 
     public ShopDTO updateShop(String operatorUserId, String shopId, UpdateShopDTO dto) {

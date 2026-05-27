@@ -17,12 +17,14 @@ import * as Location from 'expo-location';
 import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
-import { DeliveryService, DeliveryPersonnelProfile } from '../../services/DeliveryService';
+import { DeliveryService, DeliveryPersonnelProfile, EarningsTotal, DaySchedule } from '../../services/DeliveryService';
 
 export default function DeliveryDashboardScreen({ navigation }: any) {
   const { token, user } = useAuth();
   const { socket } = useSocket();
   const [profile, setProfile] = useState<DeliveryPersonnelProfile | null>(null);
+  const [earnings, setEarnings] = useState<EarningsTotal | null>(null);
+  const [, setNow] = useState(Date.now()); // tick to refresh "shift ends in"
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [togglingActive, setTogglingActive] = useState(false);
@@ -33,8 +35,12 @@ export default function DeliveryDashboardScreen({ navigation }: any) {
     if (!token) return;
     try {
       setError(null);
-      const p = await DeliveryService.getMyProfile(token);
+      const [p, e] = await Promise.all([
+        DeliveryService.getMyProfile(token),
+        DeliveryService.getMyEarningsTotal(token),
+      ]);
       setProfile(p);
+      setEarnings(e);
     } catch (e: any) {
       setError(e.message || 'Could not load delivery profile');
     } finally {
@@ -42,6 +48,12 @@ export default function DeliveryDashboardScreen({ navigation }: any) {
       setRefreshing(false);
     }
   }, [token]);
+
+  // Tick once a minute so "shift ends in X" stays accurate without a refresh.
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -173,6 +185,25 @@ export default function DeliveryDashboardScreen({ navigation }: any) {
           )}
         </View>
 
+        <View style={styles.salesCard}>
+          <View style={styles.salesIconWrap}>
+            <Ionicons name="cash-outline" size={22} color={COLORS.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.salesLabel}>Total Earnings</Text>
+            <Text style={styles.salesValue}>₱{(earnings?.totalEarnings ?? 0).toFixed(2)}</Text>
+            <Text style={styles.salesSubtitle}>
+              {earnings?.totalDeliveries ?? 0} delivered ·{' '}
+              {earnings?.incentiveActive ? '₱15 / delivery (incentive)' : '₱10 / delivery'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.shiftRow}>
+          <Ionicons name="time-outline" size={16} color={COLORS.primary} />
+          <Text style={styles.shiftText}>{shiftRemainingLabel(profile?.weeklySchedule)}</Text>
+        </View>
+
         <View style={styles.statRow}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{profile?.totalDeliveries ?? 0}</Text>
@@ -228,6 +259,44 @@ export default function DeliveryDashboardScreen({ navigation }: any) {
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+const DAYS_OF_WEEK = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+
+/**
+ * Reads today's entry from the weekly schedule and returns a human-friendly
+ * "X before shift ends" string. Returns "No schedule set" when none configured,
+ * "Off today" when today's not enabled, or "Shift ends in Xh Ym" while on shift.
+ */
+function shiftRemainingLabel(schedule?: DaySchedule[] | null): string {
+  if (!schedule || schedule.length === 0) return 'No schedule set';
+  const now = new Date();
+  const todayKey = DAYS_OF_WEEK[now.getDay()];
+  const today = schedule.find((d) => d.dayOfWeek === todayKey);
+  if (!today || !today.enabled) return 'Off today';
+
+  const [endH, endM] = (today.endTime || '').split(':').map((n) => parseInt(n, 10));
+  if (Number.isNaN(endH) || Number.isNaN(endM)) return 'Shift hours not set';
+
+  const [startH, startM] = (today.startTime || '').split(':').map((n) => parseInt(n, 10));
+  if (!Number.isNaN(startH) && !Number.isNaN(startM)) {
+    const startMinutes = startH * 60 + startM;
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    if (nowMinutes < startMinutes) {
+      const remaining = startMinutes - nowMinutes;
+      const h = Math.floor(remaining / 60);
+      const m = remaining % 60;
+      return `Shift starts in ${h > 0 ? `${h}h ` : ''}${m}m`;
+    }
+  }
+
+  const endMinutes = endH * 60 + endM;
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const remaining = endMinutes - nowMinutes;
+  if (remaining <= 0) return 'Shift ended';
+  const h = Math.floor(remaining / 60);
+  const m = remaining % 60;
+  return `Shift ends in ${h > 0 ? `${h}h ` : ''}${m}m`;
 }
 
 function formatRelative(iso: string): string {
@@ -291,6 +360,31 @@ const styles = StyleSheet.create({
   statusValue: { fontSize: 22, fontWeight: '700', color: COLORS.textSecondary, marginTop: 2 },
   statusValueActive: { color: COLORS.primary },
   statusSub: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, marginTop: 4 },
+  salesCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.gold,
+  },
+  salesIconWrap: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: COLORS.backgroundSecondary,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  salesLabel: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, fontWeight: '600' },
+  salesValue: { fontSize: 22, fontWeight: '700', color: COLORS.text, marginTop: 2 },
+  salesSubtitle: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, marginTop: 2 },
+  shiftRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 14, paddingVertical: 8,
+    marginBottom: 14,
+  },
+  shiftText: { fontSize: SIZES.captionSize, color: COLORS.text, fontWeight: '500' },
   statRow: { flexDirection: 'row', gap: 10, marginBottom: 24 },
   statCard: {
     flex: 1,

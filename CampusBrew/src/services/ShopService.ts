@@ -28,6 +28,11 @@ export interface UpdateMenuItemRequest {
   customizationOptions?: CustomizationOptions;
 }
 
+export interface SalesTotal {
+  totalSales: number;
+  totalOrders: number;
+}
+
 export interface UpdateShopRequest {
   shopName?: string;
   description?: string;
@@ -129,6 +134,15 @@ export const ShopService = {
   },
 
   // ─── Shop Operator: own shop ───
+  async getMySalesTotal(token: string): Promise<SalesTotal> {
+    const res = await fetch(`${API_BASE_URL}/api/shops/sales/total`, {
+      headers: authHeaders(token),
+    });
+    const json = await safeJson(res);
+    if (!res.ok) throw new Error(json.error || 'Failed to load sales total');
+    return json;
+  },
+
   async getMyShop(token: string): Promise<Shop> {
     const res = await fetch(`${API_BASE_URL}/api/shops/me`, {
       headers: authHeaders(token),

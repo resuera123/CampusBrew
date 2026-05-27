@@ -69,6 +69,16 @@ public class ShopController {
         }
     }
 
+    @GetMapping("/sales/total")
+    public ResponseEntity<?> getMySalesTotal(@RequestHeader("Authorization") String authHeader) {
+        try {
+            String userId = jwtService.extractUserId(authHeader.replace("Bearer ", ""));
+            return ResponseEntity.ok(shopService.getMySalesTotal(userId));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<?> updateShop(
             @RequestHeader("Authorization") String authHeader,

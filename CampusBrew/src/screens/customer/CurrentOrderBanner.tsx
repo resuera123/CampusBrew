@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Animated,
   PanResponder,
-  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -16,8 +15,10 @@ import { useSocket } from '../../context/SocketContext';
 import { OrderService, Order, OrderStatus, StatusHistoryEntry } from '../../services/OrderService';
 
 const TERMINAL: OrderStatus[] = ['DELIVERED', 'CANCELLED'];
-const COLLAPSED_HEIGHT = 110;
-const EXPANDED_HEIGHT = Math.min(Math.round(Dimensions.get('window').height * 0.65), 560);
+// Tight enough that the collapsed pill just hugs its row, and the expanded
+// container exactly fits the 6-step timeline + CTA with no trailing whitespace.
+const COLLAPSED_HEIGHT = 64;
+const EXPANDED_HEIGHT = 332;
 const DRAG_RANGE = EXPANDED_HEIGHT - COLLAPSED_HEIGHT;
 
 const STATUS_BLURBS: Record<OrderStatus, { label: string; tone: 'info' | 'progress' | 'done' }> = {
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
     bottom: 12,
     backgroundColor: COLORS.white,
     borderRadius: 14,
-    paddingTop: 6,
+    paddingTop: 4,
     paddingHorizontal: 12,
     shadowColor: '#000',
     shadowOpacity: 0.12,
@@ -258,38 +259,39 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   dragHandle: {
-    width: 36, height: 4, borderRadius: 2,
+    width: 36, height: 3, borderRadius: 2,
     backgroundColor: COLORS.border,
-    alignSelf: 'center', marginBottom: 8,
+    alignSelf: 'center', marginBottom: 4,
   },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingBottom: 12 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingBottom: 8 },
   iconWrap: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 32, height: 32, borderRadius: 16,
     backgroundColor: COLORS.backgroundSecondary,
     justifyContent: 'center', alignItems: 'center',
   },
   title: { fontSize: SIZES.captionSize, fontWeight: '700', color: COLORS.text },
-  subtitle: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, marginTop: 2 },
+  subtitle: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, marginTop: 1 },
 
   expandedBody: {
-    paddingTop: 4,
-    paddingBottom: 16,
+    paddingTop: 6,
+    paddingBottom: 10,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    marginTop: 4,
   },
   sectionTitle: {
-    fontSize: SIZES.captionSize,
+    fontSize: SIZES.smallSize,
     fontWeight: '700',
-    color: COLORS.text,
-    marginTop: 12,
-    marginBottom: 8,
+    color: COLORS.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 4,
+    marginBottom: 6,
   },
 
   timelineRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  timelineGutter: { width: 22, alignItems: 'center' },
+  timelineGutter: { width: 20, alignItems: 'center' },
   dot: {
-    width: 16, height: 16, borderRadius: 8,
+    width: 14, height: 14, borderRadius: 7,
     backgroundColor: COLORS.backgroundSecondary,
     borderWidth: 2, borderColor: COLORS.border,
     justifyContent: 'center', alignItems: 'center',
@@ -299,23 +301,23 @@ const styles = StyleSheet.create({
   dotCurrent: { backgroundColor: COLORS.gold, borderColor: COLORS.gold },
   line: {
     width: 2, flex: 1, backgroundColor: COLORS.border,
-    minHeight: 20, alignSelf: 'center',
+    minHeight: 14, alignSelf: 'center',
   },
   lineReached: { backgroundColor: COLORS.primary },
-  timelineBody: { flex: 1, paddingLeft: 8, paddingBottom: 10 },
+  timelineBody: { flex: 1, paddingLeft: 8, paddingBottom: 6 },
   timelineLabel: { fontSize: SIZES.smallSize, color: COLORS.textSecondary },
   timelineLabelReached: { color: COLORS.text, fontWeight: '600' },
-  timelineTimestamp: { fontSize: SIZES.tinySize, color: COLORS.textSecondary, marginTop: 1 },
+  timelineTimestamp: { fontSize: SIZES.tinySize, color: COLORS.textSecondary, marginTop: 0 },
 
   openBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    marginTop: 10,
-    height: 40,
+    marginTop: 6,
+    height: 36,
     backgroundColor: COLORS.primary,
-    borderRadius: 20,
+    borderRadius: 18,
   },
-  openBtnText: { color: COLORS.white, fontWeight: '700', fontSize: SIZES.captionSize },
+  openBtnText: { color: COLORS.white, fontWeight: '700', fontSize: SIZES.smallSize },
 });

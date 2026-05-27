@@ -17,6 +17,12 @@ export interface DaySchedule {
   endTime: string;   // "HH:mm"
 }
 
+export interface EarningsTotal {
+  totalEarnings: number;
+  totalDeliveries: number;
+  incentiveActive: boolean;
+}
+
 export interface DeliveryPersonnelProfile {
   id: string;
   userId: string;
@@ -48,6 +54,15 @@ function authHeaders(token: string) {
 }
 
 export const DeliveryService = {
+  async getMyEarningsTotal(token: string): Promise<EarningsTotal> {
+    const res = await fetch(`${API_BASE_URL}/api/delivery/earnings/total`, {
+      headers: authHeaders(token),
+    });
+    const json = await safeJson(res);
+    if (!res.ok) throw new Error(json.error || 'Failed to load earnings total');
+    return json;
+  },
+
   async getMyProfile(token: string): Promise<DeliveryPersonnelProfile> {
     const res = await fetch(`${API_BASE_URL}/api/delivery/me`, {
       headers: authHeaders(token),
