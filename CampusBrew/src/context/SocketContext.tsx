@@ -1,10 +1,94 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
-import { SOCKET_BASE_URL } from '../constants/api';
+import { SOCKET_URL } from '../constants/api';
 import { useAuth } from './AuthContext';
 
+type Handler = (payload: any) => void;
+
+/**
+ * Minimal event-emitter over a plain WebSocket.
+ *
+ * Keeps the `on` / `off` surface the screens already use, so swapping the
+ * backend off Socket.IO (which needed its own port) changed nothing for them.
+ */
+export class RealtimeSocket {
+  private ws: WebSocket | null = null;
+  private handlers = new Map<string, Set<Handler>>();
+  private retries = 0;
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  private closed = false;
+
+  constructor(private url: string, private onStatus: (connected: boolean) => void) {
+    this.connect();
+  }
+
+  private connect() {
+    const ws = new WebSocket(this.url);
+    this.ws = ws;
+
+    ws.onopen = () => {
+      this.retries = 0;
+      this.onStatus(true);
+    };
+
+    ws.onmessage = (e) => {
+      try {
+        const { event, data } = JSON.parse(e.data as string);
+        this.handlers.get(event)?.forEach((h) => h(data));
+      } catch {
+        // Ignore frames that aren't our JSON envelope.
+      }
+    };
+
+    ws.onerror = () => {
+      // A close always follows, which is where reconnection is handled.
+    };
+
+    ws.onclose = () => {
+      this.onStatus(false);
+      this.scheduleReconnect();
+    };
+  }
+
+  private scheduleReconnect() {
+    if (this.closed) return;
+    // Exponential backoff capped at 10s, so a sleeping server doesn't get hammered.
+    const delay = Math.min(1000 * 2 ** this.retries++, 10000);
+    this.timer = setTimeout(() => this.connect(), delay);
+  }
+
+  on(event: string, handler: Handler) {
+    if (!this.handlers.has(event)) this.handlers.set(event, new Set());
+    this.handlers.get(event)!.add(handler);
+  }
+
+  off(event: string, handler: Handler) {
+    this.handlers.get(event)?.delete(handler);
+  }
+
+  private send(event: string, room: string) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ event, room }));
+    }
+  }
+
+  /** Subscribe to updates for one order, in addition to this user's own feed. */
+  joinOrder(orderId: string) {
+    this.send('join', `order:${orderId}`);
+  }
+
+  leaveOrder(orderId: string) {
+    this.send('leave', `order:${orderId}`);
+  }
+
+  close() {
+    this.closed = true;
+    if (this.timer) clearTimeout(this.timer);
+    this.ws?.close();
+  }
+}
+
 interface SocketContextType {
-  socket: Socket | null;
+  socket: RealtimeSocket | null;
   connected: boolean;
 }
 
@@ -12,7 +96,7 @@ const SocketContext = createContext<SocketContextType>({ socket: null, connected
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const { token } = useAuth();
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [socket, setSocket] = useState<RealtimeSocket | null>(null);
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
@@ -22,27 +106,17 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    // JWT travels as URL query param so the backend AuthorizationListener can validate it.
-    // Allow polling as a fallback — websocket-only fails fast on networks that block
-    // ws:// (some campus Wi-Fi setups) and on Expo Web where ws upgrade can race.
-    const next = io(SOCKET_BASE_URL, {
-      query: { token },
-      transports: ['polling', 'websocket'],
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-    });
-
-    next.on('connect', () => setConnected(true));
-    next.on('disconnect', () => setConnected(false));
-    next.on('connect_error', (err) => {
-      console.warn('[socket] connect_error:', err.message);
-    });
+    // JWT travels as a URL query param so the handshake interceptor can reject
+    // the upgrade before a session is ever opened.
+    const next = new RealtimeSocket(
+      `${SOCKET_URL}?token=${encodeURIComponent(token)}`,
+      setConnected,
+    );
 
     setSocket(next);
 
     return () => {
-      next.disconnect();
+      next.close();
       setSocket(null);
       setConnected(false);
     };

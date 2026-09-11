@@ -28,7 +28,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow CampusBrew to use your location for delivery assignment near your area."
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }

@@ -4,10 +4,9 @@ import { NativeModules } from 'react-native';
 // Leave empty to detect automatically.
 const MANUAL_HOST = '';
 
-const PROD_BASE = 'https://your-render-url.onrender.com';
+const PROD_BASE = 'https://campusbrew-backend.onrender.com';
 
 const API_PORT = 8080;
-const SOCKET_PORT = 9092;
 
 // Metro serves the JS bundle from the dev machine, so the bundle URL already
 // holds that machine's current IP. Reading it here means the API host follows
@@ -24,4 +23,7 @@ function detectDevHost(): string {
 const DEV_HOST = `http://${detectDevHost()}`;
 
 export const API_BASE_URL = __DEV__ ? `${DEV_HOST}:${API_PORT}` : PROD_BASE;
-export const SOCKET_BASE_URL = __DEV__ ? `${DEV_HOST}:${SOCKET_PORT}` : PROD_BASE;
+
+// Realtime shares the API's port and host, so it works behind hosts that route
+// public traffic to a single port. http -> ws, https -> wss.
+export const SOCKET_URL = `${API_BASE_URL.replace(/^http/, 'ws')}/ws`;

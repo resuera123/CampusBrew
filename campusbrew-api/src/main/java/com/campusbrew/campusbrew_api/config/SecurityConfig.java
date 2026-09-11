@@ -36,6 +36,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/orders/**").permitAll()
                 .requestMatchers("/api/menus/**").permitAll()
                 .requestMatchers("/api/delivery/**").permitAll()
+                // The WebSocket handshake authenticates via JwtHandshakeInterceptor,
+                // which rejects the upgrade before a session is ever opened.
+                .requestMatchers("/ws", "/ws/**").permitAll()
                 .anyRequest().authenticated()
             );
         return http.build();

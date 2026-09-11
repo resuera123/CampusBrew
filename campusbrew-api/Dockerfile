@@ -23,8 +23,8 @@ COPY --from=build /build/target/*.jar app.jar
 RUN groupadd --system spring && useradd --system --gid spring spring
 USER spring
 
-# 8080 = REST API, 9092 = Socket.IO
-EXPOSE 8080 9092
+# REST API and the /ws realtime endpoint share this one port.
+EXPOSE 8080
 
 ENV SPRING_PROFILES_ACTIVE=prod
 
