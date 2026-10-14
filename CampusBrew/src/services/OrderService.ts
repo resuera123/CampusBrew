@@ -42,6 +42,7 @@ export interface CreateOrderItem {
   sugarLevel?: string;
   temperature?: string;
   addOns?: string[];
+  optionsHash?: string; // v2.0 FR-2.2
 }
 
 export interface CreateOrderRequest {

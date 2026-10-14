@@ -49,6 +49,11 @@ export default function ProfileScreen({ navigation }: any) {
           <Text style={styles.outlinedButtonText}>Edit Profile</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={[styles.outlinedButton, { marginTop: 16 }]} onPress={() => navigation.navigate('PaymentCenter')} activeOpacity={0.7}>
+          <Ionicons name="card-outline" size={20} color="#94353E" style={{ marginRight: 8 }} />
+          <Text style={styles.outlinedButtonText}>Payment Center</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={[styles.outlinedButton, { marginTop: 16, borderColor: '#E8E8E8' }]} onPress={() => setLogoutOpen(true)} activeOpacity={0.7}>
           <Ionicons name="log-out-outline" size={20} color="#94353E" style={{ marginRight: 8 }} />
           <Text style={styles.outlinedButtonText}>Log Out</Text>

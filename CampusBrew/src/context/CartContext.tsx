@@ -14,13 +14,32 @@ export interface CartItem {
   temperature?: string;
   addOns: string[];
   unitPrice: number;
+  optionsHash: string; // v2.0 FR-2.2 — identity for merging identical lines
+}
+
+// v2.0 FR-2.2 — stable key over itemId + options (add-ons order-independent).
+// Two lines with the same key are the "same item" and are merged.
+export function optionsHashOf(i: {
+  menuItemId: string;
+  size?: string;
+  sugarLevel?: string;
+  temperature?: string;
+  addOns?: string[];
+}): string {
+  const addOns = [...(i.addOns ?? [])].map((a) => a.trim().toLowerCase()).sort().join('|');
+  return [i.menuItemId, i.size ?? '', i.sugarLevel ?? '', i.temperature ?? '', addOns].join('::');
+}
+
+export interface AddItemResult {
+  merged: boolean;
+  item: CartItem;
 }
 
 interface CartContextType {
   items: CartItem[];
   shopId: string | null;
   shopName: string | null;
-  addItem: (item: Omit<CartItem, 'cartItemId'>) => void;
+  addItem: (item: Omit<CartItem, 'cartItemId' | 'optionsHash'>) => AddItemResult;
   removeItem: (cartItemId: string) => void;
   updateQuantity: (cartItemId: string, quantity: number) => void;
   replaceCart: (items: CartItem[], shopId: string, shopName: string) => void;
@@ -39,20 +58,33 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const [shopId, setShopId] = useState<string | null>(null);
   const [shopName, setShopName] = useState<string | null>(null);
 
-  const addItem = (item: Omit<CartItem, 'cartItemId'>) => {
-    setItems((prev) => {
-      // Cart is single-shop. Reset if a different shop is added.
-      if (shopId && shopId !== item.shopId) {
-        setShopId(item.shopId);
-        setShopName(item.shopName);
-        return [{ ...item, cartItemId: newCartItemId() }];
-      }
-      if (!shopId) {
-        setShopId(item.shopId);
-        setShopName(item.shopName);
-      }
-      return [...prev, { ...item, cartItemId: newCartItemId() }];
-    });
+  const addItem = (item: Omit<CartItem, 'cartItemId' | 'optionsHash'>): AddItemResult => {
+    const hash = optionsHashOf(item);
+
+    // Cart is single-shop. Reset if a different shop is added.
+    if (shopId && shopId !== item.shopId) {
+      const line: CartItem = { ...item, cartItemId: newCartItemId(), optionsHash: hash };
+      setItems([line]);
+      setShopId(item.shopId);
+      setShopName(item.shopName);
+      return { merged: false, item: line };
+    }
+    if (!shopId) {
+      setShopId(item.shopId);
+      setShopName(item.shopName);
+    }
+
+    // v2.0 FR-2.2 — merge into an existing identical line instead of appending.
+    const existing = items.find((i) => i.optionsHash === hash);
+    if (existing) {
+      const updated: CartItem = { ...existing, quantity: existing.quantity + item.quantity };
+      setItems((prev) => prev.map((i) => (i.cartItemId === existing.cartItemId ? updated : i)));
+      return { merged: true, item: updated };
+    }
+
+    const line: CartItem = { ...item, cartItemId: newCartItemId(), optionsHash: hash };
+    setItems((prev) => [...prev, line]);
+    return { merged: false, item: line };
   };
 
   const removeItem = (cartItemId: string) => {

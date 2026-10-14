@@ -14,7 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../constants/theme';
 import { ShopService, MenuItem } from '../../services/ShopService';
-import { useCart, computeUnitPrice } from '../../context/CartContext';
+import { useCart, computeUnitPrice, AddItemResult } from '../../context/CartContext';
+import AddToCartSheet from '../../components/AddToCartSheet';
 
 export default function CustomizeItemScreen({ navigation, route }: any) {
   const { menuItemId, shopId } = route.params || {};
@@ -30,6 +31,7 @@ export default function CustomizeItemScreen({ navigation, route }: any) {
   const [temperature, setTemperature] = useState<string | undefined>();
   const [addOns, setAddOns] = useState<string[]>([]);
   const [quantity, setQuantity] = useState(1);
+  const [addResult, setAddResult] = useState<AddItemResult | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -91,7 +93,7 @@ export default function CustomizeItemScreen({ navigation, route }: any) {
 
   const doAdd = () => {
     if (!item) return;
-    addItem({
+    const result = addItem({
       menuItemId: item.id,
       shopId: item.shopId,
       shopName: shopName || 'Shop',
@@ -104,8 +106,16 @@ export default function CustomizeItemScreen({ navigation, route }: any) {
       addOns,
       unitPrice,
     });
-    navigation.goBack();
+    // v2.0 FR-2.2 — confirm with a sheet instead of silently popping the screen.
+    setAddResult(result);
   };
+
+  const optionsSummary = useMemo(
+    () => [size, temperature, sugarLevel && `${sugarLevel} sugar`, ...addOns]
+      .filter(Boolean)
+      .join(' · '),
+    [size, temperature, sugarLevel, addOns],
+  );
 
   if (loading) {
     return (
@@ -254,6 +264,17 @@ export default function CustomizeItemScreen({ navigation, route }: any) {
           <Text style={styles.addToCartText}>Add to Cart — ₱{totalPrice.toFixed(0)}</Text>
         </TouchableOpacity>
       </View>
+
+      <AddToCartSheet
+        visible={!!addResult}
+        merged={addResult?.merged ?? false}
+        itemName={addResult?.item.itemName ?? ''}
+        optionsSummary={optionsSummary}
+        quantity={addResult?.item.quantity ?? 0}
+        lineTotal={(addResult?.item.unitPrice ?? 0) * (addResult?.item.quantity ?? 0)}
+        onViewCart={() => { setAddResult(null); navigation.navigate('Checkout'); }}
+        onContinue={() => { setAddResult(null); navigation.goBack(); }}
+      />
     </SafeAreaView>
   );
 }

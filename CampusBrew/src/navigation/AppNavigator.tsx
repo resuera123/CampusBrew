@@ -25,6 +25,8 @@ import ReorderCartScreen from '../screens/customer/ReorderCartScreen';
 import OrdersPlaceholderScreen from '../screens/customer/OrdersPlaceholderScreen';
 import ProfileScreen from '../screens/customer/ProfileScreen';
 import EditProfileScreen from '../screens/customer/EditProfileScreen';
+import PaymentCenterScreen from '../screens/customer/PaymentCenterScreen';
+import PaymentReceiptScreen from '../screens/customer/PaymentReceiptScreen';
 
 // Delivery screens
 import DeliveryDashboardScreen from '../screens/delivery/DeliveryDashboardScreen';
@@ -88,6 +90,8 @@ export function CustomerStack() {
       <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
       <Stack.Screen name="Notifications" component={NotificationScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="PaymentCenter" component={PaymentCenterScreen} />
+      <Stack.Screen name="PaymentReceipt" component={PaymentReceiptScreen} />
       <Stack.Screen name="AccountVerification" component={AccountVerificationScreen} />
       <Stack.Screen name="VerifiedSuccess" component={VerifiedSuccessScreen} />
     </Stack.Navigator>
@@ -117,6 +121,8 @@ export function DeliveryStack() {
       <Stack.Screen name="DeliveryHistory" component={DeliveryHistoryScreen} />
       <Stack.Screen name="AssignedDelivery" component={AssignedDeliveryScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="PaymentCenter" component={PaymentCenterScreen} />
+      <Stack.Screen name="PaymentReceipt" component={PaymentReceiptScreen} />
       <Stack.Screen name="AccountVerification" component={AccountVerificationScreen} />
       <Stack.Screen name="VerifiedSuccess" component={VerifiedSuccessScreen} />
     </Stack.Navigator>
@@ -147,6 +153,8 @@ export function ShopStack() {
       <Stack.Screen name="ItemAvailability" component={ItemAvailabilityScreen} />
       <Stack.Screen name="ShopOrderHistory" component={ShopOrderHistoryScreen} />
       <Stack.Screen name="EditShopProfile" component={EditShopProfileScreen} />
+      <Stack.Screen name="PaymentCenter" component={PaymentCenterScreen} />
+      <Stack.Screen name="PaymentReceipt" component={PaymentReceiptScreen} />
       <Stack.Screen name="AccountVerification" component={AccountVerificationScreen} />
       <Stack.Screen name="VerifiedSuccess" component={VerifiedSuccessScreen} />
     </Stack.Navigator>

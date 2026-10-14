@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../constants/theme';
 import { ReorderItem, ReorderPayload } from '../../services/OrderService';
-import { useCart } from '../../context/CartContext';
+import { useCart, optionsHashOf } from '../../context/CartContext';
 
 const DELIVERY_FEE = 10;
 
@@ -54,6 +54,7 @@ export default function ReorderCartScreen({ navigation, route }: any) {
       temperature: i.temperature,
       addOns: i.addOns || [],
       unitPrice: i.currentUnitPrice,
+      optionsHash: optionsHashOf(i), // v2.0 FR-2.2
     }));
     replaceCart(cartItems, payload.shopId, payload.shopName);
     navigation.navigate('Checkout');

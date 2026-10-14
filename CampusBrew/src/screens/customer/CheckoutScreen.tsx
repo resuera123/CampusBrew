@@ -86,6 +86,7 @@ export default function CheckoutScreen({ navigation }: any) {
             sugarLevel: i.sugarLevel,
             temperature: i.temperature,
             addOns: i.addOns,
+            optionsHash: i.optionsHash,
           })),
         },
         token,
