@@ -12,4 +12,5 @@ public class CreateOrderItemDTO {
     private String sugarLevel;
     private String temperature;
     private List<String> addOns;
+    private String optionsHash; // v2.0 FR-2.2 — client-supplied; server recomputes defensively
 }

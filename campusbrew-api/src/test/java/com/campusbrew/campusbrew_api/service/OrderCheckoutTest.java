@@ -8,6 +8,7 @@ import com.campusbrew.campusbrew_api.repository.OrderRepository;
 import com.campusbrew.campusbrew_api.repository.ShopRepository;
 import com.campusbrew.campusbrew_api.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -114,6 +115,33 @@ class OrderCheckoutTest {
         assertThatThrownBy(() -> service.createOrder("cust1", dto(PaymentMethod.GCASH, 150.0)))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Tip");
+    }
+
+    @Test
+    void identicalLinesAreMergedServerSide() {
+        menuItemPriced(100);
+        when(paymentService.initiate(any())).thenReturn(
+                new PaymentService.PaymentInitResult(PaymentStatus.PENDING_COD, null));
+
+        // Two identical lines (same item, no options) sent separately.
+        CreateOrderItemDTO a = new CreateOrderItemDTO();
+        a.setMenuItemId("item1"); a.setQuantity(1);
+        CreateOrderItemDTO b = new CreateOrderItemDTO();
+        b.setMenuItemId("item1"); b.setQuantity(1);
+        CreateOrderDTO dto = new CreateOrderDTO();
+        dto.setShopId("shop1");
+        dto.setDeliveryLocation("GLE Lobby");
+        dto.setPaymentMethod(PaymentMethod.COD);
+        dto.setItems(List.of(a, b));
+
+        ArgumentCaptor<Order> captor = ArgumentCaptor.forClass(Order.class);
+        service.createOrder("cust1", dto);
+        verify(orderRepository).save(captor.capture());
+
+        Order saved = captor.getValue();
+        assertThat(saved.getItems()).hasSize(1);            // merged into one line
+        assertThat(saved.getItems().get(0).getQuantity()).isEqualTo(2);
+        assertThat(saved.getTotalAmount()).isEqualTo(215.0); // 200 beverages + 15 fee
     }
 
     @Test

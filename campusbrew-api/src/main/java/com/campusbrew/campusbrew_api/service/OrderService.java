@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -54,7 +55,9 @@ public class OrderService {
             throw new RuntimeException("Cash on Delivery requires a verified CIT-U account");
         }
 
-        List<OrderItem> orderItems = new ArrayList<>();
+        // v2.0 FR-2.2 — merge identical lines server-side (defensive: the client merges
+        // too, but the server recomputes the hash and never trusts the supplied one).
+        LinkedHashMap<String, OrderItem> merged = new LinkedHashMap<>();
         double subtotal = 0.0;
 
         for (CreateOrderItemDTO line : dto.getItems()) {
@@ -74,18 +77,30 @@ public class OrderService {
             double totalPrice = unitPrice * line.getQuantity();
             subtotal += totalPrice;
 
-            orderItems.add(OrderItem.builder()
-                    .menuItemId(menuItem.getId())
-                    .itemName(menuItem.getName())
-                    .quantity(line.getQuantity())
-                    .size(line.getSize())
-                    .sugarLevel(line.getSugarLevel())
-                    .temperature(line.getTemperature())
-                    .addOns(line.getAddOns() == null ? List.of() : line.getAddOns())
-                    .unitPrice(unitPrice)
-                    .totalPrice(totalPrice)
-                    .build());
+            String hash = optionsHash(menuItem.getId(), line.getSize(),
+                    line.getSugarLevel(), line.getTemperature(), line.getAddOns());
+
+            OrderItem existing = merged.get(hash);
+            if (existing != null) {
+                existing.setQuantity(existing.getQuantity() + line.getQuantity());
+                existing.setTotalPrice(round(existing.getTotalPrice() + totalPrice));
+            } else {
+                merged.put(hash, OrderItem.builder()
+                        .menuItemId(menuItem.getId())
+                        .itemName(menuItem.getName())
+                        .quantity(line.getQuantity())
+                        .size(line.getSize())
+                        .sugarLevel(line.getSugarLevel())
+                        .temperature(line.getTemperature())
+                        .addOns(line.getAddOns() == null ? List.of() : line.getAddOns())
+                        .unitPrice(unitPrice)
+                        .totalPrice(totalPrice)
+                        .optionsHash(hash)
+                        .build());
+            }
         }
+
+        List<OrderItem> orderItems = new ArrayList<>(merged.values());
 
         // v2.0 FR-2.2/4.3 — fees from config; commission is the platform's cut from the
         // delivery fee, not a separate charge. Customer pays beverages + fee + tip.
@@ -446,6 +461,24 @@ public class OrderService {
             throw new RuntimeException("Shop does not belong to this operator");
         }
         return shop;
+    }
+
+    /**
+     * v2.0 FR-2.2 — stable identity for a configured line (add-ons order-independent),
+     * matching the client's optionsHashOf so both sides merge the same lines.
+     */
+    private String optionsHash(String menuItemId, String size, String sugarLevel,
+                               String temperature, List<String> addOns) {
+        String a = (addOns == null ? List.<String>of() : addOns).stream()
+                .map(s -> s.trim().toLowerCase())
+                .sorted()
+                .collect(Collectors.joining("|"));
+        return String.join("::",
+                menuItemId,
+                size == null ? "" : size,
+                sugarLevel == null ? "" : sugarLevel,
+                temperature == null ? "" : temperature,
+                a);
     }
 
     private double computeUnitPrice(MenuItem item, String size, List<String> addOnNames) {

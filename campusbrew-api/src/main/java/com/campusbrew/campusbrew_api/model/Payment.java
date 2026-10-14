@@ -46,6 +46,10 @@ public class Payment {
     /** Raw webhook events appended for audit/idempotency. */
     private List<Object> webhookEvents;
 
+    // v2.0 FR-4.8 — "Report a Problem" from the Payment Center.
+    private boolean reported;
+    private String reportNote;
+
     /**
      * For a type=ORDER GCash payment: the validated-but-unsaved order, materialized
      * into a real Order document only when the payment reaches PAID (FR-4.1). Null

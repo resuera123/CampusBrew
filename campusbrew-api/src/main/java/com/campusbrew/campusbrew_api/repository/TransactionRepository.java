@@ -12,4 +12,7 @@ public interface TransactionRepository extends MongoRepository<Transaction, Stri
     List<Transaction> findByDeliveryPersonnelIdOrderByCreatedAtDesc(String deliveryPersonnelId);
 
     List<Transaction> findByShopIdOrderByCreatedAtDesc(String shopId);
+
+    // v2.0 FR-4.8 — customer's completed transactions for the Payment Center.
+    List<Transaction> findByCustomerIdOrderByCreatedAtDesc(String customerId);
 }
