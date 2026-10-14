@@ -16,6 +16,9 @@ export class RealtimeSocket {
   private retries = 0;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private closed = false;
+  // Frames emitted while the socket is down are queued and flushed on open, so a
+  // chat message or location ping sent mid-reconnect isn't silently dropped (NFR-R4).
+  private outbox: string[] = [];
 
   constructor(private url: string, private onStatus: (connected: boolean) => void) {
     this.connect();
@@ -28,6 +31,9 @@ export class RealtimeSocket {
     ws.onopen = () => {
       this.retries = 0;
       this.onStatus(true);
+      const pending = this.outbox;
+      this.outbox = [];
+      pending.forEach((frame) => ws.send(frame));
     };
 
     ws.onmessage = (e) => {
@@ -65,19 +71,30 @@ export class RealtimeSocket {
     this.handlers.get(event)?.delete(handler);
   }
 
-  private send(event: string, room: string) {
+  private sendFrame(frame: Record<string, unknown>) {
+    const text = JSON.stringify(frame);
     if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ event, room }));
+      this.ws.send(text);
+    } else if (!this.closed) {
+      this.outbox.push(text);
     }
+  }
+
+  /**
+   * Send a domain event to the server, e.g. emit('chat:send', { orderId, channel, text }).
+   * The server trusts the authenticated identity from the handshake, not this payload.
+   */
+  emit(event: string, data?: unknown) {
+    this.sendFrame({ event, data });
   }
 
   /** Subscribe to updates for one order, in addition to this user's own feed. */
   joinOrder(orderId: string) {
-    this.send('join', `order:${orderId}`);
+    this.sendFrame({ event: 'join', room: `order:${orderId}` });
   }
 
   leaveOrder(orderId: string) {
-    this.send('leave', `order:${orderId}`);
+    this.sendFrame({ event: 'leave', room: `order:${orderId}` });
   }
 
   close() {

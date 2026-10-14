@@ -7,7 +7,8 @@ export type PaymentStatus =
   | 'PENDING_COD'
   | 'PAID_COD'
   | 'REFUND_PENDING'
-  | 'REFUNDED';
+  | 'REFUNDED'
+  | 'FLAGGED'; // v2.0 FR-4.2
 export type OrderStatus =
   | 'PLACED'
   | 'PREPARING'
@@ -70,6 +71,10 @@ export interface Order {
   platformCommission: number;
   totalAmount: number;
   paymentUrl?: string;
+  // v2.0 FR-4.1 — when true there is no order yet (id is null): open paymentUrl,
+  // then poll PaymentService.getPayment(paymentId) until the status leaves PENDING.
+  paymentRequired?: boolean;
+  paymentId?: string;
   statusHistory?: StatusHistoryEntry[];
   readyAt?: string;
   createdAt: string;
