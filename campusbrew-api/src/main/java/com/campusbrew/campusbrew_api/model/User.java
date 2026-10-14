@@ -40,6 +40,13 @@ public class User {
     private String phoneNumber;
     private String profilePicture;
 
+    // v2.0 FR-3.6 — rating aggregates (shown only once ratingCount >= rating.minCountToShow).
+    private double ratingAvg;
+    private int ratingCount;
+
+    // v2.0 FR-3.4 — Expo push token for background notifications.
+    private String expoPushToken;
+
     private Date createdAt;
     private Date updatedAt;
 }

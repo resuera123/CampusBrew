@@ -36,6 +36,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/orders/**").permitAll()
                 .requestMatchers("/api/menus/**").permitAll()
                 .requestMatchers("/api/delivery/**").permitAll()
+                // v2.0 FR-4.1 — payment routes are permitted here and validate the JWT in the
+                // controller (like the other /api routes); the Xendit webhook has no JWT and is
+                // authenticated by its x-callback-token instead.
+                .requestMatchers("/api/payments/**").permitAll()
                 // The WebSocket handshake authenticates via JwtHandshakeInterceptor,
                 // which rejects the upgrade before a session is ever opened.
                 .requestMatchers("/ws", "/ws/**").permitAll()

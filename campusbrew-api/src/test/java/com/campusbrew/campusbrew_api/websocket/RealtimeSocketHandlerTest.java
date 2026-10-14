@@ -1,5 +1,6 @@
 package com.campusbrew.campusbrew_api.websocket;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -7,7 +8,9 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,7 +23,7 @@ class RealtimeSocketHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new RealtimeSocketHandler(new ObjectMapper());
+        handler = new RealtimeSocketHandler(new ObjectMapper(), List.of());
     }
 
     private WebSocketSession session(String userId) throws Exception {
@@ -111,5 +114,59 @@ class RealtimeSocketHandlerTest {
 
         handler.emit("user:alice", "ping", Map.of("ok", true));
         verify(alice).sendMessage(any(TextMessage.class));
+    }
+
+    // ---- v2.0 inbound domain-event dispatch ----
+
+    /** Records what it was dispatched, for assertions. */
+    static class RecordingHandler implements InboundSocketHandler {
+        final String event;
+        final List<String> calls = new ArrayList<>();
+        RecordingHandler(String event) { this.event = event; }
+        public String event() { return event; }
+        public void handle(String senderId, String senderRole, JsonNode data) {
+            calls.add(senderId + "|" + senderRole + "|" + data.path("text").asText());
+        }
+    }
+
+    @Test
+    void domainEventsDispatchToTheirHandlerWithAuthenticatedIdentity() throws Exception {
+        RecordingHandler chat = new RecordingHandler("chat:send");
+        RealtimeSocketHandler h = new RealtimeSocketHandler(new ObjectMapper(), List.of(chat));
+
+        WebSocketSession alice = session("alice");
+        h.afterConnectionEstablished(alice);
+        h.handleTextMessage(alice, new TextMessage(
+                "{\"event\":\"chat:send\",\"data\":{\"orderId\":\"o1\",\"text\":\"hi\"}}"));
+
+        // Identity comes from the session (JWT), not the payload.
+        assertThat(chat.calls).containsExactly("alice|CUSTOMER|hi");
+    }
+
+    @Test
+    void unknownDomainEventsAreIgnored() throws Exception {
+        RecordingHandler chat = new RecordingHandler("chat:send");
+        RealtimeSocketHandler h = new RealtimeSocketHandler(new ObjectMapper(), List.of(chat));
+
+        WebSocketSession alice = session("alice");
+        h.afterConnectionEstablished(alice);
+        h.handleTextMessage(alice, new TextMessage(
+                "{\"event\":\"nonsense:event\",\"data\":{\"text\":\"x\"}}"));
+
+        assertThat(chat.calls).isEmpty();
+    }
+
+    @Test
+    void joinStillWorksAlongsideRegisteredHandlers() throws Exception {
+        RecordingHandler chat = new RecordingHandler("chat:send");
+        RealtimeSocketHandler h = new RealtimeSocketHandler(new ObjectMapper(), List.of(chat));
+
+        WebSocketSession alice = session("alice");
+        h.afterConnectionEstablished(alice);
+        h.handleTextMessage(alice, new TextMessage("{\"event\":\"join\",\"room\":\"order:o1\"}"));
+        h.emit("order:o1", "order:statusUpdate", Map.of("status", "READY"));
+
+        verify(alice).sendMessage(any(TextMessage.class));
+        assertThat(chat.calls).isEmpty();
     }
 }

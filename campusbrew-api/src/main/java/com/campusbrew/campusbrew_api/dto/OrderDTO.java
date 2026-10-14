@@ -33,6 +33,10 @@ public class OrderDTO {
     private double platformCommission;
     private double totalAmount;
     private String paymentUrl;
+    // v2.0 FR-4.1 — when true, no order exists yet: the client must open paymentUrl and
+    // poll GET /api/payments/{paymentId} until the status leaves PENDING.
+    private boolean paymentRequired;
+    private String paymentId;
     private List<StatusHistoryEntry> statusHistory;
     private Date readyAt;
     private Date createdAt;
@@ -73,6 +77,34 @@ public class OrderDTO {
                 .readyAt(order.getReadyAt())
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
+                .build();
+    }
+
+    /**
+     * v2.0 FR-4.1 — a "no order yet, pay first" response for GCash checkout. Carries the
+     * draft's amounts for the confirmation UI plus the checkout URL and payment id to poll.
+     */
+    public static OrderDTO paymentRequired(Order draft, String shopName,
+                                           String paymentId, String checkoutUrl) {
+        return OrderDTO.builder()
+                .id(null)
+                .customerId(draft.getCustomerId())
+                .shopId(draft.getShopId())
+                .shopName(shopName)
+                .items(draft.getItems().stream()
+                        .map(OrderItemDTO::fromOrderItem)
+                        .collect(Collectors.toList()))
+                .deliveryLocation(draft.getDeliveryLocation())
+                .dasherInstructions(draft.getDasherInstructions())
+                .paymentMethod(draft.getPaymentMethod())
+                .paymentStatus(draft.getPaymentStatus())
+                .beverageSubtotal(draft.getBeverageSubtotal())
+                .deliveryFee(draft.getDeliveryFee())
+                .platformCommission(draft.getPlatformCommission())
+                .totalAmount(draft.getTotalAmount())
+                .paymentUrl(checkoutUrl)
+                .paymentRequired(true)
+                .paymentId(paymentId)
                 .build();
     }
 }

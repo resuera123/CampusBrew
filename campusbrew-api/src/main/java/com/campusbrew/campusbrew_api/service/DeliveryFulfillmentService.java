@@ -38,6 +38,7 @@ public class DeliveryFulfillmentService {
     private final ShopRepository shopRepository;
     private final TransactionRepository transactionRepository;
     private final SocketService socketService;
+    private final ConfigService configService;
 
     public OrderDTO markPickedUp(String dpUserId, String orderId) {
         Order order = orderRepository.findById(orderId)
@@ -76,12 +77,14 @@ public class DeliveryFulfillmentService {
         applyTransition(order, OrderStatus.DELIVERED);
         Order saved = orderRepository.save(order);
 
-        // Incentive: deliveries 1-9 → ₱5 commission / ₱10 dasher earnings,
-        // delivery 10+ → commission waived, dasher keeps the full delivery fee.
-        // Check is on the post-increment count so the 10th delivery itself unlocks.
+        // v2.0 FR-4.3/4.4/4.5 — incentive threshold now comes from ConfigService
+        // (default 5, was a hard-coded 10). Below the threshold: ₱5 commission /
+        // ₱10 dasher. At or above it: commission waived, dasher keeps the full fee.
+        // Check is on the post-increment count so the threshold delivery itself unlocks.
+        int threshold = configService.getIncentiveThreshold();
         DeliveryPersonnel dp = deliveryPersonnelRepository.findByUserId(dpUserId).orElse(null);
         int newTotal = (dp == null ? 0 : dp.getTotalDeliveries()) + 1;
-        boolean incentiveActive = newTotal >= 10;
+        boolean incentiveActive = newTotal >= threshold;
         double txCommission = incentiveActive ? 0.0 : saved.getPlatformCommission();
         double txDpEarnings = saved.getDeliveryFee() - txCommission;
 

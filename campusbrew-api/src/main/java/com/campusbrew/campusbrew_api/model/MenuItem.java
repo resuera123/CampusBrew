@@ -32,4 +32,11 @@ public class MenuItem {
     private boolean isAvailable;
     private String stockStatus;
     private CustomizationOptions customizationOptions;
+
+    // v2.0 FR-5.5 — optional per-item stock tracking. When stockTracking is false
+    // (default, and for all legacy items) stockQty/lowStockLevel are ignored.
+    // A null lowStockLevel falls back to ConfigService.inventoryLowStockDefault.
+    private boolean stockTracking;
+    private Integer stockQty;
+    private Integer lowStockLevel;
 }

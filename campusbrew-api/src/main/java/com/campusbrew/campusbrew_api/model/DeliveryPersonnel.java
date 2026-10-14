@@ -54,6 +54,14 @@ public class DeliveryPersonnel {
     /** Non-null while the DP is mid-delivery; prevents accepting new assignments. */
     private String currentOrderId;
 
+    // v2.0 FR-3.1 — max distance (m) from the shop the DP will accept first offers.
+    // null = campus default; the re-broadcast after offer.rebroadcastSeconds ignores this.
+    private Integer pickupRangeMeters;
+
+    // v2.0 FR-3.6 — rating aggregates (shown only once ratingCount >= rating.minCountToShow).
+    private double ratingAvg;
+    private int ratingCount;
+
     private Date createdAt;
     private Date updatedAt;
 }

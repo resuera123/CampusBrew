@@ -117,6 +117,13 @@ public class OrderService {
                 .updatedAt(now)
                 .build();
 
+        // v2.0 FR-4.1 — GCash is payment-first: no order is persisted here. The order
+        // is created by the webhook once Xendit confirms PAID (see createPaidOrderFromDraft).
+        if (order.getPaymentMethod() == PaymentMethod.GCASH) {
+            order.setPaymentStatus(PaymentStatus.PENDING);
+            return paymentService.initiateGcashCheckout(order, userId, shop.getShopName());
+        }
+
         PaymentService.PaymentInitResult payment = paymentService.initiate(order);
         order.setPaymentStatus(payment.getStatus());
 
@@ -124,6 +131,45 @@ public class OrderService {
         // Broadcast so the shop queue and any tracking screen pick up the new order live.
         broadcastStatusUpdate(saved, OrderStatus.PLACED, saved.getCreatedAt());
         return OrderDTO.fromOrder(saved, shop.getShopName(), payment.getPaymentUrl());
+    }
+
+    /**
+     * v2.0 FR-4.1 — materialize the order carried by a now-PAID GCash payment. Called by
+     * the webhook controller. Idempotent: if the payment already produced an order, that
+     * order is returned instead of creating a second one.
+     */
+    public OrderDTO createPaidOrderFromDraft(com.campusbrew.campusbrew_api.model.Payment payment) {
+        if (payment.getOrderId() != null) {
+            Order existing = orderRepository.findById(payment.getOrderId()).orElse(null);
+            if (existing != null) {
+                String name = shopRepository.findById(existing.getShopId())
+                        .map(Shop::getShopName).orElse(null);
+                return OrderDTO.fromOrder(existing, name, null);
+            }
+        }
+
+        Order draft = payment.getOrderDraft();
+        if (draft == null) {
+            throw new RuntimeException("Payment " + payment.getId() + " has no order draft");
+        }
+
+        Date now = Date.from(Instant.now());
+        draft.setId(null);
+        draft.setPaymentStatus(PaymentStatus.PAID_GCASH);
+        draft.setOrderStatus(OrderStatus.PLACED);
+        draft.setStatusHistory(new ArrayList<>(List.of(
+                StatusHistoryEntry.builder().status(OrderStatus.PLACED).timestamp(now).build())));
+        draft.setCreatedAt(now);
+        draft.setUpdatedAt(now);
+
+        Order saved = orderRepository.save(draft);
+        paymentService.attachOrder(payment.getId(), saved.getId());
+
+        // Broadcast so the shop queue and any tracking screen pick up the new order live.
+        broadcastStatusUpdate(saved, OrderStatus.PLACED, saved.getCreatedAt());
+        String shopName = shopRepository.findById(saved.getShopId())
+                .map(Shop::getShopName).orElse(null);
+        return OrderDTO.fromOrder(saved, shopName, null);
     }
 
     /**

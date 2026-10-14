@@ -21,4 +21,7 @@ public class OrderItem {
     private List<String> addOns;
     private double unitPrice;
     private double totalPrice;
+
+    // v2.0 FR-2.2 — stable hash of itemId + options, used to merge identical lines.
+    private String optionsHash;
 }

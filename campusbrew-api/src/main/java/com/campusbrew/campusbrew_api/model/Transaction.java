@@ -42,6 +42,9 @@ public class Transaction {
     private double platformCommission;
     private double dpEarnings;
 
+    // v2.0 FR-4.7 — tip portion, credited 100% to the dasher (no commission).
+    private double tip;
+
     private PaymentMethod paymentMethod;
     private String xenditTransactionId;
 

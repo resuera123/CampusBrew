@@ -34,3 +34,22 @@ delivery.orderExpiry.minutes=10
 # Disable Spring Security's default login page for now
 spring.security.user.name=admin
 spring.security.user.password=admin
+
+# ================= v2.0 (SRS/SDD v2.0) =================
+fees.deliveryFee=15
+fees.commission=5
+incentive.threshold=5
+cod.limit=300
+delivery.offer.rebroadcastSeconds=60
+tip.maxAmount=100
+tip.windowHours=24
+rating.windowHours=24
+rating.minCountToShow=3
+chat.readOnlyAfterMinutes=30
+location.intervalSeconds=5
+inventory.lowStockDefault=5
+# Xendit — set these in your real application.properties / environment only.
+xendit.secretKey=<xendit-test-secret-key>
+xendit.callbackToken=<xendit-webhook-callback-token>
+xendit.successUrl=campusbrew://payment/success
+xendit.failureUrl=campusbrew://payment/failure

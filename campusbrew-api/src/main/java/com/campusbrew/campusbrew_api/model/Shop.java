@@ -29,4 +29,9 @@ public class Shop {
     private boolean isOpen;
     private String operatorId;
     private String estimatedPrepTime;
+
+    // v2.0 FR-3.6 — rating aggregates (distinct from the legacy seeded `rating` above;
+    // shown only once ratingCount >= rating.minCountToShow).
+    private double ratingAvg;
+    private int ratingCount;
 }

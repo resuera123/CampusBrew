@@ -6,5 +6,7 @@ public enum PaymentStatus {
     PENDING_COD,
     PAID_COD,
     REFUND_PENDING,
-    REFUNDED
+    REFUNDED,
+    // v2.0 FR-4.2 — COD amounts collected and confirmed did not match; needs manual review.
+    FLAGGED
 }
