@@ -19,14 +19,6 @@ import java.util.*;
 @RequiredArgsConstructor
 public class OrderService {
 
-    /**
-     * Total delivery charge paid by the customer. The platform keeps
-     * {@link #PLATFORM_COMMISSION} from this fee and the dasher gets the rest
-     * (or the full fee if their incentive is unlocked).
-     */
-    private static final double DELIVERY_FEE = 15.0;
-    private static final double PLATFORM_COMMISSION = 5.0;
-
     private final OrderRepository orderRepository;
     private final ShopRepository shopRepository;
     private final UserRepository userRepository;
@@ -34,6 +26,8 @@ public class OrderService {
     private final PaymentService paymentService;
     private final DeliveryAssignmentEngine deliveryAssignmentEngine;
     private final SocketService socketService;
+    // v2.0 — fees, COD limit and tip cap come from ConfigService (no hard-coded numbers).
+    private final ConfigService configService;
 
     public OrderDTO createOrder(String userId, CreateOrderDTO dto) {
         User user = userRepository.findById(userId)
@@ -93,8 +87,26 @@ public class OrderService {
                     .build());
         }
 
-        // PLATFORM_COMMISSION is the platform's cut from DELIVERY_FEE, not a separate charge.
-        double total = subtotal + DELIVERY_FEE;
+        // v2.0 FR-2.2/4.3 — fees from config; commission is the platform's cut from the
+        // delivery fee, not a separate charge. Customer pays beverages + fee + tip.
+        double deliveryFee = configService.getDeliveryFee();
+        double commission = configService.getCommission();
+
+        // v2.0 FR-4.7 — optional tip (0..tip.maxAmount), added to the total, 100% to the dasher.
+        double tip = dto.getTip() == null ? 0.0 : dto.getTip();
+        if (tip < 0 || tip > configService.getTipMaxAmount()) {
+            throw new RuntimeException("Tip must be between ₱0 and ₱"
+                    + (int) configService.getTipMaxAmount());
+        }
+
+        double total = subtotal + deliveryFee + tip;
+
+        // v2.0 FR-2.2 — COD ceiling re-checked server-side (UI also gates this).
+        if (dto.getPaymentMethod() == PaymentMethod.COD && total > configService.getCodLimit()) {
+            throw new RuntimeException("Cash on Delivery is only available for orders up to ₱"
+                    + (int) configService.getCodLimit() + ". Please pay with GCash.");
+        }
+
         Date now = Date.from(Instant.now());
 
         Order order = Order.builder()
@@ -103,12 +115,14 @@ public class OrderService {
                 .items(orderItems)
                 .deliveryLocation(dto.getDeliveryLocation())
                 .dasherInstructions(dto.getDasherInstructions())
+                .dropoffNote(dto.getDropoffNote())
                 .paymentMethod(dto.getPaymentMethod())
                 .paymentStatus(PaymentStatus.PENDING)
                 .orderStatus(OrderStatus.PLACED)
                 .beverageSubtotal(round(subtotal))
-                .deliveryFee(DELIVERY_FEE)
-                .platformCommission(PLATFORM_COMMISSION)
+                .deliveryFee(deliveryFee)
+                .platformCommission(commission)
+                .tip(tip)
                 .totalAmount(round(total))
                 .statusHistory(new ArrayList<>(List.of(
                         StatusHistoryEntry.builder().status(OrderStatus.PLACED).timestamp(now).build()

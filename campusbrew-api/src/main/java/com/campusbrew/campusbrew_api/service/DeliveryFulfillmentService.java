@@ -86,7 +86,9 @@ public class DeliveryFulfillmentService {
         int newTotal = (dp == null ? 0 : dp.getTotalDeliveries()) + 1;
         boolean incentiveActive = newTotal >= threshold;
         double txCommission = incentiveActive ? 0.0 : saved.getPlatformCommission();
-        double txDpEarnings = saved.getDeliveryFee() - txCommission;
+        // v2.0 FR-4.7 — the tip is credited to the dasher in full, with no commission on it.
+        double tip = saved.getTip();
+        double txDpEarnings = saved.getDeliveryFee() - txCommission + tip;
 
         Transaction tx = Transaction.builder()
                 .orderId(saved.getId())
@@ -96,6 +98,7 @@ public class DeliveryFulfillmentService {
                 .beverageCost(saved.getBeverageSubtotal())
                 .deliveryFee(saved.getDeliveryFee())
                 .platformCommission(txCommission)
+                .tip(tip)
                 .dpEarnings(txDpEarnings)
                 .paymentMethod(saved.getPaymentMethod())
                 .status(TransactionStatus.COMPLETED)

@@ -31,7 +31,9 @@ public class OrderDTO {
     private double beverageSubtotal;
     private double deliveryFee;
     private double platformCommission;
+    private double tip;
     private double totalAmount;
+    private String dropoffNote;
     private String paymentUrl;
     // v2.0 FR-4.1 — when true, no order exists yet: the client must open paymentUrl and
     // poll GET /api/payments/{paymentId} until the status leaves PENDING.
@@ -71,7 +73,9 @@ public class OrderDTO {
                 .beverageSubtotal(order.getBeverageSubtotal())
                 .deliveryFee(order.getDeliveryFee())
                 .platformCommission(order.getPlatformCommission())
+                .tip(order.getTip())
                 .totalAmount(order.getTotalAmount())
+                .dropoffNote(order.getDropoffNote())
                 .paymentUrl(paymentUrl)
                 .statusHistory(order.getStatusHistory())
                 .readyAt(order.getReadyAt())
@@ -101,7 +105,9 @@ public class OrderDTO {
                 .beverageSubtotal(draft.getBeverageSubtotal())
                 .deliveryFee(draft.getDeliveryFee())
                 .platformCommission(draft.getPlatformCommission())
+                .tip(draft.getTip())
                 .totalAmount(draft.getTotalAmount())
+                .dropoffNote(draft.getDropoffNote())
                 .paymentUrl(checkoutUrl)
                 .paymentRequired(true)
                 .paymentId(paymentId)
