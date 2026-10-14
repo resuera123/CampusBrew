@@ -50,6 +50,8 @@ export interface CreateOrderRequest {
   deliveryLocation: string;
   dasherInstructions?: string;
   paymentMethod: PaymentMethod;
+  tip?: number; // v2.0 FR-4.7
+  dropoffNote?: string; // v2.0 FR-3.4
 }
 
 export interface Order {
