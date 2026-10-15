@@ -27,6 +27,7 @@ public class OrderService {
     private final PaymentService paymentService;
     private final DeliveryAssignmentEngine deliveryAssignmentEngine;
     private final SocketService socketService;
+    private final PushNotificationService pushNotificationService;
     // v2.0 — fees, COD limit and tip cap come from ConfigService (no hard-coded numbers).
     private final ConfigService configService;
 
@@ -475,6 +476,24 @@ public class OrderService {
         if (order.getDeliveryPersonnelId() != null) {
             socketService.emitToUser(order.getDeliveryPersonnelId(), "order:statusUpdate", payload);
         }
+
+        // v2.0 FR-3.4 — also push to the customer so they're informed when the app
+        // is closed. Best-effort; the socket emit above is the in-app path.
+        String[] msg = customerStatusMessage(next);
+        if (msg != null) {
+            pushNotificationService.send(order.getCustomerId(), msg[0], msg[1],
+                    Map.of("orderId", order.getId(), "status", next.name()));
+        }
+    }
+
+    /** Customer-facing push copy per order status, or null when no push is warranted. */
+    private String[] customerStatusMessage(OrderStatus status) {
+        return switch (status) {
+            case PREPARING -> new String[]{"Order accepted", "The shop is preparing your order."};
+            case READY_FOR_PICKUP -> new String[]{"Ready for pickup", "Your order is ready and waiting for a rider."};
+            case CANCELLED -> new String[]{"Order cancelled", "Your order was cancelled."};
+            default -> null; // PLACED is the customer's own action; others push elsewhere
+        };
     }
 
     private Shop requireOwnedShop(String operatorUserId, String shopId) {

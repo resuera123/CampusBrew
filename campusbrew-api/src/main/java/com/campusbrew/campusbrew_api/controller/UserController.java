@@ -46,4 +46,17 @@ public class UserController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
+
+    @PutMapping("/me/push-token")
+    public ResponseEntity<?> setPushToken(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, String> body) {
+        try {
+            String userId = jwtService.extractUserId(authHeader.replace("Bearer ", ""));
+            userService.setPushToken(userId, body.get("token"));
+            return ResponseEntity.ok(Map.of("ok", true));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
 }

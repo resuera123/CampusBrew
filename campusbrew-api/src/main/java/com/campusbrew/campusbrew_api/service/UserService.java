@@ -41,4 +41,13 @@ public class UserService {
 
         return UserDTO.fromUser(user);
     }
+
+    // v2.0 FR-3.4 — register the device's Expo push token for background notifications.
+    public void setPushToken(String userId, String token) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setExpoPushToken(token);
+        user.setUpdatedAt(Date.from(Instant.now()));
+        userRepository.save(user);
+    }
 }

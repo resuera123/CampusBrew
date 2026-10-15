@@ -15,6 +15,7 @@ import {
 } from './src/navigation/AppNavigator';
 import IncomingOrderModal from './src/screens/delivery/IncomingOrderModal';
 import { COLORS } from './src/constants/theme';
+import { navigationRef } from './src/navigation/navigationRef';
 
 function RootNavigator() {
   const { user, isLoading } = useAuth();
@@ -56,7 +57,7 @@ export default function App() {
           <SocketProvider>
             <NotificationsProvider>
               <CartProvider>
-                <NavigationContainer>
+                <NavigationContainer ref={navigationRef}>
                   <RootNavigator />
                   <IncomingOrderModal />
                 </NavigationContainer>

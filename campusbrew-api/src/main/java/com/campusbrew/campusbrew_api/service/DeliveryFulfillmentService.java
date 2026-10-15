@@ -39,6 +39,7 @@ public class DeliveryFulfillmentService {
     private final TransactionRepository transactionRepository;
     private final SocketService socketService;
     private final ConfigService configService;
+    private final PushNotificationService pushNotificationService;
 
     public OrderDTO markPickedUp(String dpUserId, String orderId) {
         Order order = orderRepository.findById(orderId)
@@ -55,6 +56,9 @@ public class DeliveryFulfillmentService {
         Map<String, Object> payload = statusPayload(saved);
         socketService.emitToUser(saved.getCustomerId(), "order:outForDelivery", payload);
         socketService.emitToOrder(saved.getId(), "order:statusUpdate", payload);
+        pushNotificationService.send(saved.getCustomerId(), "On the way",
+                "Your order is out for delivery — track it live.",
+                java.util.Map.of("orderId", saved.getId(), "status", "OUT_FOR_DELIVERY"));
 
         return toDTO(saved);
     }
@@ -138,6 +142,9 @@ public class DeliveryFulfillmentService {
         socketService.emitToOrder(saved.getId(), "order:statusUpdate", payload);
         shopRepository.findById(saved.getShopId()).ifPresent(s ->
                 socketService.emitToUser(s.getOperatorId(), "order:delivered", payload));
+        pushNotificationService.send(saved.getCustomerId(), "Delivered",
+                "Your order has been delivered. Enjoy!",
+                java.util.Map.of("orderId", saved.getId(), "status", "DELIVERED"));
 
         return toDTO(saved);
     }

@@ -9,6 +9,7 @@ import {
   RefreshControl,
   TextInput,
   Alert,
+  AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -103,6 +104,15 @@ export default function OrderTrackingScreen({ route, navigation }: any) {
   }, [token, orderId]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  // v2.0 NFR-R3 — if a push or socket event is missed while backgrounded,
+  // re-fetch the order whenever the app returns to the foreground.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') load();
+    });
+    return () => sub.remove();
+  }, [load]);
 
   // Live updates: refetch when statusUpdate or noDriver events fire for this order.
   useEffect(() => {

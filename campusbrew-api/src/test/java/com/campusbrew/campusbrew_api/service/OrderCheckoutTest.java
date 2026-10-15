@@ -63,7 +63,7 @@ class OrderCheckoutTest {
         });
 
         service = new OrderService(orderRepository, shopRepository, userRepository, shopService,
-                paymentService, assignmentEngine, socketService, config);
+                paymentService, assignmentEngine, socketService, mock(PushNotificationService.class), config);
     }
 
     /** A ₱priced menu item for the one cart line. */
