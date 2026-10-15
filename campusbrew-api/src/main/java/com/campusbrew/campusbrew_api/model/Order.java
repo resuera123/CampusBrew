@@ -62,6 +62,13 @@ public class Order {
     /** When the shop marked the order Ready for Pickup. Drives the 10-min auto-cancel. */
     private Date readyAt;
 
+    /**
+     * v2.0 FR-3.2 — when the unclaimed offer was re-broadcast to all active dashers
+     * (ignoring pickup range). Null until the 60s window lapses; set once so the
+     * re-broadcast fires exactly once.
+     */
+    private Date rebroadcastAt;
+
     private Date createdAt;
     private Date updatedAt;
 }

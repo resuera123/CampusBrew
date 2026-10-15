@@ -1,6 +1,7 @@
 package com.campusbrew.campusbrew_api.controller;
 
 import com.campusbrew.campusbrew_api.dto.AvailabilityToggleDTO;
+import com.campusbrew.campusbrew_api.dto.PickupRangeDTO;
 import com.campusbrew.campusbrew_api.dto.UpdateLocationDTO;
 import com.campusbrew.campusbrew_api.dto.UpdateScheduleDTO;
 import com.campusbrew.campusbrew_api.service.DeliveryPersonnelService;
@@ -72,6 +73,18 @@ public class DeliveryPersonnelController {
             String userId = userIdFrom(authHeader);
             return ResponseEntity.ok(
                     deliveryPersonnelService.updateLocation(userId, dto.getLongitude(), dto.getLatitude()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/pickup-range")
+    public ResponseEntity<?> updatePickupRange(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody PickupRangeDTO dto) {
+        try {
+            String userId = userIdFrom(authHeader);
+            return ResponseEntity.ok(deliveryPersonnelService.updatePickupRange(userId, dto.getMeters()));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         }

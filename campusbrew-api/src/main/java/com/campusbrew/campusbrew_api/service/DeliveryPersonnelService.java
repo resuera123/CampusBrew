@@ -47,6 +47,21 @@ public class DeliveryPersonnelService {
         return DeliveryPersonnelDTO.fromEntity(deliveryPersonnelRepository.save(dp));
     }
 
+    /**
+     * v2.0 FR-3.1 — set the max distance (m) from the shop this dasher will accept
+     * first offers. null restores the campus default (no range cap). Clamped to a
+     * sane ceiling so a typo cannot silently disable range filtering.
+     */
+    public DeliveryPersonnelDTO updatePickupRange(String userId, Integer meters) {
+        if (meters != null && (meters <= 0 || meters > 20000)) {
+            throw new RuntimeException("Pickup range must be between 1 and 20000 meters, or empty for campus default");
+        }
+        DeliveryPersonnel dp = requireProfile(userId);
+        dp.setPickupRangeMeters(meters);
+        dp.setUpdatedAt(Date.from(Instant.now()));
+        return DeliveryPersonnelDTO.fromEntity(deliveryPersonnelRepository.save(dp));
+    }
+
     public DeliveryPersonnelDTO updateLocation(String userId, double longitude, double latitude) {
         DeliveryPersonnel dp = requireProfile(userId);
         // GeoJSON Point coordinates are [longitude, latitude] — the constructor matches that order.

@@ -5,6 +5,7 @@ import com.campusbrew.campusbrew_api.model.DeliveryAssignment;
 import com.campusbrew.campusbrew_api.model.DeliveryPersonnel;
 import com.campusbrew.campusbrew_api.model.Order;
 import com.campusbrew.campusbrew_api.model.OrderStatus;
+import com.campusbrew.campusbrew_api.model.PaymentMethod;
 import com.campusbrew.campusbrew_api.model.Shop;
 import com.campusbrew.campusbrew_api.model.User;
 import com.campusbrew.campusbrew_api.repository.DeliveryAssignmentRepository;
@@ -14,9 +15,9 @@ import com.campusbrew.campusbrew_api.repository.ShopRepository;
 import com.campusbrew.campusbrew_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.mongodb.core.FindAndModifyOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
@@ -24,26 +25,29 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Per SDD §3.2 (hybrid model). Broadcasts a `delivery:request` socket event to
- * every active + idle delivery personnel. First DP to tap Accept wins via the
- * atomic claim in {@link #claimOrder}; losing DPs receive `delivery:claimed` so
- * their modals dismiss. Order also stays in the marketplace pool the whole time
- * so DPs who missed the push can browse and claim manually.
+ * Per SDD §3.2 (broadcast-and-claim). When an order reaches READY_FOR_PICKUP the
+ * engine broadcasts a {@code delivery:request} offer to every active, idle dasher
+ * whose pickup range covers the shop (v2.0 FR-3.2). The first to tap Accept wins
+ * via the atomic claim in {@link #claimOrder}; losing DPs receive
+ * {@code delivery:claimed} so their modals dismiss.
  *
- * The push notification is purely a UX nudge — the marketplace fetch + atomic
- * claim are the authoritative paths. This means even when proximity / GPS is
- * unreliable (dev simulator), the flow still works.
+ * If nobody claims within {@code delivery.offer.rebroadcastSeconds} (60s), the
+ * offer is re-broadcast to ALL active dashers regardless of range (see
+ * {@link #rebroadcastToAll}, driven by OfferRebroadcastScheduler). The order also
+ * stays in the marketplace pool the whole time, so a dasher who missed the push
+ * can browse and claim it manually — the atomic claim is the authoritative path.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class DeliveryAssignmentEngine {
+
+    private static final double EARTH_RADIUS_M = 6_371_000.0;
 
     private final MongoTemplate mongoTemplate;
     private final DeliveryAssignmentRepository assignmentRepository;
@@ -52,19 +56,12 @@ public class DeliveryAssignmentEngine {
     private final ShopRepository shopRepository;
     private final UserRepository userRepository;
     private final SocketService socketService;
-
-    @Value("${delivery.dispatch.timeoutSeconds:30}")
-    private long timeoutSeconds;
+    private final ConfigService configService;
 
     /**
-     * Kick off assignment for an order that just reached READY_FOR_PICKUP.
-     * Returns immediately — broadcasting proceeds synchronously here but is cheap
-     * (one socket emit per active DP). Falls back to the marketplace if no DPs
-     * are active.
-     *
-     * Broadcast model: every active, idle DP gets a `delivery:request` event.
-     * First DP to tap Accept wins via the atomic claim in {@link #claimOrder}.
-     * Losing modals are dismissed via `delivery:claimed`.
+     * Kick off assignment for an order that just reached READY_FOR_PICKUP. The
+     * initial offer is range-filtered (v2.0 FR-3.2). If no eligible dasher is in
+     * range, the 60s re-broadcast and the marketplace pull are the fallbacks.
      */
     public void assignOrder(Order order) {
         if (order.getOrderStatus() != OrderStatus.READY_FOR_PICKUP) {
@@ -72,54 +69,75 @@ public class DeliveryAssignmentEngine {
                     order.getId(), order.getOrderStatus());
             return;
         }
-
-        List<String> recipients = findEligibleDps();
+        Shop shop = shopRepository.findById(order.getShopId()).orElse(null);
+        List<DeliveryPersonnel> recipients = findEligibleDps(shop, true);
         if (recipients.isEmpty()) {
-            log.info("No active delivery personnel to notify for order {} — relying on marketplace",
+            log.info("No in-range active DP for order {} — relying on 60s re-broadcast / marketplace",
                     order.getId());
             return;
         }
-
-        Map<String, Object> payload = buildOfferPayload(order.getId());
-        for (String dpUserId : recipients) {
-            socketService.emitToUser(dpUserId, "delivery:request", payload);
-            assignmentRepository.save(DeliveryAssignment.builder()
-                    .orderId(order.getId())
-                    .deliveryPersonnelId(dpUserId)
-                    .status(AssignmentStatus.PENDING)
-                    .assignedAt(Date.from(Instant.now()))
-                    .build());
-        }
-        log.info("Broadcast offer for order {} to {} active DP(s)", order.getId(), recipients.size());
+        broadcast(order, shop, recipients);
+        log.info("Range-filtered offer for order {} sent to {} DP(s)", order.getId(), recipients.size());
     }
 
     /**
-     * Active + idle DPs. Proximity is NOT a gate here — the campus is small enough
-     * that every active rider is a valid candidate, and the simulator's GPS often
-     * isn't pointing at the actual campus location anyway.
+     * v2.0 FR-3.2 — the unclaimed-offer re-broadcast. Sends the offer to ALL active,
+     * idle dashers ignoring pickup range, and stamps {@code rebroadcastAt} so it
+     * fires exactly once. No-op if the order has since been claimed or moved on.
      */
-    private List<String> findEligibleDps() {
+    public void rebroadcastToAll(Order order) {
+        if (order.getOrderStatus() != OrderStatus.READY_FOR_PICKUP
+                || order.getDeliveryPersonnelId() != null
+                || order.getRebroadcastAt() != null) {
+            return;
+        }
+        Shop shop = shopRepository.findById(order.getShopId()).orElse(null);
+        List<DeliveryPersonnel> all = findEligibleDps(shop, false);
+        broadcast(order, shop, all);
+
+        order.setRebroadcastAt(Date.from(Instant.now()));
+        order.setUpdatedAt(order.getRebroadcastAt());
+        orderRepository.save(order);
+        log.info("Re-broadcast order {} to all {} active DP(s) (range ignored)", order.getId(), all.size());
+    }
+
+    /** Emit a per-dasher offer to each recipient and record a PENDING audit row. */
+    private void broadcast(Order order, Shop shop, List<DeliveryPersonnel> recipients) {
+        double[] ref = shopReference(shop);
+        Map<String, Object> base = baseOfferPayload(order, shop);
+        Date now = Date.from(Instant.now());
+        for (DeliveryPersonnel dp : recipients) {
+            Map<String, Object> payload = new LinkedHashMap<>(base);
+            payload.put("distanceMeters", distanceMeters(dp, ref));
+            payload.put("earnings", earningsFor(order, dp));
+            payload.put("incentiveProgress",
+                    dp.getTotalDeliveries() + "/" + configService.getIncentiveThreshold());
+            socketService.emitToUser(dp.getUserId(), "delivery:request", payload);
+            upsertPendingAssignment(order.getId(), dp.getUserId(), now);
+        }
+    }
+
+    /**
+     * Active + idle dashers. When {@code rangeFiltered} is true, keep only those
+     * within their chosen pickup range of the shop reference point. A dasher with
+     * no pickup range (campus default) or no known location is always included —
+     * this keeps the flow working when GPS is unavailable (e.g. the dev simulator).
+     */
+    private List<DeliveryPersonnel> findEligibleDps(Shop shop, boolean rangeFiltered) {
         Query q = Query.query(Criteria.where("isActive").is(true)
                 .and("currentOrderId").is(null));
-        return mongoTemplate.find(q, DeliveryPersonnel.class).stream()
-                .map(DeliveryPersonnel::getUserId)
-                .collect(java.util.stream.Collectors.toList());
+        List<DeliveryPersonnel> active = mongoTemplate.find(q, DeliveryPersonnel.class);
+        if (!rangeFiltered) {
+            return active;
+        }
+        double[] ref = shopReference(shop);
+        return active.stream().filter(dp -> withinRange(dp, ref)).toList();
     }
 
-    /**
-     * Accept path used by both the push offer (modal) and the pull marketplace.
-     * Atomic claim — if two DPs race, only the first one wins; the loser sees a
-     * helpful "Already claimed" error.
-     */
     public void acceptAssignment(String dpUserId, String orderId) {
         claimOrder(dpUserId, orderId);
     }
 
-    /**
-     * Decline the push offer. The order stays in READY_FOR_PICKUP — it stays in
-     * the marketplace pool and any DP (including this one) can still claim it via
-     * the available-deliveries list. Logged as DECLINED for audit purposes.
-     */
     public void declineAssignment(String dpUserId, String orderId) {
         assignmentRepository.findByOrderId(orderId).stream()
                 .filter(a -> dpUserId.equals(a.getDeliveryPersonnelId())
@@ -139,9 +157,8 @@ public class DeliveryAssignmentEngine {
     }
 
     /**
-     * The atomic claim itself. Uses MongoTemplate.findAndModify so two concurrent
-     * claims on the same order are resolved at the storage layer — only the first
-     * findAndModify returns a non-null document.
+     * The atomic claim. findAndModify resolves concurrent claims at the storage
+     * layer — only the first returns a non-null document; every other claim fails.
      */
     private void claimOrder(String dpUserId, String orderId) {
         DeliveryPersonnel dp = deliveryPersonnelRepository.findByUserId(dpUserId)
@@ -223,22 +240,97 @@ public class DeliveryAssignmentEngine {
         log.info("Order {} claimed by DP {}", orderId, dpUserId);
     }
 
+    // ─── Offer payload ──────────────────────────────────────────────────────
+
+    /** Fields common to every recipient of this order's offer. */
+    private Map<String, Object> baseOfferPayload(Order order, Shop shop) {
+        Map<String, Object> p = new LinkedHashMap<>();
+        boolean cod = order.getPaymentMethod() == PaymentMethod.COD;
+
+        p.put("orderId", order.getId());
+        p.put("shopName", shop != null ? shop.getShopName() : null);
+        p.put("shopLocation", shop != null ? shop.getLocation() : null);
+        p.put("dropoff", order.getDeliveryLocation());
+        p.put("itemCount", order.getItems() == null ? 0 : order.getItems().size());
+        p.put("beverageCost", order.getBeverageSubtotal());
+        // What the dasher collects from the customer: full amount for COD, nothing for GCash.
+        p.put("paidViaGcash", !cod);
+        p.put("amountToCollect", cod ? order.getTotalAmount() : null);
+        p.put("tip", order.getTip());
+        p.put("customerRating", customerRating(order.getCustomerId()));
+        long seconds = configService.getOfferRebroadcastSeconds();
+        p.put("timeoutSeconds", seconds);
+        p.put("expiresAt", System.currentTimeMillis() + seconds * 1000L);
+        return p;
+    }
+
+    /** Customer average rating, shown only once they have enough ratings (FR-3.6). */
+    private Double customerRating(String customerId) {
+        return userRepository.findById(customerId)
+                .filter(u -> u.getRatingCount() >= configService.getRatingMinCountToShow())
+                .map(User::getRatingAvg)
+                .orElse(null);
+    }
+
+    /** The dasher's take for this trip: their current fee rate + the full tip (FR-4.3). */
+    private double earningsFor(Order order, DeliveryPersonnel dp) {
+        double fee = order.getDeliveryFee();
+        double dasherFee = dp.isIncentiveActive()
+                ? fee
+                : Math.max(fee - order.getPlatformCommission(), 0);
+        return round(dasherFee + order.getTip());
+    }
+
+    // ─── Geo helpers ────────────────────────────────────────────────────────
+
+    /** Shop reference point [lng, lat]. Shops have no coordinates yet → campus center. */
+    private double[] shopReference(Shop shop) {
+        return new double[]{configService.getCampusLongitude(), configService.getCampusLatitude()};
+    }
+
+    /** True if the dasher's chosen range covers the shop; campus-default / no-GPS always passes. */
+    private boolean withinRange(DeliveryPersonnel dp, double[] ref) {
+        Integer range = dp.getPickupRangeMeters();
+        if (range == null) return true;                 // campus default = no cap
+        GeoJsonPoint loc = dp.getCurrentLocation();
+        if (loc == null) return true;                    // no GPS → don't exclude
+        return haversine(loc.getY(), loc.getX(), ref[1], ref[0]) <= range;
+    }
+
+    /** Distance in meters from the dasher to the reference point, or null without GPS. */
+    private Double distanceMeters(DeliveryPersonnel dp, double[] ref) {
+        GeoJsonPoint loc = dp.getCurrentLocation();
+        if (loc == null) return null;
+        return round(haversine(loc.getY(), loc.getX(), ref[1], ref[0]));
+    }
+
+    private static double haversine(double lat1, double lon1, double lat2, double lon2) {
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return EARTH_RADIUS_M * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
     // ─── Internals ──────────────────────────────────────────────────────────
 
-    private Map<String, Object> buildOfferPayload(String orderId) {
-        Map<String, Object> payload = new HashMap<>();
-        Order order = orderRepository.findById(orderId).orElse(null);
-        if (order == null) return payload;
-        Shop shop = shopRepository.findById(order.getShopId()).orElse(null);
+    /** Record a PENDING audit/dismiss row for this (order, dasher) unless one exists. */
+    private void upsertPendingAssignment(String orderId, String dpUserId, Date now) {
+        boolean exists = assignmentRepository.findByOrderId(orderId).stream()
+                .anyMatch(a -> dpUserId.equals(a.getDeliveryPersonnelId())
+                        && a.getStatus() == AssignmentStatus.PENDING);
+        if (exists) return;
+        assignmentRepository.save(DeliveryAssignment.builder()
+                .orderId(orderId)
+                .deliveryPersonnelId(dpUserId)
+                .status(AssignmentStatus.PENDING)
+                .assignedAt(now)
+                .build());
+    }
 
-        payload.put("orderId", orderId);
-        payload.put("shopName", shop != null ? shop.getShopName() : null);
-        payload.put("shopLocation", shop != null ? shop.getLocation() : null);
-        payload.put("deliveryLocation", order.getDeliveryLocation());
-        payload.put("orderAmount", order.getTotalAmount());
-        payload.put("itemCount", order.getItems() == null ? 0 : order.getItems().size());
-        payload.put("timeoutSeconds", timeoutSeconds);
-        return payload;
+    private static double round(double v) {
+        return Math.round(v * 100.0) / 100.0;
     }
 
     private String getShopOperatorUserId(String shopId) {

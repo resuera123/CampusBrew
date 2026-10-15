@@ -33,6 +33,9 @@ public class DeliveryPersonnelDTO {
 
     private String currentOrderId;
 
+    // v2.0 FR-3.1 — null = campus default.
+    private Integer pickupRangeMeters;
+
     public static DeliveryPersonnelDTO fromEntity(DeliveryPersonnel dp) {
         Double lng = null, lat = null;
         if (dp.getCurrentLocation() != null) {
@@ -50,6 +53,7 @@ public class DeliveryPersonnelDTO {
                 .totalDeliveries(dp.getTotalDeliveries())
                 .incentiveActive(dp.isIncentiveActive())
                 .currentOrderId(dp.getCurrentOrderId())
+                .pickupRangeMeters(dp.getPickupRangeMeters())
                 .build();
     }
 }

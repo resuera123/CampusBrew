@@ -25,6 +25,13 @@ public interface OrderRepository extends MongoRepository<Order, String> {
     /** Scheduler input: any unclaimed READY_FOR_PICKUP older than the cutoff. */
     List<Order> findByOrderStatusAndDeliveryPersonnelIdIsNullAndReadyAtLessThan(OrderStatus status, java.util.Date cutoff);
 
+    /**
+     * v2.0 FR-3.2 — unclaimed READY_FOR_PICKUP orders whose 60s offer window has
+     * lapsed and that have not yet been re-broadcast to all active dashers.
+     */
+    List<Order> findByOrderStatusAndDeliveryPersonnelIdIsNullAndRebroadcastAtIsNullAndReadyAtLessThan(
+            OrderStatus status, java.util.Date cutoff);
+
     /** Dasher's completed-deliveries history. */
     List<Order> findByDeliveryPersonnelIdAndOrderStatusOrderByUpdatedAtDesc(String dpUserId, OrderStatus status);
 }
