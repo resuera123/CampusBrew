@@ -78,6 +78,12 @@ export interface Order {
   // then poll PaymentService.getPayment(paymentId) until the status leaves PENDING.
   paymentRequired?: boolean;
   paymentId?: string;
+  tip?: number; // v2.0 FR-4.7
+  dropoffNote?: string; // v2.0 FR-3.4
+  // v2.0 FR-4.2 — COD two-sided settlement amounts
+  cashCollectedAmount?: number | null;
+  customerConfirmedAmount?: number | null;
+  shopPaymentConfirmedAt?: string | null; // v2.0 FR-3.3
   statusHistory?: StatusHistoryEntry[];
   readyAt?: string;
   createdAt: string;
@@ -157,6 +163,18 @@ export const OrderService = {
     });
     const json = await safeJson(res);
     if (!res.ok) throw new Error(json.error || 'Failed to load order');
+    return json;
+  },
+
+  // v2.0 FR-4.2 — customer confirms the cash amount they paid (COD settlement).
+  async confirmPayment(orderId: string, amount: number, token: string): Promise<Order> {
+    const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/confirm-payment`, {
+      method: 'PUT',
+      headers: authHeaders(token),
+      body: JSON.stringify({ amount }),
+    });
+    const json = await safeJson(res);
+    if (!res.ok) throw new Error(json.error || 'Failed to confirm payment');
     return json;
   },
 

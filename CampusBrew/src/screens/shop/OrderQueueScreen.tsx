@@ -83,13 +83,14 @@ export default function OrderQueueScreen({ route, navigation }: any) {
 
   const handleAction = async (
     orderId: string,
-    action: 'accept' | 'reject' | 'ready',
+    action: 'accept' | 'reject' | 'ready' | 'payment-received',
   ) => {
     if (!token) return;
     setActingOrderId(orderId);
     try {
       if (action === 'accept') await ShopOrderService.accept(orderId, token);
       else if (action === 'reject') await ShopOrderService.reject(orderId, token);
+      else if (action === 'payment-received') await ShopOrderService.confirmPaymentReceived(orderId, token);
       else await ShopOrderService.markReady(orderId, token);
       await fetchOrders();
     } catch (e: any) {
@@ -164,6 +165,7 @@ export default function OrderQueueScreen({ route, navigation }: any) {
               onAccept={() => handleAction(order.id, 'accept')}
               onReject={() => confirmReject(order)}
               onMarkReady={() => handleAction(order.id, 'ready')}
+              onPaymentReceived={() => handleAction(order.id, 'payment-received')}
             />
           ))
         )}
@@ -178,12 +180,14 @@ function OrderCard({
   onAccept,
   onReject,
   onMarkReady,
+  onPaymentReceived,
 }: {
   order: Order;
   busy: boolean;
   onAccept: () => void;
   onReject: () => void;
   onMarkReady: () => void;
+  onPaymentReceived: () => void;
 }) {
   const total = order.items.reduce((sum, it) => sum + (it.quantity || 0), 0);
   return (
@@ -294,11 +298,24 @@ function OrderCard({
           </>
         )}
 
-        {(order.orderStatus === 'ASSIGNED' || order.orderStatus === 'OUT_FOR_DELIVERY') && (
+        {order.orderStatus === 'ASSIGNED' && !order.shopPaymentConfirmedAt && (
+          <TouchableOpacity
+            style={[styles.btn, styles.btnPrimary, { flex: 1 }]}
+            onPress={onPaymentReceived}
+            disabled={busy}
+          >
+            {busy
+              ? <ActivityIndicator color={COLORS.white} />
+              : <Text style={styles.btnPrimaryText}>Payment Received</Text>}
+          </TouchableOpacity>
+        )}
+
+        {((order.orderStatus === 'ASSIGNED' && !!order.shopPaymentConfirmedAt)
+          || order.orderStatus === 'OUT_FOR_DELIVERY') && (
           <View style={[styles.btn, styles.btnDisabled, { flex: 1 }]}>
             <Text style={styles.btnDisabledText}>
               {order.orderStatus === 'ASSIGNED'
-                ? 'Rider is on the way to pick up'
+                ? 'Payment confirmed · rider picking up'
                 : 'Rider is delivering to customer'}
             </Text>
           </View>

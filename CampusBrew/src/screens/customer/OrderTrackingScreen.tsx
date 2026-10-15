@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +17,7 @@ import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { OrderService, Order, OrderStatus, StatusHistoryEntry } from '../../services/OrderService';
+import LiveMapView from '../../components/LiveMapView';
 
 const TIMELINE_STEPS: { status: OrderStatus; label: string; description: string }[] = [
   { status: 'PLACED', label: 'Order Placed', description: 'Your order has been sent to the shop.' },
@@ -41,6 +44,49 @@ export default function OrderTrackingScreen({ route, navigation }: any) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [noDriver, setNoDriver] = useState(false);
+  const [confirmInput, setConfirmInput] = useState(''); // v2.0 FR-4.2 — COD amount paid
+  const [confirming, setConfirming] = useState(false);
+  // v2.0 FR-3.4 — live dasher location
+  const [dasherLoc, setDasherLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const [etaSeconds, setEtaSeconds] = useState<number | null>(null);
+  const [locDelayed, setLocDelayed] = useState(false);
+  const lastLocAt = useRef<number>(0);
+
+  // Mark the location "delayed" if no update arrives for 30s.
+  useEffect(() => {
+    if (order?.orderStatus !== 'OUT_FOR_DELIVERY') return;
+    const t = setInterval(() => {
+      if (lastLocAt.current && Date.now() - lastLocAt.current > 30_000) setLocDelayed(true);
+    }, 5_000);
+    return () => clearInterval(t);
+  }, [order?.orderStatus]);
+
+  // v2.0 FR-4.2 — customer confirms the cash they paid; a mismatch flags the payment.
+  const handleConfirmPayment = async () => {
+    if (!order || !token) return;
+    const amount = parseFloat(confirmInput || String(order.totalAmount));
+    if (isNaN(amount) || amount < 0) {
+      Alert.alert('Enter the amount', 'Enter the cash amount you paid.');
+      return;
+    }
+    setConfirming(true);
+    try {
+      const updated = await OrderService.confirmPayment(order.id, amount, token);
+      setOrder(updated);
+      if (updated.paymentStatus === 'FLAGGED') {
+        Alert.alert('Amounts did not match',
+          'The amount you confirmed differs from what the dasher recorded — this payment is flagged for review.');
+      } else if (updated.paymentStatus === 'PAID_COD') {
+        Alert.alert('Payment confirmed', 'Thanks! Your order is complete.');
+      } else {
+        Alert.alert('Confirmed', 'Waiting for the dasher to record the cash collected.');
+      }
+    } catch (e: any) {
+      Alert.alert('Could not confirm', e.message || 'Please try again.');
+    } finally {
+      setConfirming(false);
+    }
+  };
 
   const load = useCallback(async () => {
     if (!token || !orderId) return;
@@ -87,12 +133,23 @@ export default function OrderTrackingScreen({ route, navigation }: any) {
       if (payload.orderId === orderId) setNoDriver(true);
     };
 
+    // v2.0 FR-3.4 — live dasher location for this order.
+    const onLocation = (payload: { orderId: string; lat: number; lng: number; etaSeconds?: number }) => {
+      if (payload.orderId !== orderId) return;
+      setDasherLoc({ lat: payload.lat, lng: payload.lng });
+      setEtaSeconds(payload.etaSeconds ?? null);
+      lastLocAt.current = Date.now();
+      setLocDelayed(false);
+    };
+
     socket.on('order:statusUpdate', onStatusUpdate);
     socket.on('order:noDriver', onNoDriver);
+    socket.on('location:update', onLocation);
 
     return () => {
       socket.off('order:statusUpdate', onStatusUpdate);
       socket.off('order:noDriver', onNoDriver);
+      socket.off('location:update', onLocation);
     };
   }, [socket, orderId, load]);
 
@@ -163,6 +220,15 @@ export default function OrderTrackingScreen({ route, navigation }: any) {
               </View>
             )}
 
+            {order.orderStatus === 'OUT_FOR_DELIVERY' && (
+              <LiveMapView
+                lat={dasherLoc?.lat}
+                lng={dasherLoc?.lng}
+                etaSeconds={etaSeconds}
+                delayed={locDelayed}
+              />
+            )}
+
             <Text style={styles.sectionTitle}>Order Status</Text>
             <View style={styles.timelineCard}>
               {TIMELINE_STEPS.map((step, i) => {
@@ -217,6 +283,33 @@ export default function OrderTrackingScreen({ route, navigation }: any) {
             </Text>
           </View>
         </View>
+
+        {order.paymentMethod === 'COD'
+          && (order.orderStatus === 'OUT_FOR_DELIVERY' || order.orderStatus === 'DELIVERED')
+          && order.customerConfirmedAmount == null && (
+          <View style={styles.confirmCard}>
+            <Text style={styles.confirmTitle}>Confirm your cash payment</Text>
+            <Text style={styles.confirmHint}>
+              Enter the amount you handed to the dasher (₱{order.totalAmount.toFixed(2)} total).
+            </Text>
+            <View style={styles.confirmRow}>
+              <Text style={styles.confirmPeso}>₱</Text>
+              <TextInput
+                style={styles.confirmInput}
+                value={confirmInput}
+                onChangeText={setConfirmInput}
+                keyboardType="decimal-pad"
+                placeholder={order.totalAmount.toFixed(2)}
+                placeholderTextColor={COLORS.textSecondary}
+              />
+            </View>
+            <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirmPayment} disabled={confirming}>
+              {confirming
+                ? <ActivityIndicator color={COLORS.white} />
+                : <Text style={styles.confirmBtnText}>Confirm Payment</Text>}
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -362,6 +455,14 @@ const styles = StyleSheet.create({
   itemMods: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, marginTop: 1 },
   itemPrice: { fontSize: SIZES.captionSize, color: COLORS.text },
   metaCard: { backgroundColor: COLORS.white, borderRadius: 12, padding: 14 },
+  confirmCard: { backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginTop: 16 },
+  confirmTitle: { fontSize: 15, fontWeight: '700', color: COLORS.text },
+  confirmHint: { fontSize: 12.5, color: COLORS.textSecondary, marginTop: 4, marginBottom: 12 },
+  confirmRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, paddingHorizontal: 12, marginBottom: 12 },
+  confirmPeso: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginRight: 4 },
+  confirmInput: { flex: 1, fontSize: 16, color: COLORS.text, paddingVertical: 12 },
+  confirmBtn: { height: SIZES.buttonHeight, backgroundColor: COLORS.primary, borderRadius: SIZES.buttonBorderRadius, justifyContent: 'center', alignItems: 'center' },
+  confirmBtnText: { color: COLORS.white, fontSize: 15, fontWeight: '700' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
   metaText: { flex: 1, fontSize: SIZES.captionSize, color: COLORS.text },
 });

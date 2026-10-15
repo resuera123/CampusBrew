@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   RefreshControl,
+  TextInput,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,16 +15,23 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
+import { useLocationStreamer } from '../../hooks/useLocationStreamer';
 import { DeliveryService } from '../../services/DeliveryService';
 import { Order } from '../../services/OrderService';
 
 export default function AssignedDeliveryScreen({ navigation }: any) {
   const { token } = useAuth();
+  const { socket } = useSocket();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cashInput, setCashInput] = useState(''); // v2.0 FR-4.2 — COD amount collected
+
+  // v2.0 FR-3.4 — stream location to the customer while out for delivery.
+  useLocationStreamer(order, socket);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -31,6 +39,7 @@ export default function AssignedDeliveryScreen({ navigation }: any) {
       setError(null);
       const o = await DeliveryService.getCurrentOrder(token);
       setOrder(o);
+      if (o && o.paymentMethod === 'COD') setCashInput(String(o.totalAmount));
     } catch (e: any) {
       setError(e.message || 'Could not load current delivery');
     } finally {
@@ -54,35 +63,61 @@ export default function AssignedDeliveryScreen({ navigation }: any) {
     }
   };
 
-  const handleComplete = async () => {
+  // GCash: dasher confirms handover (payment already verified at checkout).
+  const handleGcashComplete = async () => {
     if (!order || !token) return;
-    const isCod = order.paymentMethod === 'COD';
-    const confirmText = isCod
-      ? `Have you collected ₱${order.totalAmount.toFixed(2)} in cash from the customer?`
-      : 'Confirm the order was delivered?';
-    Alert.alert(
-      'Confirm delivery',
-      confirmText,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          onPress: async () => {
-            setSubmitting(true);
-            try {
-              await DeliveryService.confirmDelivery(order.id, token);
-              Alert.alert('Delivered', 'This order is complete.');
-              setOrder(null);
-              navigation.goBack();
-            } catch (e: any) {
-              Alert.alert('Could not confirm', e.message || 'Please try again.');
-            } finally {
-              setSubmitting(false);
-            }
-          },
+    Alert.alert('Confirm delivery', 'Confirm the order was delivered?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Confirm',
+        onPress: async () => {
+          setSubmitting(true);
+          try {
+            await DeliveryService.confirmDelivery(order.id, token);
+            Alert.alert('Delivered', 'This order is complete.');
+            setOrder(null);
+            navigation.goBack();
+          } catch (e: any) {
+            Alert.alert('Could not confirm', e.message || 'Please try again.');
+          } finally {
+            setSubmitting(false);
+          }
         },
-      ],
-    );
+      },
+    ]);
+  };
+
+  // v2.0 FR-4.2 — COD: record the cash collected. Completion happens once the
+  // customer also confirms; a mismatch flags the payment for review.
+  const handleCashCollected = async () => {
+    if (!order || !token) return;
+    const amount = parseFloat(cashInput);
+    if (isNaN(amount) || amount < 0) {
+      Alert.alert('Enter the amount', 'Enter the cash amount you collected.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const updated = await DeliveryService.cashCollected(order.id, amount, token);
+      if (updated.orderStatus === 'DELIVERED') {
+        const flagged = updated.paymentStatus === 'FLAGGED';
+        Alert.alert(
+          flagged ? 'Amounts did not match' : 'Delivered',
+          flagged
+            ? 'Your amount and the customer\'s don\'t match — this payment is flagged for review.'
+            : 'Cash confirmed by the customer. This order is complete.',
+        );
+        setOrder(null);
+        navigation.goBack();
+      } else {
+        setOrder(updated);
+        Alert.alert('Cash recorded', 'Waiting for the customer to confirm the payment.');
+      }
+    } catch (e: any) {
+      Alert.alert('Could not record', e.message || 'Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -189,13 +224,38 @@ export default function AssignedDeliveryScreen({ navigation }: any) {
         </TouchableOpacity>
       )}
 
-      {order && order.orderStatus === 'OUT_FOR_DELIVERY' && (
-        <TouchableOpacity style={styles.primaryBtn} onPress={handleComplete} disabled={submitting}>
+      {order && order.orderStatus === 'OUT_FOR_DELIVERY' && order.paymentMethod === 'COD' && (
+        <View style={styles.codBox}>
+          {order.cashCollectedAmount != null ? (
+            <Text style={styles.codWaiting}>
+              ₱{order.cashCollectedAmount.toFixed(2)} recorded — waiting for the customer to confirm.
+            </Text>
+          ) : (
+            <View style={styles.codRow}>
+              <Text style={styles.codPeso}>₱</Text>
+              <TextInput
+                style={styles.codInput}
+                value={cashInput}
+                onChangeText={setCashInput}
+                keyboardType="decimal-pad"
+                placeholder="Amount collected"
+                placeholderTextColor={COLORS.textSecondary}
+              />
+            </View>
+          )}
+          <TouchableOpacity style={styles.codBtn} onPress={handleCashCollected} disabled={submitting}>
+            {submitting
+              ? <ActivityIndicator color={COLORS.white} />
+              : <Text style={styles.primaryBtnText}>Cash Collected</Text>}
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {order && order.orderStatus === 'OUT_FOR_DELIVERY' && order.paymentMethod !== 'COD' && (
+        <TouchableOpacity style={styles.primaryBtn} onPress={handleGcashComplete} disabled={submitting}>
           {submitting
             ? <ActivityIndicator color={COLORS.white} />
-            : <Text style={styles.primaryBtnText}>
-                {order.paymentMethod === 'COD' ? 'Confirm Cash Received & Delivered' : 'Confirm Delivery'}
-              </Text>}
+            : <Text style={styles.primaryBtnText}>Confirm Delivery</Text>}
         </TouchableOpacity>
       )}
     </SafeAreaView>
@@ -286,6 +346,28 @@ const styles = StyleSheet.create({
   itemQty: { width: 28, fontSize: SIZES.captionSize, fontWeight: '600', color: COLORS.text },
   itemName: { fontSize: SIZES.captionSize, color: COLORS.text },
   itemMods: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, marginTop: 1 },
+  codBox: {
+    position: 'absolute',
+    left: SIZES.screenPadding,
+    right: SIZES.screenPadding,
+    bottom: 24,
+    gap: 10,
+  },
+  codRow: {
+    flexDirection: 'row', alignItems: 'center',
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: 12,
+    paddingHorizontal: 14, backgroundColor: COLORS.white,
+  },
+  codPeso: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginRight: 4 },
+  codInput: { flex: 1, fontSize: 16, color: COLORS.text, paddingVertical: 14 },
+  codWaiting: { fontSize: 13, color: COLORS.textSecondary, textAlign: 'center' },
+  codBtn: {
+    height: SIZES.buttonHeight,
+    backgroundColor: COLORS.primary,
+    borderRadius: SIZES.buttonBorderRadius,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   primaryBtn: {
     position: 'absolute',
     left: SIZES.screenPadding,

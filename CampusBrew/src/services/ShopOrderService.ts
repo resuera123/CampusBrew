@@ -59,4 +59,15 @@ export const ShopOrderService = {
     if (!res.ok) throw new Error(json.error || 'Failed to mark order ready');
     return json;
   },
+
+  // v2.0 FR-3.3 — shop confirms it received payment from the dasher at pickup.
+  async confirmPaymentReceived(orderId: string, token: string): Promise<Order> {
+    const res = await fetch(`${API_BASE_URL}/api/shops/orders/${orderId}/payment-received`, {
+      method: 'PUT',
+      headers: authHeaders(token),
+    });
+    const json = await safeJson(res);
+    if (!res.ok) throw new Error(json.error || 'Failed to confirm payment received');
+    return json;
+  },
 };

@@ -201,4 +201,16 @@ export const DeliveryService = {
     if (!res.ok) throw new Error(json.error || 'Failed to confirm delivery');
     return json;
   },
+
+  // v2.0 FR-4.2 — dasher records the cash they collected (COD two-sided settlement).
+  async cashCollected(orderId: string, amount: number, token: string): Promise<Order> {
+    const res = await fetch(`${API_BASE_URL}/api/delivery/${orderId}/cash-collected`, {
+      method: 'PUT',
+      headers: authHeaders(token),
+      body: JSON.stringify({ amount }),
+    });
+    const json = await safeJson(res);
+    if (!res.ok) throw new Error(json.error || 'Failed to record cash collected');
+    return json;
+  },
 };
