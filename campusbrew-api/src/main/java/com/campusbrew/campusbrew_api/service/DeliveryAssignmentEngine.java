@@ -57,6 +57,7 @@ public class DeliveryAssignmentEngine {
     private final UserRepository userRepository;
     private final SocketService socketService;
     private final ConfigService configService;
+    private final PushNotificationService pushNotificationService;
 
     /**
      * Kick off assignment for an order that just reached READY_FOR_PICKUP. The
@@ -114,6 +115,9 @@ public class DeliveryAssignmentEngine {
                     dp.getTotalDeliveries() + "/" + configService.getIncentiveThreshold());
             socketService.emitToUser(dp.getUserId(), "delivery:request", payload);
             upsertPendingAssignment(order.getId(), dp.getUserId(), now);
+            pushNotificationService.send(dp.getUserId(), "New delivery request",
+                    "A new order is available to deliver. Tap to view.",
+                    Map.of("orderId", order.getId(), "type", "offer"));
         }
     }
 
@@ -224,6 +228,9 @@ public class DeliveryAssignmentEngine {
         socketService.emitToOrder(order.getId(), "order:statusUpdate", payload);
         socketService.emitToUser(getShopOperatorUserId(order.getShopId()), "order:statusUpdate", payload);
         socketService.emitToUser(dpUserId, "order:statusUpdate", payload);
+        pushNotificationService.send(order.getCustomerId(), "Rider assigned",
+                (dpName == null ? "A rider" : dpName) + " is picking up your order.",
+                Map.of("orderId", orderId, "status", "ASSIGNED"));
 
         // Tell every other DP that had a pending offer for this order to dismiss their modal.
         Map<String, Object> claimedPayload = Map.of("orderId", orderId);

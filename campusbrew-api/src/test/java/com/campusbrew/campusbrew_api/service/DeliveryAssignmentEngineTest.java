@@ -56,7 +56,7 @@ class DeliveryAssignmentEngineTest {
         when(assignmentRepo.findByOrderId(anyString())).thenReturn(new ArrayList<>());
 
         engine = new DeliveryAssignmentEngine(mongo, assignmentRepo, dpRepo, orderRepo,
-                shopRepo, userRepo, socket, config);
+                shopRepo, userRepo, socket, config, mock(PushNotificationService.class));
     }
 
     private DeliveryPersonnel dp(String id, GeoJsonPoint loc, Integer range) {
