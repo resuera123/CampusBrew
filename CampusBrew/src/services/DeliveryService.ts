@@ -34,6 +34,7 @@ export interface DeliveryPersonnelProfile {
   totalDeliveries: number;
   incentiveActive: boolean;
   currentOrderId?: string | null;
+  pickupRangeMeters?: number | null; // v2.0 FR-3.1
 }
 
 async function safeJson(res: Response): Promise<any> {
@@ -80,6 +81,18 @@ export const DeliveryService = {
     });
     const json = await safeJson(res);
     if (!res.ok) throw new Error(json.error || 'Failed to update availability');
+    return json;
+  },
+
+  // v2.0 FR-3.1 — meters=null restores the campus default.
+  async updatePickupRange(meters: number | null, token: string): Promise<DeliveryPersonnelProfile> {
+    const res = await fetch(`${API_BASE_URL}/api/delivery/pickup-range`, {
+      method: 'PUT',
+      headers: authHeaders(token),
+      body: JSON.stringify({ meters }),
+    });
+    const json = await safeJson(res);
+    if (!res.ok) throw new Error(json.error || 'Failed to update pickup range');
     return json;
   },
 

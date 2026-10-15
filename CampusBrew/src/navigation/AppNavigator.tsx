@@ -31,6 +31,7 @@ import PaymentReceiptScreen from '../screens/customer/PaymentReceiptScreen';
 // Delivery screens
 import DeliveryDashboardScreen from '../screens/delivery/DeliveryDashboardScreen';
 import ScheduleSettingsScreen from '../screens/delivery/ScheduleSettingsScreen';
+import PickupRangeScreen from '../screens/delivery/PickupRangeScreen';
 import AssignedDeliveryScreen from '../screens/delivery/AssignedDeliveryScreen';
 import DeliveryTabScreen from '../screens/delivery/DeliveryTabScreen';
 import DeliveryHistoryScreen from '../screens/delivery/DeliveryHistoryScreen';
@@ -118,6 +119,7 @@ export function DeliveryStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="DeliveryTabs" component={DeliveryHomeTabs} />
       <Stack.Screen name="ScheduleSettings" component={ScheduleSettingsScreen} />
+      <Stack.Screen name="PickupRange" component={PickupRangeScreen} />
       <Stack.Screen name="DeliveryHistory" component={DeliveryHistoryScreen} />
       <Stack.Screen name="AssignedDelivery" component={AssignedDeliveryScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />

@@ -236,6 +236,15 @@ export default function DeliveryDashboardScreen({ navigation }: any) {
           onPress={() => navigation.navigate('ScheduleSettings')}
         />
         <ActionRow
+          icon="navigate-outline"
+          label="Pickup Range"
+          subtitle={profile?.pickupRangeMeters ? `${profile.pickupRangeMeters} m from shops` : 'Campus default'}
+          onPress={() => navigation.navigate('PickupRange', {
+            current: profile?.pickupRangeMeters ?? null,
+            onSaved: load,
+          })}
+        />
+        <ActionRow
           icon="archive-outline"
           label="Delivery History"
           subtitle="Your completed deliveries"

@@ -20,10 +20,19 @@ interface DeliveryOffer {
   orderId: string;
   shopName?: string;
   shopLocation?: string;
-  deliveryLocation?: string;
-  orderAmount?: number;
+  dropoff?: string;
   itemCount?: number;
+  // v2.0 FR-3.2 — richer offer payload
+  beverageCost?: number;
+  paidViaGcash?: boolean;
+  amountToCollect?: number | null;
+  tip?: number;
+  earnings?: number;
+  customerRating?: number | null;
+  distanceMeters?: number | null;
+  incentiveProgress?: string;
   timeoutSeconds?: number;
+  expiresAt?: number;
 }
 
 /**
@@ -152,14 +161,29 @@ export default function IncomingOrderModal() {
             <Row label="Pickup">
               <Text style={styles.value} numberOfLines={2}>
                 {offer.shopName || 'Shop'}{offer.shopLocation ? ` · ${offer.shopLocation}` : ''}
+                {offer.distanceMeters != null ? `  ·  ${Math.round(offer.distanceMeters)} m away` : ''}
               </Text>
             </Row>
             <Row label="Drop-off">
-              <Text style={styles.value} numberOfLines={2}>{offer.deliveryLocation || '—'}</Text>
+              <Text style={styles.value} numberOfLines={2}>
+                {offer.dropoff || '—'}
+                {offer.customerRating != null ? `   ★ ${offer.customerRating.toFixed(1)}` : ''}
+              </Text>
             </Row>
-            <Row label="Order">
+            <Row label="Pay the shop">
+              <Text style={styles.value}>₱{(offer.beverageCost ?? 0).toFixed(2)}</Text>
+            </Row>
+            <Row label="Collect">
               <Text style={styles.value}>
-                {offer.itemCount ?? '—'} item{(offer.itemCount ?? 0) !== 1 ? 's' : ''} · ₱{(offer.orderAmount ?? 0).toFixed(2)}
+                {offer.paidViaGcash
+                  ? 'Paid via GCash ✓'
+                  : `₱${(offer.amountToCollect ?? 0).toFixed(2)}`}
+              </Text>
+            </Row>
+            <Row label="Your earnings">
+              <Text style={[styles.value, styles.earnings]}>
+                ₱{(offer.earnings ?? 0).toFixed(2)}
+                {offer.incentiveProgress ? `   ·   ${offer.incentiveProgress} to full fee` : ''}
               </Text>
             </Row>
           </View>
@@ -244,6 +268,7 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   value: { fontSize: SIZES.captionSize, color: COLORS.text },
+  earnings: { fontWeight: '700', color: COLORS.primary },
   countdownBox: {
     borderRadius: 12,
     padding: 18,
