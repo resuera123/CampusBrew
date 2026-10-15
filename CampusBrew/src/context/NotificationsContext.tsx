@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { useSocket } from './SocketContext';
+import * as Notifications from 'expo-notifications';
+import { registerPushToken } from '../services/push';
+import { navigate } from '../navigation/navigationRef';
 
 export interface Notification {
   id: string;
@@ -54,7 +57,7 @@ function describeStatusUpdate(status: string, orderId?: string, deliveryPersonne
 }
 
 export const NotificationsProvider = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { socket } = useSocket();
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
@@ -62,6 +65,27 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
   useEffect(() => {
     setNotifications([]);
   }, [user?.userId]);
+
+  // v2.0 FR-3.4 — register this device for push on login; tap routes to the order.
+  useEffect(() => {
+    if (!user || !token) return;
+    registerPushToken(token);
+
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as { orderId?: string } | undefined;
+      const orderId = data?.orderId;
+      if (!orderId) return;
+      // Route to the role-appropriate screen for this order.
+      if (user.role === 'DELIVERY_PERSONNEL') {
+        navigate('AssignedDelivery', { orderId });
+      } else if (user.role === 'SHOP_OPERATOR') {
+        navigate('OrderQueue');
+      } else {
+        navigate('OrderTracking', { orderId });
+      }
+    });
+    return () => sub.remove();
+  }, [user?.userId, token]);
 
   useEffect(() => {
     if (!socket) return;
