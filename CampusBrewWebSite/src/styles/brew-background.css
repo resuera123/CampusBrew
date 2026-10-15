@@ -1,0 +1,84 @@
+/* ============ EDIT THESE ============ */
+:root {
+  --brew-coral:      #7D2826;   /* main theme color */
+  --brew-coral-deep: #4a1716;
+  --brew-coral-dark: #2b0d0c;
+  --brew-candle:     #EFE9D7;   /* main theme cream */
+
+  --brew-pattern-opacity: 0.12;  /* how visible the line-art is */
+  --brew-drift-speed: 60s;       /* lower = faster */
+}
+/* ==================================== */
+
+.brew-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 55% at 78% 18%, rgba(190, 82, 74, 0.45), transparent 70%),
+    radial-gradient(55% 50% at 12% 88%, rgba(239, 233, 215, 0.10), transparent 70%),
+    linear-gradient(160deg, var(--brew-coral), var(--brew-coral-deep) 70%, var(--brew-coral-dark));
+}
+
+/* Fade in together with the rest of the hero intro */
+.hero .brew-bg {
+  opacity: 0;
+  transition: opacity 1.6s cubic-bezier(.22, 1, .36, 1);
+}
+.hero.is-loaded .brew-bg { opacity: 1; }
+
+/* ---------- Drifting line-art pattern ---------- */
+.brew-pattern {
+  position: absolute;
+  top: -240px;
+  left: -240px;
+  width: calc(100% + 480px);
+  height: calc(100% + 480px);
+  color: var(--brew-candle);
+  opacity: var(--brew-pattern-opacity);
+  animation: brew-drift var(--brew-drift-speed) linear infinite;
+  will-change: transform;
+}
+/* moves exactly one tile (240px), so the loop is seamless */
+@keyframes brew-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(240px, 240px, 0); }
+}
+
+/* ---------- Floating bubbles ---------- */
+.brew-bubble {
+  position: absolute;
+  bottom: -60px;
+  left: var(--x);
+  width: var(--s);
+  height: var(--s);
+  border-radius: 50%;
+  border: 1px solid rgba(239, 233, 215, 0.4);
+  background: radial-gradient(circle at 30% 30%, rgba(239, 233, 215, 0.28), rgba(239, 233, 215, 0.03));
+  opacity: 0;
+  animation: brew-rise var(--t) linear infinite;
+  animation-delay: var(--delay);
+}
+@keyframes brew-rise {
+  0%   { transform: translate3d(0, 0, 0);          opacity: 0; }
+  10%  { opacity: 1; }
+  50%  { transform: translate3d(14px, -55vh, 0); }
+  90%  { opacity: 1; }
+  100% { transform: translate3d(-10px, -115vh, 0); opacity: 0; }
+}
+
+/* ---------- Readability vignette ---------- */
+.brew-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at center, rgba(43, 13, 12, 0.3), transparent 60%),
+    radial-gradient(ellipse at center, transparent 45%, rgba(43, 13, 12, 0.55));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brew-pattern, .brew-bubble { animation: none; }
+  .brew-bubble { opacity: 0.5; bottom: 20%; }
+}
