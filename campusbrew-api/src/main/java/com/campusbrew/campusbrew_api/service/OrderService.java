@@ -395,6 +395,34 @@ public class OrderService {
         return OrderDTO.fromOrder(saved, shop.getShopName(), null);
     }
 
+    /**
+     * v2.0 FR-3.3 — the shop confirms it received payment from the dasher at pickup.
+     * Stamps shopPaymentConfirmedAt and notifies the dasher and customer. Allowed
+     * once a dasher is assigned (ASSIGNED, or OUT_FOR_DELIVERY if confirmed late).
+     */
+    public OrderDTO confirmPaymentReceived(String operatorUserId, String orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+        Shop shop = requireOwnedShop(operatorUserId, order.getShopId());
+        if (order.getOrderStatus() != OrderStatus.ASSIGNED
+                && order.getOrderStatus() != OrderStatus.OUT_FOR_DELIVERY) {
+            throw new RuntimeException("Payment can only be confirmed after a dasher is assigned");
+        }
+        Date now = Date.from(Instant.now());
+        order.setShopPaymentConfirmedAt(now);
+        order.setUpdatedAt(now);
+        Order saved = orderRepository.save(order);
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("orderId", saved.getId());
+        payload.put("shopPaymentConfirmedAt", now);
+        if (saved.getDeliveryPersonnelId() != null) {
+            socketService.emitToUser(saved.getDeliveryPersonnelId(), "order:paymentReceived", payload);
+        }
+        socketService.emitToUser(saved.getCustomerId(), "order:paymentReceived", payload);
+        return OrderDTO.fromOrder(saved, shop.getShopName(), null);
+    }
+
     private OrderDTO transitionShopOrder(String operatorUserId, String orderId,
                                          OrderStatus expected, OrderStatus next) {
         Order order = orderRepository.findById(orderId)

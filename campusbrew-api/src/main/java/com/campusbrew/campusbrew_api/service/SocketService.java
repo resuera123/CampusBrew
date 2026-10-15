@@ -1,7 +1,7 @@
 package com.campusbrew.campusbrew_api.service;
 
 import com.campusbrew.campusbrew_api.websocket.RealtimeSocketHandler;
-import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 /**
@@ -13,12 +13,19 @@ import org.springframework.stereotype.Service;
  *
  * Domain-specific helpers (delivery assignment, status updates, etc.) live here so
  * controllers/services don't talk to the socket handler directly.
+ *
+ * The RealtimeSocketHandler reference is @Lazy to break the construction cycle:
+ * RealtimeSocketHandler collects InboundSocketHandler beans (e.g. LocationService),
+ * which in turn emit through this SocketService.
  */
 @Service
-@RequiredArgsConstructor
 public class SocketService {
 
     private final RealtimeSocketHandler handler;
+
+    public SocketService(@Lazy RealtimeSocketHandler handler) {
+        this.handler = handler;
+    }
 
     public void emitToUser(String userId, String event, Object payload) {
         handler.emit("user:" + userId, event, payload);

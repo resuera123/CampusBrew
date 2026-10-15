@@ -37,10 +37,10 @@ public class ConfigService {
 
     // FR-3.2 — reference point for range filtering when a shop has no coordinates
     // yet (CIT-U campus center). Dasher pickup range is measured from here.
-    @Value("${delivery.campus.longitude:123.881}")
+    @Value("${delivery.campus.longitude:123.88112327116433}")
     private double campusLongitude;
 
-    @Value("${delivery.campus.latitude:10.2945}")
+    @Value("${delivery.campus.latitude:10.294734124980659}")
     private double campusLatitude;
 
     // Tipping (FR-4.7)

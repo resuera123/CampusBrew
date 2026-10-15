@@ -3,6 +3,8 @@ package com.campusbrew.campusbrew_api.controller;
 import com.campusbrew.campusbrew_api.dto.CreateOrderDTO;
 import com.campusbrew.campusbrew_api.dto.OrderDTO;
 import com.campusbrew.campusbrew_api.dto.ReorderDTO;
+import com.campusbrew.campusbrew_api.dto.CashAmountDTO;
+import com.campusbrew.campusbrew_api.service.CodSettlementService;
 import com.campusbrew.campusbrew_api.service.JwtService;
 import com.campusbrew.campusbrew_api.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,7 @@ import java.util.Map;
 public class OrderController {
 
     private final OrderService orderService;
+    private final CodSettlementService codSettlementService;
     private final JwtService jwtService;
 
     @PostMapping
@@ -67,6 +70,20 @@ public class OrderController {
             String userId = userIdFrom(authHeader);
             ReorderDTO reorder = orderService.prepareReorder(userId, orderId);
             return ResponseEntity.ok(reorder);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}/confirm-payment")
+    public ResponseEntity<?> confirmPayment(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable String id,
+            @RequestBody CashAmountDTO dto) {
+        try {
+            String userId = userIdFrom(authHeader);
+            if (dto.getAmount() == null) throw new RuntimeException("Amount is required");
+            return ResponseEntity.ok(codSettlementService.recordCustomerConfirmed(userId, id, dto.getAmount()));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         }

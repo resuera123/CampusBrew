@@ -71,6 +71,18 @@ public class ShopOrderController {
         }
     }
 
+    @PutMapping("/orders/{orderId}/payment-received")
+    public ResponseEntity<?> paymentReceived(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable String orderId) {
+        try {
+            String userId = userIdFrom(authHeader);
+            return ResponseEntity.ok(orderService.confirmPaymentReceived(userId, orderId));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     private List<OrderStatus> parseStatuses(String csv) {
         if (csv == null || csv.isBlank()) return List.of();
         return Arrays.stream(csv.split(","))

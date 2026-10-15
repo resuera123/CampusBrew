@@ -68,11 +68,29 @@ public class DeliveryFulfillmentService {
                     + ", expected OUT_FOR_DELIVERY");
         }
 
-        // Flip COD payment status — the DP has confirmed cash in hand.
-        if (order.getPaymentMethod() == PaymentMethod.COD
-                && order.getPaymentStatus() == PaymentStatus.PENDING_COD) {
-            order.setPaymentStatus(PaymentStatus.PAID_COD);
+        // v2.0 FR-4.2 — COD now completes via two-sided settlement (dasher Cash
+        // Collected + customer Confirm payment), not this dasher-only path.
+        if (order.getPaymentMethod() == PaymentMethod.COD) {
+            throw new RuntimeException(
+                    "Cash on Delivery orders complete when you tap Cash Collected and the "
+                    + "customer confirms payment");
         }
+
+        return completeDelivery(order);
+    }
+
+    /**
+     * v2.0 FR-4.2 — complete an OUT_FOR_DELIVERY order: transition to DELIVERED,
+     * write the transaction, apply the incentive and free the dasher. The caller
+     * has already set the final paymentStatus (PAID_GCASH, PAID_COD or FLAGGED).
+     * Guarded on OUT_FOR_DELIVERY so it can't double-complete an order.
+     */
+    public OrderDTO completeDelivery(Order order) {
+        if (order.getOrderStatus() != OrderStatus.OUT_FOR_DELIVERY) {
+            throw new RuntimeException("Order is in status " + order.getOrderStatus()
+                    + ", expected OUT_FOR_DELIVERY");
+        }
+        String dpUserId = order.getDeliveryPersonnelId();
 
         applyTransition(order, OrderStatus.DELIVERED);
         Order saved = orderRepository.save(order);

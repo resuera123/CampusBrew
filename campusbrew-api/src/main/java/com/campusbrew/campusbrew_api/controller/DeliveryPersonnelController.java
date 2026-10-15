@@ -2,6 +2,7 @@ package com.campusbrew.campusbrew_api.controller;
 
 import com.campusbrew.campusbrew_api.dto.AvailabilityToggleDTO;
 import com.campusbrew.campusbrew_api.dto.PickupRangeDTO;
+import com.campusbrew.campusbrew_api.dto.CashAmountDTO;
 import com.campusbrew.campusbrew_api.dto.UpdateLocationDTO;
 import com.campusbrew.campusbrew_api.dto.UpdateScheduleDTO;
 import com.campusbrew.campusbrew_api.service.DeliveryPersonnelService;
@@ -19,6 +20,7 @@ import java.util.Map;
 public class DeliveryPersonnelController {
 
     private final DeliveryPersonnelService deliveryPersonnelService;
+    private final com.campusbrew.campusbrew_api.service.CodSettlementService codSettlementService;
     private final JwtService jwtService;
 
     @GetMapping("/me")
@@ -85,6 +87,20 @@ public class DeliveryPersonnelController {
         try {
             String userId = userIdFrom(authHeader);
             return ResponseEntity.ok(deliveryPersonnelService.updatePickupRange(userId, dto.getMeters()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{orderId}/cash-collected")
+    public ResponseEntity<?> cashCollected(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable String orderId,
+            @RequestBody CashAmountDTO dto) {
+        try {
+            String userId = userIdFrom(authHeader);
+            if (dto.getAmount() == null) throw new RuntimeException("Amount is required");
+            return ResponseEntity.ok(codSettlementService.recordDasherCollected(userId, orderId, dto.getAmount()));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         }
