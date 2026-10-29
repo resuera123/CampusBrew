@@ -3,6 +3,7 @@ package com.campusbrew.campusbrew_api.controller;
 import com.campusbrew.campusbrew_api.payment.InvalidCallbackTokenException;
 import com.campusbrew.campusbrew_api.service.OrderService;
 import com.campusbrew.campusbrew_api.service.PaymentService;
+import com.campusbrew.campusbrew_api.service.TipService;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +17,8 @@ import java.util.Map;
  * v2.0 FR-4.1 — Xendit payment webhook. No JWT (permitted in SecurityConfig); the
  * x-callback-token header is the authentication. Orchestrates the two services so
  * neither depends on the other: PaymentService applies the status change, and on a
- * verified PAID this controller asks OrderService to create the order.
+ * verified PAID this controller asks OrderService to create the order, or
+ * TipService to credit a post-delivery tip.
  */
 @Slf4j
 @RestController
@@ -26,6 +28,7 @@ public class PaymentWebhookController {
 
     private final PaymentService paymentService;
     private final OrderService orderService;
+    private final TipService tipService;
 
     @PostMapping("/xendit")
     public ResponseEntity<?> xendit(
@@ -35,6 +38,9 @@ public class PaymentWebhookController {
             PaymentService.WebhookOutcome outcome = paymentService.processWebhook(callbackToken, payload);
             if (outcome.isShouldCreateOrder()) {
                 orderService.createPaidOrderFromDraft(outcome.getPayment());
+            }
+            if (outcome.isShouldCreditTip()) {
+                tipService.creditTip(outcome.getPayment()); // v2.0 FR-4.7
             }
             // Always 200 for a processed (or no-op) webhook so Xendit stops retrying.
             return ResponseEntity.ok(Map.of("received", true));

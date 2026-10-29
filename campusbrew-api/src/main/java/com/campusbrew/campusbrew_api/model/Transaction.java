@@ -45,6 +45,10 @@ public class Transaction {
     // v2.0 FR-4.7 — tip portion, credited 100% to the dasher (no commission).
     private double tip;
 
+    // v2.0 FR-4.7 — tip paid by GCash after delivery. Kept apart from `tip` (paid with
+    // the order, in cash for COD) so cash-collected totals stay right; also in dpEarnings.
+    private double postDeliveryTip;
+
     private PaymentMethod paymentMethod;
     private String xenditTransactionId;
 

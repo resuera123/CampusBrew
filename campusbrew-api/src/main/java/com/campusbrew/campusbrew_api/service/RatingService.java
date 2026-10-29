@@ -7,7 +7,6 @@ import com.campusbrew.campusbrew_api.model.Order;
 import com.campusbrew.campusbrew_api.model.OrderStatus;
 import com.campusbrew.campusbrew_api.model.Rating;
 import com.campusbrew.campusbrew_api.model.Shop;
-import com.campusbrew.campusbrew_api.model.StatusHistoryEntry;
 import com.campusbrew.campusbrew_api.model.User;
 import com.campusbrew.campusbrew_api.repository.DeliveryPersonnelRepository;
 import com.campusbrew.campusbrew_api.repository.OrderRepository;
@@ -225,22 +224,9 @@ public class RatingService {
     /** When the rating window closes, or null if the order isn't delivered. */
     private Date closesAt(Order order) {
         if (order.getOrderStatus() != OrderStatus.DELIVERED) return null;
-        Date deliveredAt = deliveredAt(order);
+        Date deliveredAt = order.reachedAt(OrderStatus.DELIVERED);
         if (deliveredAt == null) return null;
         return Date.from(deliveredAt.toInstant().plus(Duration.ofHours(configService.getRatingWindowHours())));
-    }
-
-    private static Date deliveredAt(Order order) {
-        List<StatusHistoryEntry> history = order.getStatusHistory();
-        if (history != null) {
-            for (int i = history.size() - 1; i >= 0; i--) {
-                StatusHistoryEntry e = history.get(i);
-                if (e.getStatus() == OrderStatus.DELIVERED && e.getTimestamp() != null) {
-                    return e.getTimestamp();
-                }
-            }
-        }
-        return order.getUpdatedAt();
     }
 
     private Optional<Shop> shop(Order order) {

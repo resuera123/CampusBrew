@@ -85,6 +85,31 @@ public class PaymentService {
         return OrderDTO.paymentRequired(draft, shopName, payment.getId(), charge.checkoutUrl());
     }
 
+    // ---- GCash tip after delivery (FR-4.7) ----
+
+    /**
+     * Persist a PENDING TIP payment for a delivered order and open a Xendit GCash
+     * charge for it. The tip is credited to the dasher only when the webhook reports
+     * PAID (see {@link WebhookOutcome#isShouldCreditTip()}).
+     */
+    public TipCharge initiateTipCharge(String userId, String orderId, double amount) {
+        Payment payment = paymentRepository.save(Payment.builder()
+                .orderId(orderId)
+                .userId(userId)
+                .type(PaymentType.TIP)
+                .method(PaymentMethod.GCASH)
+                .amount(amount)
+                .status(PaymentRecordStatus.PENDING)
+                .webhookEvents(new ArrayList<>())
+                .createdAt(Date.from(Instant.now()))
+                .build());
+
+        XenditClient.ChargeResult charge = xenditClient.createGcashCharge(payment.getId(), amount);
+        payment.setGatewayChargeId(charge.chargeId());
+        paymentRepository.save(payment);
+        return new TipCharge(payment.getId(), charge.checkoutUrl());
+    }
+
     // ---- Webhook (FR-4.1) ----
 
     /**
@@ -135,9 +160,11 @@ public class PaymentService {
             payment.setStatus(PaymentRecordStatus.PAID);
             payment.setReferenceNo(chargeId);
             Payment saved = paymentRepository.save(payment);
-            // Create the order only for an ORDER payment that has not already produced one.
+            // Create the order only for an ORDER payment that has not already produced one;
+            // a TIP is credited to the dasher. PAID is terminal, so each happens once.
             boolean createOrder = saved.getType() == PaymentType.ORDER && saved.getOrderId() == null;
-            return new WebhookOutcome(saved, createOrder);
+            boolean creditTip = saved.getType() == PaymentType.TIP;
+            return new WebhookOutcome(saved, createOrder, creditTip);
         }
 
         if (isFailed(status)) {
@@ -181,13 +208,12 @@ public class PaymentService {
 
     /** Refund the GCash payment for an order, if one was PAID. No-op for COD/unpaid. */
     public void refund(String orderId) {
-        Optional<Payment> maybe = paymentRepository.findByOrderId(orderId);
-        if (maybe.isEmpty()) {
-            return;
-        }
-        Payment payment = maybe.get();
-        if (payment.getStatus() != PaymentRecordStatus.PAID
-                || payment.getGatewayChargeId() == null) {
+        // Only the order's checkout payment is refunded; a post-delivery tip can't
+        // coexist with a refund (tips need DELIVERED, refunds happen before pickup).
+        Payment payment = paymentRepository.findByOrderIdAndType(orderId, PaymentType.ORDER).stream()
+                .filter(p -> p.getStatus() == PaymentRecordStatus.PAID && p.getGatewayChargeId() != null)
+                .findFirst().orElse(null);
+        if (payment == null) {
             return;
         }
         xenditClient.refund(payment.getGatewayChargeId(), payment.getAmount());
@@ -243,15 +269,23 @@ public class PaymentService {
         private String paymentUrl;
     }
 
-    /** Outcome of a webhook: the (updated) payment and whether the caller must create the order. */
+    /**
+     * Outcome of a webhook: the (updated) payment and what the caller must do next —
+     * create the order (ORDER payment) or credit the tip (TIP payment).
+     */
     @Data
     @AllArgsConstructor
     public static class WebhookOutcome {
         private Payment payment;
         private boolean shouldCreateOrder;
+        private boolean shouldCreditTip;
 
         static WebhookOutcome noop() {
-            return new WebhookOutcome(null, false);
+            return new WebhookOutcome(null, false, false);
         }
+    }
+
+    /** A started tip charge: the payment to poll and the GCash checkout to open. */
+    public record TipCharge(String paymentId, String paymentUrl) {
     }
 }

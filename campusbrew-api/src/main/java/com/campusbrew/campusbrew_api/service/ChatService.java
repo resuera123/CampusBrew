@@ -7,7 +7,6 @@ import com.campusbrew.campusbrew_api.model.ChatMessage;
 import com.campusbrew.campusbrew_api.model.Order;
 import com.campusbrew.campusbrew_api.model.OrderStatus;
 import com.campusbrew.campusbrew_api.model.Shop;
-import com.campusbrew.campusbrew_api.model.StatusHistoryEntry;
 import com.campusbrew.campusbrew_api.model.User;
 import com.campusbrew.campusbrew_api.repository.ChatMessageRepository;
 import com.campusbrew.campusbrew_api.repository.OrderRepository;
@@ -224,24 +223,10 @@ public class ChatService implements InboundSocketHandler {
     }
 
     private boolean withinGrace(Order order, OrderStatus terminal, Instant now) {
-        Date endedAt = endedAt(order, terminal);
+        Date endedAt = order.reachedAt(terminal);
         if (endedAt == null) return false;
         Duration grace = Duration.ofMinutes(configService.getChatReadOnlyAfterMinutes());
         return now.isBefore(endedAt.toInstant().plus(grace));
-    }
-
-    /** When the order reached its terminal status — from history, else its last update. */
-    private static Date endedAt(Order order, OrderStatus terminal) {
-        List<StatusHistoryEntry> history = order.getStatusHistory();
-        if (history != null) {
-            for (int i = history.size() - 1; i >= 0; i--) {
-                StatusHistoryEntry e = history.get(i);
-                if (e.getStatus() == terminal && e.getTimestamp() != null) {
-                    return e.getTimestamp();
-                }
-            }
-        }
-        return order.getUpdatedAt();
     }
 
     private Participants participants(Order order, ChatChannel channel) {

@@ -53,8 +53,10 @@ class PaymentServiceTest {
         when(repo.findById(anyString())).thenAnswer(inv -> Optional.ofNullable(store.get(inv.getArgument(0))));
         when(repo.findByGatewayChargeId(anyString())).thenAnswer(inv ->
                 store.values().stream().filter(p -> inv.getArgument(0).equals(p.getGatewayChargeId())).findFirst());
-        when(repo.findByOrderId(anyString())).thenAnswer(inv ->
-                store.values().stream().filter(p -> inv.getArgument(0).equals(p.getOrderId())).findFirst());
+        when(repo.findByOrderIdAndType(anyString(), any(PaymentType.class))).thenAnswer(inv ->
+                store.values().stream()
+                        .filter(p -> inv.getArgument(0).equals(p.getOrderId()) && inv.getArgument(1) == p.getType())
+                        .toList());
 
         service = new PaymentService(repo, xendit, config);
     }
@@ -194,5 +196,49 @@ class PaymentServiceTest {
 
         verify(xendit, never()).refund(anyString(), anyDouble());
         assertThat(store.get(p.getId()).getStatus()).isEqualTo(PaymentRecordStatus.PENDING);
+    }
+
+    // ---- v2.0 FR-4.7 post-delivery tip ----
+
+    @Test
+    void tipChargeCreatesPendingTipPaymentForTheOrder() {
+        when(xendit.createGcashCharge(anyString(), anyDouble()))
+                .thenReturn(new XenditClient.ChargeResult("ewc_tip", "https://checkout/tip"));
+
+        PaymentService.TipCharge charge = service.initiateTipCharge("cust1", "order_9", 10);
+
+        Payment tip = store.get(charge.paymentId());
+        assertThat(charge.paymentUrl()).isEqualTo("https://checkout/tip");
+        assertThat(tip.getType()).isEqualTo(PaymentType.TIP);
+        assertThat(tip.getOrderId()).isEqualTo("order_9");
+        assertThat(tip.getStatus()).isEqualTo(PaymentRecordStatus.PENDING);
+        assertThat(tip.getGatewayChargeId()).isEqualTo("ewc_tip");
+    }
+
+    @Test
+    void paidTipWebhookSignalsCreditNotOrderCreation_andOnlyOnce() {
+        Payment tip = repo.save(Payment.builder().userId("cust1").orderId("order_9").type(PaymentType.TIP)
+                .method(PaymentMethod.GCASH).amount(10).status(PaymentRecordStatus.PENDING)
+                .gatewayChargeId("ewc_tip").webhookEvents(new ArrayList<>()).createdAt(new Date()).build());
+
+        PaymentService.WebhookOutcome first =
+                service.processWebhook("secret-token", webhook(tip.getId(), "ewc_tip", "SUCCEEDED", 10));
+        assertThat(first.isShouldCreditTip()).isTrue();
+        assertThat(first.isShouldCreateOrder()).isFalse();
+
+        PaymentService.WebhookOutcome repeat =
+                service.processWebhook("secret-token", webhook(tip.getId(), "ewc_tip", "SUCCEEDED", 10));
+        assertThat(repeat.isShouldCreditTip()).isFalse();
+    }
+
+    @Test
+    void refundIgnoresTipPaymentsOnTheSameOrder() {
+        repo.save(Payment.builder().userId("cust1").orderId("order_3").type(PaymentType.TIP)
+                .method(PaymentMethod.GCASH).amount(10).status(PaymentRecordStatus.PAID)
+                .gatewayChargeId("ewc_tip").webhookEvents(new ArrayList<>()).createdAt(new Date()).build());
+
+        service.refund("order_3");
+
+        verify(xendit, never()).refund(anyString(), anyDouble());
     }
 }

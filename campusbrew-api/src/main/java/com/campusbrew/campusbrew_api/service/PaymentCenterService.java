@@ -96,7 +96,8 @@ public class PaymentCenterService {
 
         for (Transaction t : transactionRepository.findByDeliveryPersonnelIdOrderByCreatedAtDesc(userId)) {
             earnings += t.getDpEarnings();
-            tips += t.getTip();
+            double orderTips = t.getTip() + t.getPostDeliveryTip();
+            tips += orderTips;
             boolean cod = t.getPaymentMethod() == PaymentMethod.COD;
             if (cod) {
                 cashCollected += t.getBeverageCost() + t.getDeliveryFee() + t.getTip();
@@ -107,7 +108,7 @@ public class PaymentCenterService {
                     .orderId(t.getOrderId())
                     .method(t.getPaymentMethod() == null ? null : t.getPaymentMethod().name())
                     .status(t.getStatus().name()).amount(t.getDpEarnings())
-                    .description("Delivery earnings" + (t.getTip() > 0 ? " (incl. ₱" + (int) t.getTip() + " tip)" : ""))
+                    .description("Delivery earnings" + (orderTips > 0 ? " (incl. ₱" + (int) orderTips + " tip)" : ""))
                     .createdAt(t.getCreatedAt()).build());
         }
 

@@ -71,4 +71,20 @@ public class Order {
 
     private Date createdAt;
     private Date updatedAt;
+
+    /**
+     * When the order last entered {@code status}, from statusHistory, falling back to
+     * updatedAt. Drives the post-delivery windows (chat, rating, tip).
+     */
+    public Date reachedAt(OrderStatus status) {
+        if (statusHistory != null) {
+            for (int i = statusHistory.size() - 1; i >= 0; i--) {
+                StatusHistoryEntry e = statusHistory.get(i);
+                if (e.getStatus() == status && e.getTimestamp() != null) {
+                    return e.getTimestamp();
+                }
+            }
+        }
+        return updatedAt;
+    }
 }
