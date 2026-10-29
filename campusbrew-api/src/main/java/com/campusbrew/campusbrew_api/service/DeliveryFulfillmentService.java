@@ -140,8 +140,14 @@ public class DeliveryFulfillmentService {
         Map<String, Object> payload = statusPayload(saved);
         socketService.emitToUser(saved.getCustomerId(), "order:delivered", payload);
         socketService.emitToOrder(saved.getId(), "order:statusUpdate", payload);
-        shopRepository.findById(saved.getShopId()).ifPresent(s ->
-                socketService.emitToUser(s.getOperatorId(), "order:delivered", payload));
+        shopRepository.findById(saved.getShopId()).ifPresent(s -> {
+            socketService.emitToUser(s.getOperatorId(), "order:delivered", payload);
+            // v2.0 FR-3.6 — prompt the shop to rate the dasher. The dasher is taken to the
+            // rating screen in-app, and the customer's rating card is on order tracking.
+            pushNotificationService.send(s.getOperatorId(), "Rate the dasher",
+                    "How did the pickup go? Rate your dasher.",
+                    java.util.Map.of("type", "rating", "orderId", saved.getId()));
+        });
         pushNotificationService.send(saved.getCustomerId(), "Delivered",
                 "Your order has been delivered. Enjoy!",
                 java.util.Map.of("orderId", saved.getId(), "status", "DELIVERED"));
