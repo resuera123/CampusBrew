@@ -28,7 +28,7 @@ class PickupRangeTest {
         dpRepo = mock(DeliveryPersonnelRepository.class);
         userRepo = mock(UserRepository.class);
         TransactionRepository txRepo = mock(TransactionRepository.class);
-        service = new DeliveryPersonnelService(dpRepo, userRepo, txRepo);
+        service = new DeliveryPersonnelService(dpRepo, userRepo, txRepo, mock(ConfigService.class));
 
         when(userRepo.findById("d1")).thenReturn(Optional.of(
                 User.builder().id("d1").role(UserRole.DELIVERY_PERSONNEL).build()));

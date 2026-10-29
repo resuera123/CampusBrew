@@ -36,6 +36,11 @@ public class DeliveryPersonnelDTO {
     // v2.0 FR-3.1 — null = campus default.
     private Integer pickupRangeMeters;
 
+    // v2.0 FR-3.6 — the dasher's own rating on their profile; the average is null
+    // until rating.minCountToShow ratings (set by DeliveryPersonnelService.getMyProfile).
+    private Double ratingAvg;
+    private int ratingCount;
+
     public static DeliveryPersonnelDTO fromEntity(DeliveryPersonnel dp) {
         Double lng = null, lat = null;
         if (dp.getCurrentLocation() != null) {
@@ -54,6 +59,7 @@ public class DeliveryPersonnelDTO {
                 .incentiveActive(dp.isIncentiveActive())
                 .currentOrderId(dp.getCurrentOrderId())
                 .pickupRangeMeters(dp.getPickupRangeMeters())
+                .ratingCount(dp.getRatingCount())
                 .build();
     }
 }

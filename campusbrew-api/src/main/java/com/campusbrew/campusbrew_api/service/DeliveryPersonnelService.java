@@ -24,9 +24,14 @@ public class DeliveryPersonnelService {
     private final DeliveryPersonnelRepository deliveryPersonnelRepository;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
+    private final ConfigService configService;
 
     public DeliveryPersonnelDTO getMyProfile(String userId) {
-        return DeliveryPersonnelDTO.fromEntity(requireProfile(userId));
+        DeliveryPersonnel dp = requireProfile(userId);
+        DeliveryPersonnelDTO dto = DeliveryPersonnelDTO.fromEntity(dp);
+        dto.setRatingAvg(RatingDisplay.visible(
+                dp.getRatingAvg(), dp.getRatingCount(), configService.getRatingMinCountToShow()));
+        return dto;
     }
 
     public DeliveryPersonnelDTO setAvailability(String userId, boolean isActive) {
