@@ -34,9 +34,9 @@ import java.util.Objects;
  * (customer ↔ assigned dasher). Only the two participants of a channel may read or
  * write it. A channel accepts messages only while it is open:
  *   - SHOP   from PLACED until the dasher picks up (closes at OUT_FOR_DELIVERY);
- *   - DASHER from ASSIGNED until delivery;
+ *   - DASHER from ASSIGNED until delivery is confirmed (read-only at DELIVERED);
  * and either stays writable for {@code chat.readOnlyAfterMinutes} after the order is
- * DELIVERED (DASHER) or CANCELLED (both), then becomes read-only.
+ * CANCELLED, then becomes read-only.
  *
  * Registered automatically (InboundSocketHandler) for the client→server "chat:send"
  * event. A sent message is relayed as "chat:message" to both participants (the echo
@@ -214,7 +214,8 @@ public class ChatService implements InboundSocketHandler {
             case ASSIGNED, OUT_FOR_DELIVERY:
                 return null;
             case DELIVERED:
-                return withinGrace(order, status, now) ? null : "This order was delivered";
+                // Read-only as soon as delivery is confirmed — no grace window.
+                return "This order was delivered";
             case CANCELLED:
                 return withinGrace(order, status, now) ? null : "This order was cancelled";
             default:

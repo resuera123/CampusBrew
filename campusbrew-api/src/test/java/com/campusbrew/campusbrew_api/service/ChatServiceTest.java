@@ -133,14 +133,22 @@ class ChatServiceTest {
     }
 
     @Test
-    void dasherChannelStaysWritableForThirtyMinutesAfterDelivery() {
-        order(OrderStatus.DELIVERED, "d1", Instant.now().minus(10, ChronoUnit.MINUTES));
-        assertThat(service.history("c1", "o1", ChatChannel.DASHER).isWritable()).isTrue();
-
-        order(OrderStatus.DELIVERED, "d1", Instant.now().minus(31, ChronoUnit.MINUTES));
+    void dasherChannelIsReadOnlyAsSoonAsDeliveryIsConfirmed() {
+        order(OrderStatus.DELIVERED, "d1", Instant.now());
         ChatHistoryDTO h = service.history("c1", "o1", ChatChannel.DASHER);
         assertThat(h.isWritable()).isFalse();
         assertThat(h.getClosedReason()).contains("delivered");
+        assertThatThrownBy(() -> service.send("c1", "CUSTOMER", "o1", ChatChannel.DASHER, "thanks", null))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void cancelledOrderKeepsTheGraceWindow() {
+        order(OrderStatus.CANCELLED, null, Instant.now().minus(10, ChronoUnit.MINUTES));
+        assertThat(service.history("c1", "o1", ChatChannel.SHOP).isWritable()).isTrue();
+
+        order(OrderStatus.CANCELLED, null, Instant.now().minus(31, ChronoUnit.MINUTES));
+        assertThat(service.history("c1", "o1", ChatChannel.SHOP).isWritable()).isFalse();
     }
 
     @Test
