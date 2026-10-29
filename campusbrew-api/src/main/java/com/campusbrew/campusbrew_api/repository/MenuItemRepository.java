@@ -11,7 +11,5 @@ public interface MenuItemRepository extends MongoRepository<MenuItem, String> {
 
     List<MenuItem> findByShopIdOrderByCategory(String shopId);
 
-    List<MenuItem> findByShopIdAndCategory(String shopId, String category);
-
     List<MenuItem> findByNameContainingIgnoreCase(String query);
 }

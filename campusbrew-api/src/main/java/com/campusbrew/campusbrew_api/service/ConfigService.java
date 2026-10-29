@@ -61,10 +61,6 @@ public class ConfigService {
     @Value("${chat.readOnlyAfterMinutes:30}")
     private int chatReadOnlyAfterMinutes;
 
-    // Live-location ping interval in seconds (FR-3.4)
-    @Value("${location.intervalSeconds:5}")
-    private int locationIntervalSeconds;
-
     // Default low-stock alert level for newly stock-tracked items (FR-5.5)
     @Value("${inventory.lowStockDefault:5}")
     private int inventoryLowStockDefault;

@@ -2,7 +2,6 @@ package com.campusbrew.campusbrew_api.repository;
 
 import com.campusbrew.campusbrew_api.model.Payment;
 import com.campusbrew.campusbrew_api.model.PaymentRecordStatus;
-import com.campusbrew.campusbrew_api.model.PaymentType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -19,8 +18,6 @@ public interface PaymentRepository extends MongoRepository<Payment, String> {
     Optional<Payment> findByOrderId(String orderId);
 
     Page<Payment> findByUserIdOrderByCreatedAtDesc(String userId, Pageable pageable);
-
-    Page<Payment> findByUserIdAndTypeOrderByCreatedAtDesc(String userId, PaymentType type, Pageable pageable);
 
     List<Payment> findByStatus(PaymentRecordStatus status);
 }
