@@ -211,6 +211,25 @@ export default function OrderTrackingScreen({ route, navigation }: any) {
           </Text>
         </View>
 
+        {/* v2.0 FR-3.5 — chat with the shop until pickup, with the dasher once assigned. */}
+        <View style={styles.chatRow}>
+          <TouchableOpacity
+            style={styles.chatBtn}
+            onPress={() => navigation.navigate('Chat', { orderId: order.id, channel: 'SHOP' })}
+          >
+            <Ionicons name="storefront-outline" size={16} color={COLORS.primary} />
+            <Text style={styles.chatBtnText}>Chat with Shop</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.chatBtn, !order.deliveryPersonnelId && styles.chatBtnDisabled]}
+            disabled={!order.deliveryPersonnelId}
+            onPress={() => navigation.navigate('Chat', { orderId: order.id, channel: 'DASHER' })}
+          >
+            <Ionicons name="bicycle-outline" size={16} color={COLORS.primary} />
+            <Text style={styles.chatBtnText}>Chat with Dasher</Text>
+          </TouchableOpacity>
+        </View>
+
         {isCancelled ? (
           <View style={styles.cancelledBanner}>
             <Ionicons name="close-circle" size={22} color="#D93025" />
@@ -432,6 +451,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF4D6', borderRadius: 8, padding: 12, marginBottom: 12,
   },
   warnText: { color: '#7A5A00', flex: 1, fontSize: SIZES.captionSize },
+  chatRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+  chatBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    height: 42, borderRadius: SIZES.buttonBorderRadius, borderWidth: 1, borderColor: COLORS.primary,
+    backgroundColor: COLORS.white,
+  },
+  chatBtnDisabled: { opacity: 0.4 },
+  chatBtnText: { color: COLORS.primary, fontSize: SIZES.captionSize, fontWeight: '600' },
   sectionTitle: { fontSize: SIZES.bodySize, fontWeight: '600', color: COLORS.text, marginBottom: 10, marginTop: 6 },
   timelineCard: { backgroundColor: COLORS.white, borderRadius: 12, padding: 14, marginBottom: 16 },
   timelineRow: { flexDirection: 'row', alignItems: 'flex-start' },

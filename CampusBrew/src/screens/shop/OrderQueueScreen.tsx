@@ -166,6 +166,7 @@ export default function OrderQueueScreen({ route, navigation }: any) {
               onReject={() => confirmReject(order)}
               onMarkReady={() => handleAction(order.id, 'ready')}
               onPaymentReceived={() => handleAction(order.id, 'payment-received')}
+              onChat={() => navigation.navigate('Chat', { orderId: order.id, channel: 'SHOP' })}
             />
           ))
         )}
@@ -181,6 +182,7 @@ function OrderCard({
   onReject,
   onMarkReady,
   onPaymentReceived,
+  onChat,
 }: {
   order: Order;
   busy: boolean;
@@ -188,6 +190,7 @@ function OrderCard({
   onReject: () => void;
   onMarkReady: () => void;
   onPaymentReceived: () => void;
+  onChat: () => void;
 }) {
   const total = order.items.reduce((sum, it) => sum + (it.quantity || 0), 0);
   return (
@@ -239,6 +242,14 @@ function OrderCard({
         <Ionicons name="location-outline" size={12} color={COLORS.textSecondary} />{' '}
         {order.deliveryLocation}
       </Text>
+
+      {/* v2.0 FR-3.5 — shop chat stays open until the dasher picks up. */}
+      {order.orderStatus !== 'OUT_FOR_DELIVERY' && order.orderStatus !== 'DELIVERED' && (
+        <TouchableOpacity style={styles.chatLink} onPress={onChat}>
+          <Ionicons name="chatbubble-ellipses-outline" size={14} color={COLORS.primary} />
+          <Text style={styles.chatLinkText}>Message customer</Text>
+        </TouchableOpacity>
+      )}
 
       <View style={styles.actionRow}>
         {order.orderStatus === 'PLACED' && (
@@ -390,6 +401,8 @@ const styles = StyleSheet.create({
   orderId: { fontSize: SIZES.bodySize, fontWeight: '700', color: COLORS.text },
   customerName: { fontSize: SIZES.captionSize, color: COLORS.text, flex: 1 },
   orderMeta: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, marginTop: 2 },
+  chatLink: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 4, marginBottom: 6 },
+  chatLinkText: { fontSize: SIZES.smallSize, color: COLORS.primary, fontWeight: '600' },
   riderLine: { fontSize: SIZES.smallSize, color: COLORS.text, marginTop: 4 },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   badgeText: { fontSize: SIZES.smallSize, fontWeight: '600' },

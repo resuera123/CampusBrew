@@ -139,7 +139,17 @@ export default function AssignedDeliveryScreen({ navigation }: any) {
           <View style={styles.topBarIcon} />
         )}
         <Text style={styles.topBarTitle}>Current Delivery</Text>
-        <View style={styles.topBarIcon} />
+        {/* v2.0 FR-3.5 — chat with the customer about this delivery. */}
+        {order ? (
+          <TouchableOpacity
+            style={styles.topBarIcon}
+            onPress={() => navigation.navigate('Chat', { orderId: order.id, channel: 'DASHER' })}
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={22} color={COLORS.primary} />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.topBarIcon} />
+        )}
       </View>
 
       <ScrollView

@@ -72,9 +72,15 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
     registerPushToken(token);
 
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as { orderId?: string } | undefined;
+      const data = response.notification.request.content.data as
+        { orderId?: string; type?: string; channel?: string } | undefined;
       const orderId = data?.orderId;
       if (!orderId) return;
+      // v2.0 FR-3.5 — a chat push opens that conversation for every role.
+      if (data?.type === 'chat') {
+        navigate('Chat', { orderId, channel: data.channel });
+        return;
+      }
       // Route to the role-appropriate screen for this order.
       if (user.role === 'DELIVERY_PERSONNEL') {
         navigate('AssignedDelivery', { orderId });
