@@ -15,6 +15,8 @@ interface Props {
   destructive?: boolean;
   /** Optional ionicon name shown at the top of the dialog. */
   icon?: any;
+  /** One-button notice (no Cancel), e.g. "Thanks for rating!". */
+  hideCancel?: boolean;
   /** Disables both buttons while an async action is running. */
   busy?: boolean;
   onConfirm: () => void;
@@ -34,6 +36,7 @@ export default function ConfirmDialog({
   cancelLabel = 'Cancel',
   destructive = false,
   icon,
+  hideCancel = false,
   busy = false,
   onConfirm,
   onCancel,
@@ -56,14 +59,16 @@ export default function ConfirmDialog({
           {!!message && <Text style={styles.message}>{message}</Text>}
 
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.btn, styles.cancelBtn]}
-              onPress={onCancel}
-              disabled={busy}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.cancelText}>{cancelLabel}</Text>
-            </TouchableOpacity>
+            {!hideCancel && (
+              <TouchableOpacity
+                style={[styles.btn, styles.cancelBtn]}
+                onPress={onCancel}
+                disabled={busy}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.cancelText}>{cancelLabel}</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.btn, destructive ? styles.destructiveBtn : styles.confirmBtn]}
               onPress={onConfirm}
@@ -87,7 +92,8 @@ type ConfirmOptions = Omit<Props, 'visible' | 'busy' | 'onConfirm' | 'onCancel'>
  * Promise-style ConfirmDialog for one-off confirmations:
  *   const { confirm, dialog } = useConfirm();
  *   if (await confirm({ title: 'Delete item?', destructive: true })) { ... }
- * Render `{dialog}` once anywhere in the screen.
+ * Render `{dialog}` once anywhere in the screen. `notify` is the one-button
+ * version for messages; it resolves when the user taps OK.
  */
 export function useConfirm() {
   // Options stay set after closing so the text doesn't blank out during the fade.
@@ -101,6 +107,12 @@ export function useConfirm() {
     setOpen(true);
     return new Promise<boolean>((resolve) => { resolver.current = resolve; });
   }, []);
+
+  const notify = useCallback(
+    (title: string, message?: string, opts?: Partial<ConfirmOptions>) =>
+      confirm({ title, message, confirmLabel: 'OK', ...opts, hideCancel: true }).then(() => {}),
+    [confirm],
+  );
 
   const close = (ok: boolean) => {
     resolver.current?.(ok);
@@ -117,7 +129,7 @@ export function useConfirm() {
     />
   );
 
-  return { confirm, dialog };
+  return { confirm, notify, dialog };
 }
 
 const styles = StyleSheet.create({

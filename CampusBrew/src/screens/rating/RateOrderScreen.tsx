@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,12 +16,14 @@ import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { RatingService, RatingForm, RatingTarget, RateeRole } from '../../services/RatingService';
 import { TipService, TipStatus } from '../../services/TipService';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 /**
  * v2.0 FR-3.6 — rate the other parties of a delivered order. The server decides who
  * the caller can rate (customer → shop + dasher, dasher → customer + shop,
- * shop → dasher) and supplies the tag choices. Ratings can be edited until the
- * window closes (24h after delivery); after that the screen is read-only.
+ * shop → dasher) and supplies the tag choices. A rating is final once submitted:
+ * that party's card locks, and when everyone is rated the button becomes
+ * "Rating Confirmed". Unrated parties stay open until the window closes (24h).
  *
  * Customers also get a tip card (FR-4.7): a separate GCash payment, so a failed
  * tip never blocks the rating, and nothing is recorded unless it's paid.
@@ -49,6 +50,7 @@ export default function RateOrderScreen({ route, navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const { notify, dialog } = useConfirm();
 
   const applyForm = (f: RatingForm) => {
     setForm(f);
@@ -97,7 +99,7 @@ export default function RateOrderScreen({ route, navigation }: any) {
   const submit = async () => {
     if (!form || !token) return;
     const entries = form.targets
-      .filter((t) => (drafts[t.rateeRole]?.stars ?? 0) > 0)
+      .filter((t) => !t.stars && (drafts[t.rateeRole]?.stars ?? 0) > 0)
       .map((t) => {
         const d = drafts[t.rateeRole];
         return {
@@ -108,24 +110,27 @@ export default function RateOrderScreen({ route, navigation }: any) {
         };
       });
     if (entries.length === 0) {
-      Alert.alert('Add a rating', 'Tap the stars to rate at least one party.');
+      notify('Add a rating', 'Tap the stars to rate at least one party.', { icon: 'star-outline' });
       return;
     }
     setSubmitting(true);
     try {
       applyForm(await RatingService.submit(orderId, entries, token));
-      Alert.alert('Thanks for rating!', 'You can edit your ratings until the window closes.', [
-        { text: 'Done', onPress: () => navigation.goBack() },
-      ]);
+      await notify('Thanks for rating!', 'Your ratings have been recorded.', {
+        confirmLabel: 'Done',
+        icon: 'star',
+      });
+      navigation.goBack();
     } catch (e: any) {
-      Alert.alert('Could not submit', e.message ?? 'Please try again.');
+      notify('Could not submit', e.message ?? 'Please try again.', { icon: 'alert-circle-outline' });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const editable = !!form?.windowOpen;
-  const alreadyRated = !!form?.targets.some((t) => t.stars);
+  const windowOpen = !!form?.windowOpen;
+  // A saved rating (t.stars from the server) is final.
+  const allRated = !!form && form.targets.every((t) => t.stars);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -158,7 +163,7 @@ export default function RateOrderScreen({ route, navigation }: any) {
                 key={t.rateeRole}
                 target={t}
                 draft={drafts[t.rateeRole]}
-                editable={editable}
+                editable={windowOpen && !t.stars}
                 onStars={(stars) => update(t.rateeRole, { stars })}
                 onTag={(tag) => toggleTag(t.rateeRole, tag)}
                 onReview={(review) => update(t.rateeRole, { review })}
@@ -166,28 +171,36 @@ export default function RateOrderScreen({ route, navigation }: any) {
             ))}
 
             {tip && (tip.canTip || tip.postDeliveryTip > 0) && (
-              <TipCard status={tip} orderId={orderId} token={token} onTipped={loadTip} />
+              <TipCard status={tip} orderId={orderId} token={token} onTipped={loadTip} notify={notify} />
             )}
 
             <Text style={styles.footNote}>
-              {editable
-                ? `You can edit your ratings until ${formatClose(form.closesAt)}.`
-                : 'The rating window for this order has closed.'}
+              {allRated
+                ? 'Thanks for your feedback.'
+                : windowOpen
+                  ? `You can rate until ${formatClose(form.closesAt)}. Ratings can't be changed once submitted.`
+                  : 'The rating window for this order has closed.'}
               {' '}Ratings show as an average after 3 ratings.
             </Text>
           </ScrollView>
 
-          {editable && (
+          {allRated ? (
+            <View style={styles.confirmedBar}>
+              <Ionicons name="checkmark-circle" size={20} color="#1E8E3E" />
+              <Text style={styles.confirmedText}>Rating Confirmed</Text>
+            </View>
+          ) : windowOpen && (
             <TouchableOpacity style={styles.submitBtn} onPress={submit} disabled={submitting}>
               {submitting ? (
                 <ActivityIndicator color={COLORS.white} />
               ) : (
-                <Text style={styles.submitText}>{alreadyRated ? 'Update Ratings' : 'Submit Ratings'}</Text>
+                <Text style={styles.submitText}>Submit Ratings</Text>
               )}
             </TouchableOpacity>
           )}
         </KeyboardAvoidingView>
       )}
+      {dialog}
     </SafeAreaView>
   );
 }
@@ -266,11 +279,13 @@ function TipCard({
   orderId,
   token,
   onTipped,
+  notify,
 }: {
   status: TipStatus;
   orderId: string;
   token: string | null;
   onTipped: () => void;
+  notify: (title: string, message?: string, opts?: { icon?: any }) => Promise<void>;
 }) {
   const [amount, setAmount] = useState<number | null>(status.presets[1] ?? status.presets[0] ?? null);
   const [custom, setCustom] = useState('');
@@ -298,16 +313,16 @@ function TipCard({
     try {
       const result = await TipService.sendTip(orderId, value, token);
       if (result.status === 'PAID') {
-        Alert.alert('Tip sent', `${dasher} received your ₱${value.toFixed(0)} tip.`);
+        notify('Tip sent', `${dasher} received your ₱${value.toFixed(0)} tip.`, { icon: 'heart' });
         onTipped();
       } else if (result.status === 'PENDING') {
-        Alert.alert('Still processing', "GCash hasn't confirmed the tip yet. Check the Payment Center in a moment.");
+        notify('Still processing', "GCash hasn't confirmed the tip yet. Check the Payment Center in a moment.", { icon: 'time-outline' });
         onTipped();
       } else {
-        Alert.alert('Tip not sent', "The GCash payment didn't go through, so no tip was recorded. You can try again.");
+        notify('Tip not sent', "The GCash payment didn't go through, so no tip was recorded. You can try again.", { icon: 'alert-circle-outline' });
       }
     } catch (e: any) {
-      Alert.alert('Could not send tip', e.message ?? 'Please try again.');
+      notify('Could not send tip', e.message ?? 'Please try again.', { icon: 'alert-circle-outline' });
     } finally {
       setSending(false);
     }
@@ -445,4 +460,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   submitText: { color: COLORS.white, fontSize: 15, fontWeight: '700' },
+  confirmedBar: {
+    height: SIZES.buttonHeight,
+    borderRadius: SIZES.buttonBorderRadius,
+    backgroundColor: '#E6F4EA',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: SIZES.screenPadding,
+    marginBottom: 12,
+  },
+  confirmedText: { color: '#1E8E3E', fontSize: 15, fontWeight: '700' },
 });
