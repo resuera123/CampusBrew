@@ -16,12 +16,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { RatingService, RatingForm, RatingTarget, RateeRole } from '../../services/RatingService';
+import { TipService, TipStatus } from '../../services/TipService';
 
 /**
  * v2.0 FR-3.6 — rate the other parties of a delivered order. The server decides who
  * the caller can rate (customer → shop + dasher, dasher → customer + shop,
  * shop → dasher) and supplies the tag choices. Ratings can be edited until the
  * window closes (24h after delivery); after that the screen is read-only.
+ *
+ * Customers also get a tip card (FR-4.7): a separate GCash payment, so a failed
+ * tip never blocks the rating, and nothing is recorded unless it's paid.
  */
 
 interface Draft {
@@ -37,8 +41,9 @@ const ROLE_LABEL: Record<RateeRole, string> = {
 };
 
 export default function RateOrderScreen({ route, navigation }: any) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const orderId: string = route?.params?.orderId;
+  const [tip, setTip] = useState<TipStatus | null>(null);
   const [form, setForm] = useState<RatingForm | null>(null);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [loading, setLoading] = useState(true);
@@ -66,9 +71,20 @@ export default function RateOrderScreen({ route, navigation }: any) {
     }
   }, [token, orderId]);
 
+  // Tip status only matters to customers; a failure here just hides the tip card.
+  const loadTip = useCallback(async () => {
+    if (!token || !orderId || user?.role !== 'CUSTOMER') return;
+    try {
+      setTip(await TipService.status(orderId, token));
+    } catch {
+      setTip(null);
+    }
+  }, [token, orderId, user?.role]);
+
   useEffect(() => {
     load();
-  }, [load]);
+    loadTip();
+  }, [load, loadTip]);
 
   const update = (role: RateeRole, patch: Partial<Draft>) =>
     setDrafts((prev) => ({ ...prev, [role]: { ...prev[role], ...patch } }));
@@ -148,6 +164,10 @@ export default function RateOrderScreen({ route, navigation }: any) {
                 onReview={(review) => update(t.rateeRole, { review })}
               />
             ))}
+
+            {tip && (tip.canTip || tip.postDeliveryTip > 0) && (
+              <TipCard status={tip} orderId={orderId} token={token} onTipped={loadTip} />
+            )}
 
             <Text style={styles.footNote}>
               {editable
@@ -241,6 +261,106 @@ function TargetCard({
   );
 }
 
+function TipCard({
+  status,
+  orderId,
+  token,
+  onTipped,
+}: {
+  status: TipStatus;
+  orderId: string;
+  token: string | null;
+  onTipped: () => void;
+}) {
+  const [amount, setAmount] = useState<number | null>(status.presets[1] ?? status.presets[0] ?? null);
+  const [custom, setCustom] = useState('');
+  const [useCustom, setUseCustom] = useState(false);
+  const [sending, setSending] = useState(false);
+  const dasher = status.dasherName ?? 'your dasher';
+
+  if (status.postDeliveryTip > 0) {
+    return (
+      <View style={[styles.card, styles.tipDone]}>
+        <Ionicons name="heart" size={18} color={COLORS.primary} />
+        <Text style={styles.tipDoneText}>
+          You tipped {dasher} ₱{status.postDeliveryTip.toFixed(0)}. Thank you!
+        </Text>
+      </View>
+    );
+  }
+
+  const value = useCustom ? parseFloat(custom) : amount;
+  const valid = value != null && !isNaN(value) && value >= 1 && value <= status.maxAmount;
+
+  const send = async () => {
+    if (!token || !valid || value == null) return;
+    setSending(true);
+    try {
+      const result = await TipService.sendTip(orderId, value, token);
+      if (result.status === 'PAID') {
+        Alert.alert('Tip sent', `${dasher} received your ₱${value.toFixed(0)} tip.`);
+        onTipped();
+      } else if (result.status === 'PENDING') {
+        Alert.alert('Still processing', "GCash hasn't confirmed the tip yet. Check the Payment Center in a moment.");
+        onTipped();
+      } else {
+        Alert.alert('Tip not sent', "The GCash payment didn't go through, so no tip was recorded. You can try again.");
+      }
+    } catch (e: any) {
+      Alert.alert('Could not send tip', e.message ?? 'Please try again.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>
+        Add a tip for <Text style={styles.cardName}>{dasher}</Text>
+      </Text>
+      <View style={styles.tagsRow}>
+        {status.presets.map((p) => {
+          const on = !useCustom && amount === p;
+          return (
+            <TouchableOpacity
+              key={p}
+              style={[styles.tag, on && styles.tagOn]}
+              onPress={() => { setUseCustom(false); setAmount(p); }}
+            >
+              <Text style={[styles.tagText, on && styles.tagTextOn]}>₱{p}</Text>
+            </TouchableOpacity>
+          );
+        })}
+        <TouchableOpacity style={[styles.tag, useCustom && styles.tagOn]} onPress={() => setUseCustom(true)}>
+          <Text style={[styles.tagText, useCustom && styles.tagTextOn]}>Other</Text>
+        </TouchableOpacity>
+      </View>
+      {useCustom && (
+        <TextInput
+          style={styles.tipInput}
+          value={custom}
+          onChangeText={setCustom}
+          keyboardType="decimal-pad"
+          placeholder={`Amount (up to ₱${status.maxAmount.toFixed(0)})`}
+          placeholderTextColor={COLORS.textSecondary}
+        />
+      )}
+      <Text style={styles.tipHint}>Paid via GCash · 100% goes to your dasher</Text>
+      <TouchableOpacity
+        style={[styles.tipBtn, (!valid || sending) && styles.tipBtnDisabled]}
+        onPress={send}
+        disabled={!valid || sending}
+      >
+        {sending ? (
+          <ActivityIndicator color={COLORS.white} />
+        ) : (
+          <Text style={styles.tipBtnText}>{valid ? `Send ₱${value!.toFixed(0)} Tip` : 'Send Tip'}</Text>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 function formatClose(iso?: string | null): string {
   if (!iso) return 'the window closes';
   try {
@@ -290,6 +410,30 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     textAlignVertical: 'top',
   },
+  tipInput: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: SIZES.captionSize,
+    color: COLORS.text,
+  },
+  tipHint: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, marginTop: 10 },
+  tipBtn: {
+    marginTop: 10,
+    height: 42,
+    borderRadius: SIZES.buttonBorderRadius,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tipBtnDisabled: { opacity: 0.4 },
+  tipBtnText: { color: COLORS.primary, fontSize: SIZES.captionSize, fontWeight: '700' },
+  tipDone: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  tipDoneText: { flex: 1, fontSize: SIZES.captionSize, color: COLORS.text },
   footNote: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, textAlign: 'center', marginTop: 4 },
   submitBtn: {
     height: SIZES.buttonHeight,

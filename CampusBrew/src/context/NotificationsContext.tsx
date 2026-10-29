@@ -86,6 +86,11 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
         navigate('RateOrder', { orderId });
         return;
       }
+      // v2.0 FR-4.7 — a tip push opens the dasher's delivery history.
+      if (data?.type === 'tip') {
+        navigate('DeliveryHistory');
+        return;
+      }
       // Route to the role-appropriate screen for this order.
       if (user.role === 'DELIVERY_PERSONNEL') {
         navigate('AssignedDelivery', { orderId });
@@ -142,14 +147,27 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
       });
     };
 
+    // v2.0 FR-4.7 — a customer tipped the dasher after delivery.
+    const onTipReceived = (payload: any) => {
+      const amount = Number(payload?.amount ?? 0);
+      push({
+        title: `You got a ₱${amount.toFixed(0)} tip!`,
+        body: `For order #${(payload?.orderId ?? '').slice(-6).toUpperCase()} — 100% yours.`,
+        orderId: payload?.orderId,
+        timestamp: new Date().toISOString(),
+      });
+    };
+
     socket.on('order:statusUpdate', onStatusUpdate);
     socket.on('delivery:request', onDeliveryRequest);
     socket.on('order:noDriver', onNoDriver);
+    socket.on('tip:received', onTipReceived);
 
     return () => {
       socket.off('order:statusUpdate', onStatusUpdate);
       socket.off('delivery:request', onDeliveryRequest);
       socket.off('order:noDriver', onNoDriver);
+      socket.off('tip:received', onTipReceived);
     };
   }, [socket]);
 
