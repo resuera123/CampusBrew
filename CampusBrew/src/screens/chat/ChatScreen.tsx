@@ -130,13 +130,20 @@ export default function ChatScreen({ route, navigation }: any) {
       load();
     };
 
+    // Delivery/cancellation can close the channel while it's open — refresh writability.
+    const onStatus = (p: { orderId: string }) => {
+      if (p?.orderId === orderId) load();
+    };
+
     socket.on('chat:message', onMessage);
     socket.on('chat:read', onRead);
     socket.on('chat:error', onError);
+    socket.on('order:statusUpdate', onStatus);
     return () => {
       socket.off('chat:message', onMessage);
       socket.off('chat:read', onRead);
       socket.off('chat:error', onError);
+      socket.off('order:statusUpdate', onStatus);
     };
   }, [socket, orderId, channel, user?.userId, markRead, load]);
 
