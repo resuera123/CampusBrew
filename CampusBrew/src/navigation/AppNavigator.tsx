@@ -43,7 +43,7 @@ import ItemAvailabilityScreen from '../screens/shop/ItemAvailabilityScreen';
 import ShopProfileScreen from '../screens/shop/ShopProfileScreen';
 import EditShopProfileScreen from '../screens/shop/EditShopProfileScreen';
 import ShopOrderHistoryScreen from '../screens/shop/ShopOrderHistoryScreen';
-import InventoryMovementScreen from '../screens/shop/InventoryMovementScreen';
+import SalesByItemScreen from '../screens/shop/SalesByItemScreen';
 import ItemTrendScreen from '../screens/shop/ItemTrendScreen';
 
 // Shared screens
@@ -163,7 +163,7 @@ export function ShopStack() {
       <Stack.Screen name="MenuManagement" component={MenuManagementScreen} />
       <Stack.Screen name="ItemAvailability" component={ItemAvailabilityScreen} />
       <Stack.Screen name="ShopOrderHistory" component={ShopOrderHistoryScreen} />
-      <Stack.Screen name="InventoryMovement" component={InventoryMovementScreen} />
+      <Stack.Screen name="SalesByItem" component={SalesByItemScreen} />
       <Stack.Screen name="ItemTrend" component={ItemTrendScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen name="RateOrder" component={RateOrderScreen} />

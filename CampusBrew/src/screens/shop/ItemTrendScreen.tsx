@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
-import { InventoryService, ItemTrend } from '../../services/InventoryService';
+import { ItemSalesService, ItemTrend } from '../../services/ItemSalesService';
 
 /**
  * v2.0 FR-5.5 — one item's sales trend: daily (this week, Mon–Sun) or weekly (last
@@ -29,7 +29,7 @@ export default function ItemTrendScreen({ route, navigation }: any) {
     if (!token || !itemId) return;
     setLoading(true);
     try {
-      setTrend(await InventoryService.trend(itemId, period, token));
+      setTrend(await ItemSalesService.trend(itemId, period, token));
       setError(null);
     } catch (e: any) {
       setError(e.message ?? 'Failed to load trend');

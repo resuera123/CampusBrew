@@ -16,6 +16,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { ShopService, Shop } from '../../services/ShopService';
 import { ShopOrderService } from '../../services/ShopOrderService';
+import SalesByItemChart from '../../components/SalesByItemChart';
 
 export default function ShopDashboardScreen({ navigation }: any) {
   const { token } = useAuth();
@@ -152,6 +153,9 @@ export default function ShopDashboardScreen({ navigation }: any) {
           />
         </View>
 
+        {/* v2.0 FR-5.5 — units sold per item, best sellers at a glance. */}
+        <SalesByItemChart token={token} onOpenDetails={() => navigation.navigate('SalesByItem')} />
+
         <Text style={styles.sectionTitle}>Manage</Text>
 
         <ActionRow
@@ -173,10 +177,10 @@ export default function ShopDashboardScreen({ navigation }: any) {
           onPress={() => navigation.navigate('ItemAvailability', { shopId: shop?.id })}
         />
         <ActionRow
-          icon="cube-outline"
-          label="Inventory"
-          subtitle="Units sold, stock and sales trends"
-          onPress={() => navigation.navigate('InventoryMovement')}
+          icon="bar-chart-outline"
+          label="Sales by Item"
+          subtitle="Units sold per item and best sellers"
+          onPress={() => navigation.navigate('SalesByItem')}
         />
         <ActionRow
           icon="archive-outline"
