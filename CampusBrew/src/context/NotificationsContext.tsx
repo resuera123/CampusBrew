@@ -74,6 +74,11 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as
         { orderId?: string; type?: string; channel?: string } | undefined;
+      // v2.0 FR-5.5 — stock alerts aren't tied to an order; open the shop's inventory.
+      if (data?.type === 'inventory') {
+        navigate('InventoryMovement');
+        return;
+      }
       const orderId = data?.orderId;
       if (!orderId) return;
       // v2.0 FR-3.5 — a chat push opens that conversation for every role.
@@ -158,16 +163,28 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
       });
     };
 
+    // v2.0 FR-5.5 — a tracked item ran low or out after a sale.
+    const onLowStock = (payload: any) => {
+      const qty = Number(payload?.stockQty ?? 0);
+      push({
+        title: qty <= 0 ? `Out of stock: ${payload?.name ?? 'an item'}` : `Low stock: ${payload?.name ?? 'an item'}`,
+        body: qty <= 0 ? "It's hidden from customers until you restock." : `${qty} left. Restock soon.`,
+        timestamp: new Date().toISOString(),
+      });
+    };
+
     socket.on('order:statusUpdate', onStatusUpdate);
     socket.on('delivery:request', onDeliveryRequest);
     socket.on('order:noDriver', onNoDriver);
     socket.on('tip:received', onTipReceived);
+    socket.on('inventory:lowStock', onLowStock);
 
     return () => {
       socket.off('order:statusUpdate', onStatusUpdate);
       socket.off('delivery:request', onDeliveryRequest);
       socket.off('order:noDriver', onNoDriver);
       socket.off('tip:received', onTipReceived);
+      socket.off('inventory:lowStock', onLowStock);
     };
   }, [socket]);
 

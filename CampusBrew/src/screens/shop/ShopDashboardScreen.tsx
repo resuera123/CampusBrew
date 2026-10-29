@@ -173,6 +173,12 @@ export default function ShopDashboardScreen({ navigation }: any) {
           onPress={() => navigation.navigate('ItemAvailability', { shopId: shop?.id })}
         />
         <ActionRow
+          icon="cube-outline"
+          label="Inventory"
+          subtitle="Units sold, stock and sales trends"
+          onPress={() => navigation.navigate('InventoryMovement')}
+        />
+        <ActionRow
           icon="archive-outline"
           label="Order History"
           subtitle="Past deliveries and cancellations"
