@@ -42,7 +42,7 @@ public class DeliveryFulfillmentService {
     private final SocketService socketService;
     private final ConfigService configService;
     private final PushNotificationService pushNotificationService;
-    private final InventoryService inventoryService;
+    private final ItemSalesService itemSalesService;
 
     public OrderDTO markPickedUp(String dpUserId, String orderId) {
         Order order = orderRepository.findById(orderId)
@@ -131,12 +131,12 @@ public class DeliveryFulfillmentService {
                 .build();
         transactionRepository.save(tx);
 
-        // v2.0 FR-5.5 — log the sale and deduct tracked stock. Inventory is secondary:
-        // a failure here must never stop the delivery from completing.
+        // v2.0 FR-5.5 — log units sold per item. Secondary to the delivery: a failure
+        // here must never stop the order from completing.
         try {
-            inventoryService.recordSale(saved);
+            itemSalesService.recordSale(saved);
         } catch (RuntimeException e) {
-            log.error("Inventory update failed for order {}: {}", saved.getId(), e.getMessage(), e);
+            log.error("Recording item sales failed for order {}: {}", saved.getId(), e.getMessage(), e);
         }
 
         // Free up the DP, bump lifetime counter, flip incentiveActive on the doc.

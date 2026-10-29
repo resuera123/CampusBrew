@@ -15,7 +15,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class InventoryTrendDTO {
+public class ItemTrendDTO {
     private String itemId;
     private String itemName;
     /** "daily" or "weekly". */

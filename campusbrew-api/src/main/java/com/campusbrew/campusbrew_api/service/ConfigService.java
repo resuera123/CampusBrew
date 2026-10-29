@@ -61,10 +61,6 @@ public class ConfigService {
     @Value("${chat.readOnlyAfterMinutes:30}")
     private int chatReadOnlyAfterMinutes;
 
-    // Default low-stock alert level for newly stock-tracked items (FR-5.5)
-    @Value("${inventory.lowStockDefault:5}")
-    private int inventoryLowStockDefault;
-
     // Xendit (FR-4.1) — secrets injected from the environment; may be blank in dev.
     @Value("${xendit.secretKey:}")
     private String xenditSecretKey;

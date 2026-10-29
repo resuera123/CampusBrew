@@ -2,7 +2,7 @@ package com.campusbrew.campusbrew_api.config;
 
 import com.campusbrew.campusbrew_api.model.ChatMessage;
 import com.campusbrew.campusbrew_api.model.DeliveryPersonnel;
-import com.campusbrew.campusbrew_api.model.InventoryMovement;
+import com.campusbrew.campusbrew_api.model.ItemSale;
 import com.campusbrew.campusbrew_api.model.LocationPing;
 import com.campusbrew.campusbrew_api.model.Payment;
 import com.campusbrew.campusbrew_api.model.Rating;
@@ -80,13 +80,12 @@ public class MongoIndexInitializer {
         mongoTemplate.indexOps(LocationPing.class).createIndex(
                 new Index().on("createdAt", Sort.Direction.ASC).expire(7, TimeUnit.DAYS));
 
-        // inventoryMovements: per item, newest first.
-        mongoTemplate.indexOps(InventoryMovement.class).createIndex(
+        // itemSales: a shop's sales in a date range (FR-5.5 sales by item / chart).
+        mongoTemplate.indexOps(ItemSale.class).createIndex(
                 new Index().on("shopId", Sort.Direction.ASC)
-                        .on("itemId", Sort.Direction.ASC)
-                        .on("createdAt", Sort.Direction.DESC));
+                        .on("createdAt", Sort.Direction.ASC));
 
         log.info("Ensured v2.0 indexes: payments, ratings, chatMessages (TTL 30d), "
-                + "locationPings (TTL 7d), inventoryMovements");
+                + "locationPings (TTL 7d), itemSales");
     }
 }

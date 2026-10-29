@@ -10,29 +10,24 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.util.Date;
 
 /**
- * v2.0 FR-5.5 — an append-only stock ledger entry for a menu item. A SALE is written
- * for every item on a delivered order (tracked or not), so it is also the source of
- * units-sold figures and trends.
+ * v2.0 FR-5.5 — units of one menu item sold on one delivered order. The source for
+ * sales by item, trends and best sellers. The item name is stored too, so items
+ * later removed from the menu still show up in past sales.
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Document(collection = "inventoryMovements")
-public class InventoryMovement {
+@Document(collection = "itemSales")
+public class ItemSale {
 
     @Id
     private String id;
 
     private String shopId;
     private String itemId;
-
-    private InventoryMovementType type;
+    private String itemName;
     private int qty;
-    /** Stock after this movement; null for an item without stock tracking. */
-    private Integer balanceAfter;
-
-    /** Set for SALE movements. */
     private String orderId;
 
     private Date createdAt;
