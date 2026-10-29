@@ -10,7 +10,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.util.Date;
 
 /**
- * v2.0 FR-5.5 — an append-only stock ledger entry for a menu item.
+ * v2.0 FR-5.5 — an append-only stock ledger entry for a menu item. A SALE is written
+ * for every item on a delivered order (tracked or not), so it is also the source of
+ * units-sold figures and trends.
  */
 @Data
 @NoArgsConstructor
@@ -27,7 +29,8 @@ public class InventoryMovement {
 
     private InventoryMovementType type;
     private int qty;
-    private int balanceAfter;
+    /** Stock after this movement; null for an item without stock tracking. */
+    private Integer balanceAfter;
 
     /** Set for SALE movements. */
     private String orderId;

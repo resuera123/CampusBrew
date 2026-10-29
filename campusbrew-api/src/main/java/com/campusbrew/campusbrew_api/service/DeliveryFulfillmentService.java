@@ -15,6 +15,7 @@ import com.campusbrew.campusbrew_api.repository.OrderRepository;
 import com.campusbrew.campusbrew_api.repository.ShopRepository;
 import com.campusbrew.campusbrew_api.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -29,6 +30,7 @@ import java.util.Map;
  * confirmation; Module 4 extends commission/incentive math by adding to that
  * record's pipeline (not by re-implementing this service).
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DeliveryFulfillmentService {
@@ -40,6 +42,7 @@ public class DeliveryFulfillmentService {
     private final SocketService socketService;
     private final ConfigService configService;
     private final PushNotificationService pushNotificationService;
+    private final InventoryService inventoryService;
 
     public OrderDTO markPickedUp(String dpUserId, String orderId) {
         Order order = orderRepository.findById(orderId)
@@ -127,6 +130,14 @@ public class DeliveryFulfillmentService {
                 .createdAt(Date.from(Instant.now()))
                 .build();
         transactionRepository.save(tx);
+
+        // v2.0 FR-5.5 — log the sale and deduct tracked stock. Inventory is secondary:
+        // a failure here must never stop the delivery from completing.
+        try {
+            inventoryService.recordSale(saved);
+        } catch (RuntimeException e) {
+            log.error("Inventory update failed for order {}: {}", saved.getId(), e.getMessage(), e);
+        }
 
         // Free up the DP, bump lifetime counter, flip incentiveActive on the doc.
         if (dp != null) {
