@@ -22,7 +22,6 @@ import OrderHistoryScreen from '../screens/customer/OrderHistoryScreen';
 import OrderTrackingScreen from '../screens/customer/OrderTrackingScreen';
 import NotificationScreen from '../screens/customer/NotificationScreen';
 import ReorderCartScreen from '../screens/customer/ReorderCartScreen';
-import OrdersPlaceholderScreen from '../screens/customer/OrdersPlaceholderScreen';
 import ProfileScreen from '../screens/customer/ProfileScreen';
 import EditProfileScreen from '../screens/customer/EditProfileScreen';
 import PaymentCenterScreen from '../screens/customer/PaymentCenterScreen';
