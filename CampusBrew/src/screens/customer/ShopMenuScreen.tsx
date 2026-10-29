@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../constants/theme';
 import { ShopService, Shop, MenuItem } from '../../services/ShopService';
 import { useCart } from '../../context/CartContext';
+import RatingBadge from '../../components/RatingBadge';
 
 export default function ShopMenuScreen({ navigation, route }: any) {
   const { shopId } = route.params || {};
@@ -85,9 +86,13 @@ export default function ShopMenuScreen({ navigation, route }: any) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.topBarIcon}>
           <Ionicons name="arrow-back" size={22} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.topBarTitle} numberOfLines={1}>
-          {shop?.shopName || 'Shop'}
-        </Text>
+        <View style={styles.titleBlock}>
+          <Text style={styles.topBarTitle} numberOfLines={1}>
+            {shop?.shopName || 'Shop'}
+          </Text>
+          {/* v2.0 FR-2.1 — shop's average from three-way ratings. */}
+          {shop && <RatingBadge average={shop.ratingAvg} count={shop.ratingCount} size={11} />}
+        </View>
         <TouchableOpacity style={styles.topBarIcon} onPress={() => navigation.navigate('Checkout')}>
           <Ionicons name="bag-outline" size={22} color={COLORS.text} />
           {itemCount > 0 && (
@@ -204,7 +209,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   topBarIcon: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  topBarTitle: { flex: 1, fontSize: 16, fontWeight: '600', color: COLORS.text, textAlign: 'center' },
+  titleBlock: { flex: 1, alignItems: 'center' },
+  topBarTitle: { fontSize: 16, fontWeight: '600', color: COLORS.text, textAlign: 'center' },
 
   cartBadge: {
     position: 'absolute',

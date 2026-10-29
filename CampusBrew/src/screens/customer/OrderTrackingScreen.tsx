@@ -19,6 +19,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { OrderService, Order, OrderStatus, StatusHistoryEntry } from '../../services/OrderService';
 import LiveMapView from '../../components/LiveMapView';
+import RatingBadge from '../../components/RatingBadge';
 
 const TIMELINE_STEPS: { status: OrderStatus; label: string; description: string }[] = [
   { status: 'PLACED', label: 'Order Placed', description: 'Your order has been sent to the shop.' },
@@ -210,6 +211,16 @@ export default function OrderTrackingScreen({ route, navigation }: any) {
             {order.items.length} item{order.items.length !== 1 ? 's' : ''} · ₱{order.totalAmount.toFixed(2)}
           </Text>
         </View>
+
+        {/* v2.0 FR-3.2 step 7 / FR-2.1 — who's delivering, with their rating. */}
+        {order.deliveryPersonnelName && !isCancelled && (
+          <View style={styles.dasherCard}>
+            <Ionicons name="bicycle" size={18} color={COLORS.primary} />
+            <Text style={styles.dasherName} numberOfLines={1}>{order.deliveryPersonnelName}</Text>
+            <RatingBadge average={order.deliveryPersonnelRating} />
+            <Text style={styles.dasherLabel}>Dasher</Text>
+          </View>
+        )}
 
         {/* v2.0 FR-3.5 — chat with the shop until pickup, with the dasher once assigned. */}
         <View style={styles.chatRow}>
@@ -466,6 +477,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF4D6', borderRadius: 8, padding: 12, marginBottom: 12,
   },
   warnText: { color: '#7A5A00', flex: 1, fontSize: SIZES.captionSize },
+  dasherCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: COLORS.white, borderRadius: 12, padding: 14, marginBottom: 12,
+  },
+  dasherName: { flexShrink: 1, fontSize: SIZES.captionSize, fontWeight: '700', color: COLORS.text },
+  dasherLabel: { marginLeft: 'auto', fontSize: SIZES.smallSize, color: COLORS.textSecondary },
   chatRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   chatBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,

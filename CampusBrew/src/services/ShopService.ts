@@ -50,7 +50,9 @@ export interface Shop {
   operatingHours?: OperatingHours;
   location: string;
   shopImage?: string;
-  rating: number;
+  // v2.0 FR-2.1 — null until the shop has enough ratings to show an average.
+  ratingAvg?: number | null;
+  ratingCount: number;
   isOpen: boolean;
   estimatedPrepTime?: string;
 }
@@ -103,8 +105,9 @@ function authHeaders(token: string) {
 }
 
 export const ShopService = {
-  async getShops(openOnly: boolean = false): Promise<Shop[]> {
-    const res = await fetch(`${API_BASE_URL}/api/shops?openOnly=${openOnly}`);
+  async getShops(openOnly: boolean = false, sort?: 'rating' | 'name'): Promise<Shop[]> {
+    const sortParam = sort ? `&sort=${sort}` : '';
+    const res = await fetch(`${API_BASE_URL}/api/shops?openOnly=${openOnly}${sortParam}`);
     const json = await safeJson(res);
     if (!res.ok) throw new Error(json.error || 'Failed to load shops');
     return json;

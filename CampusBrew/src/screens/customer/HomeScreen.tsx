@@ -18,6 +18,7 @@ import { ShopService, Shop, MenuItem } from '../../services/ShopService';
 import { useCart } from '../../context/CartContext';
 import { useNotifications } from '../../context/NotificationsContext';
 import CurrentOrderBanner from './CurrentOrderBanner';
+import RatingBadge from '../../components/RatingBadge';
 
 const CATEGORIES = ['All', 'Coffee', 'Milk Tea', 'Fruit Tea', 'Smoothie'];
 
@@ -32,11 +33,13 @@ export default function HomeScreen({ navigation }: any) {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
+  // v2.0 FR-2.1 — top-rated first by default; tap to switch to A–Z.
+  const [sortBy, setSortBy] = useState<'rating' | 'name'>('rating');
 
   const load = useCallback(async () => {
     try {
       setError(null);
-      const shopList = await ShopService.getShops(false);
+      const shopList = await ShopService.getShops(false, sortBy);
       setShops(shopList);
 
       // Popular Picks: pull menu of first available shop to give the home a populated feel.
@@ -56,7 +59,7 @@ export default function HomeScreen({ navigation }: any) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [sortBy]);
 
   useEffect(() => {
     load();
@@ -153,8 +156,12 @@ export default function HomeScreen({ navigation }: any) {
             {/* Partner Shops */}
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Partner Shops</Text>
-              <TouchableOpacity>
-                <Text style={styles.viewAll}>View All</Text>
+              <TouchableOpacity
+                style={styles.sortBtn}
+                onPress={() => setSortBy((s) => (s === 'rating' ? 'name' : 'rating'))}
+              >
+                <Ionicons name="swap-vertical" size={14} color={COLORS.primary} />
+                <Text style={styles.viewAll}>{sortBy === 'rating' ? 'Top rated' : 'A–Z'}</Text>
               </TouchableOpacity>
             </View>
 
@@ -190,8 +197,7 @@ export default function HomeScreen({ navigation }: any) {
                       {shop.estimatedPrepTime || (shop.isOpen ? 'Open now' : 'Closed')}
                     </Text>
                     <View style={styles.ratingRow}>
-                      <Ionicons name="star" size={12} color={COLORS.gold} />
-                      <Text style={styles.ratingText}>{shop.rating?.toFixed(1) ?? '—'}</Text>
+                      <RatingBadge average={shop.ratingAvg} count={shop.ratingCount} />
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -316,6 +322,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 16, fontWeight: '600', color: COLORS.text },
   viewAll: { color: COLORS.primary, fontSize: 13, fontWeight: '600' },
+  sortBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
   shopCard: {
     width: 140,
@@ -337,7 +344,6 @@ const styles = StyleSheet.create({
   shopName: { fontSize: 13, fontWeight: '600', color: COLORS.text },
   shopMeta: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  ratingText: { fontSize: 12, color: COLORS.text, fontWeight: '600' },
 
   chip: {
     paddingHorizontal: 14,

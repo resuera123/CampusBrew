@@ -63,6 +63,8 @@ export interface Order {
   shopName?: string;
   deliveryPersonnelId?: string;
   deliveryPersonnelName?: string;
+  // v2.0 FR-2.1 — dasher's average on the order detail; null until enough ratings.
+  deliveryPersonnelRating?: number | null;
   items: OrderItem[];
   deliveryLocation: string;
   dasherInstructions?: string;
