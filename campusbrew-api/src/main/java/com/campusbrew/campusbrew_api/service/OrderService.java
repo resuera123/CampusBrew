@@ -224,10 +224,15 @@ public class OrderService {
         String shopName = shop != null ? shop.getShopName() : null;
         String customerName = userRepository.findById(order.getCustomerId())
                 .map(User::getFullName).orElse(null);
-        String dpName = order.getDeliveryPersonnelId() == null ? null
-                : userRepository.findById(order.getDeliveryPersonnelId())
-                        .map(User::getFullName).orElse(null);
-        return OrderDTO.fromOrder(order, shopName, null, customerName, dpName);
+        User dp = order.getDeliveryPersonnelId() == null ? null
+                : userRepository.findById(order.getDeliveryPersonnelId()).orElse(null);
+        OrderDTO dto = OrderDTO.fromOrder(order, shopName, null, customerName,
+                dp == null ? null : dp.getFullName());
+        if (dp != null) {
+            dto.setDeliveryPersonnelRating(RatingDisplay.visible(
+                    dp.getRatingAvg(), dp.getRatingCount(), configService.getRatingMinCountToShow()));
+        }
+        return dto;
     }
 
     public Page<OrderDTO> getOrderHistory(String userId, int page) {

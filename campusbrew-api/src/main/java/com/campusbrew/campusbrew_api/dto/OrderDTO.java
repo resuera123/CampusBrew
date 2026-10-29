@@ -22,6 +22,8 @@ public class OrderDTO {
     private String shopName;
     private String deliveryPersonnelId;
     private String deliveryPersonnelName;
+    // v2.0 FR-2.1/3.6 — dasher's average on the order detail; null below rating.minCountToShow.
+    private Double deliveryPersonnelRating;
     private List<OrderItemDTO> items;
     private String deliveryLocation;
     private String dasherInstructions;

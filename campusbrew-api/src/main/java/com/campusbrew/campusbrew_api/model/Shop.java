@@ -23,15 +23,14 @@ public class Shop {
     private OperatingHours operatingHours;
     private String location;
     private String shopImage;
-    private double rating;
 
     @JsonProperty("isOpen")
     private boolean isOpen;
     private String operatorId;
     private String estimatedPrepTime;
 
-    // v2.0 FR-3.6 — rating aggregates (distinct from the legacy seeded `rating` above;
-    // shown only once ratingCount >= rating.minCountToShow).
+    // v2.0 FR-3.6 — rating aggregates, recomputed by RatingService
+    // (shown only once ratingCount >= rating.minCountToShow).
     private double ratingAvg;
     private int ratingCount;
 }

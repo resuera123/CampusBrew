@@ -2,6 +2,7 @@ package com.campusbrew.campusbrew_api.dto;
 
 import com.campusbrew.campusbrew_api.model.OperatingHours;
 import com.campusbrew.campusbrew_api.model.Shop;
+import com.campusbrew.campusbrew_api.service.RatingDisplay;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Data;
@@ -15,14 +16,18 @@ public class ShopDTO {
     private OperatingHours operatingHours;
     private String location;
     private String shopImage;
-    private double rating;
+
+    // v2.0 FR-2.1 — average from three-way ratings; null until the shop has
+    // rating.minCountToShow ratings (the count is always sent).
+    private Double ratingAvg;
+    private int ratingCount;
 
     @JsonProperty("isOpen")
     private boolean isOpen;
 
     private String estimatedPrepTime;
 
-    public static ShopDTO fromShop(Shop shop) {
+    public static ShopDTO fromShop(Shop shop, int ratingMinCountToShow) {
         return ShopDTO.builder()
                 .id(shop.getId())
                 .shopName(shop.getShopName())
@@ -30,7 +35,8 @@ public class ShopDTO {
                 .operatingHours(shop.getOperatingHours())
                 .location(shop.getLocation())
                 .shopImage(shop.getShopImage())
-                .rating(shop.getRating())
+                .ratingAvg(RatingDisplay.visible(shop.getRatingAvg(), shop.getRatingCount(), ratingMinCountToShow))
+                .ratingCount(shop.getRatingCount())
                 .isOpen(shop.isOpen())
                 .estimatedPrepTime(shop.getEstimatedPrepTime())
                 .build();

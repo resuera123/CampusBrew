@@ -17,6 +17,7 @@ import com.campusbrew.campusbrew_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,17 +29,39 @@ public class ShopService {
     private final MenuItemRepository menuItemRepository;
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
+    private final ConfigService configService;
 
-    public List<ShopDTO> getAllActiveShops() {
-        return shopRepository.findByIsOpenTrue().stream()
-                .map(ShopDTO::fromShop)
-                .collect(Collectors.toList());
+    public List<ShopDTO> getAllActiveShops(String sort) {
+        return sorted(shopRepository.findByIsOpenTrue(), sort);
     }
 
-    public List<ShopDTO> getAllShops() {
-        return shopRepository.findAll().stream()
-                .map(ShopDTO::fromShop)
-                .collect(Collectors.toList());
+    public List<ShopDTO> getAllShops(String sort) {
+        return sorted(shopRepository.findAll(), sort);
+    }
+
+    /**
+     * v2.0 FR-2.1 — sort=rating puts shops with a visible average first (highest
+     * average, then most ratings); sort=name is alphabetical; anything else keeps the
+     * stored order. Distance isn't offered: shops have no coordinates yet.
+     */
+    private List<ShopDTO> sorted(List<Shop> shops, String sort) {
+        List<ShopDTO> dtos = shops.stream().map(this::toDTO).collect(Collectors.toList());
+        Comparator<ShopDTO> byName = Comparator.comparing(
+                d -> d.getShopName() == null ? "" : d.getShopName(), String.CASE_INSENSITIVE_ORDER);
+        if ("rating".equalsIgnoreCase(sort)) {
+            dtos.sort(Comparator
+                    .comparing((ShopDTO d) -> d.getRatingAvg() == null)
+                    .thenComparing(d -> d.getRatingAvg() == null ? 0 : -d.getRatingAvg())
+                    .thenComparing(d -> -d.getRatingCount())
+                    .thenComparing(byName));
+        } else if ("name".equalsIgnoreCase(sort)) {
+            dtos.sort(byName);
+        }
+        return dtos;
+    }
+
+    private ShopDTO toDTO(Shop shop) {
+        return ShopDTO.fromShop(shop, configService.getRatingMinCountToShow());
     }
 
     public ShopDTO getMyShop(String operatorUserId) {
@@ -49,7 +72,7 @@ public class ShopService {
         }
         List<Shop> shops = shopRepository.findByOperatorId(operatorUserId);
         if (!shops.isEmpty()) {
-            return ShopDTO.fromShop(shops.get(0));
+            return toDTO(shops.get(0));
         }
         // Backfill: older accounts that registered before auto-provisioning was added
         // get a blank shop created on first access so they can start managing it.
@@ -59,15 +82,14 @@ public class ShopService {
                 .description("")
                 .location("")
                 .isOpen(false)
-                .rating(0.0)
                 .build();
-        return ShopDTO.fromShop(shopRepository.save(fresh));
+        return toDTO(shopRepository.save(fresh));
     }
 
     public ShopDTO getShop(String shopId) {
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new RuntimeException("Shop not found"));
-        return ShopDTO.fromShop(shop);
+        return toDTO(shop);
     }
 
     public List<MenuItemDTO> getShopMenu(String shopId) {
@@ -144,6 +166,6 @@ public class ShopService {
         if (dto.getEstimatedPrepTime() != null) shop.setEstimatedPrepTime(dto.getEstimatedPrepTime());
         if (dto.getIsOpen() != null) shop.setOpen(dto.getIsOpen());
 
-        return ShopDTO.fromShop(shopRepository.save(shop));
+        return toDTO(shopRepository.save(shop));
     }
 }

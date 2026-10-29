@@ -158,4 +158,17 @@ class DeliveryAssignmentEngineTest {
         verify(socket).emitToUser(eq("in"), eq("delivery:request"), payload.capture());
         assertThat(payload.getValue().get("customerRating")).isNull();
     }
+
+    @Test
+    void customerRatingShownAtThreshold() {
+        when(userRepo.findById("cust1")).thenReturn(Optional.of(
+                User.builder().id("cust1").ratingAvg(4.8).ratingCount(3).build()));
+        activeDps(dp("in", new GeoJsonPoint(LNG, LAT), null));
+
+        engine.assignOrder(readyOrder());
+
+        ArgumentCaptor<Map> payload = ArgumentCaptor.forClass(Map.class);
+        verify(socket).emitToUser(eq("in"), eq("delivery:request"), payload.capture());
+        assertThat(payload.getValue().get("customerRating")).isEqualTo(4.8);
+    }
 }

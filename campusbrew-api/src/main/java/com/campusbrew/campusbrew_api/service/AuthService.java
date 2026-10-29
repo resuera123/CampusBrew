@@ -63,7 +63,6 @@ public class AuthService {
                     .description("")
                     .location("")
                     .isOpen(false)
-                    .rating(0.0)
                     .build();
             shopRepository.save(shop);
         }

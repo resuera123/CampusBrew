@@ -22,9 +22,11 @@ public class ShopController {
     private final JwtService jwtService;
 
     @GetMapping
-    public ResponseEntity<?> getAllShops(@RequestParam(value = "openOnly", defaultValue = "false") boolean openOnly) {
+    public ResponseEntity<?> getAllShops(
+            @RequestParam(value = "openOnly", defaultValue = "false") boolean openOnly,
+            @RequestParam(value = "sort", required = false) String sort) {
         try {
-            List<ShopDTO> shops = openOnly ? shopService.getAllActiveShops() : shopService.getAllShops();
+            List<ShopDTO> shops = openOnly ? shopService.getAllActiveShops(sort) : shopService.getAllShops(sort);
             return ResponseEntity.ok(shops);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));

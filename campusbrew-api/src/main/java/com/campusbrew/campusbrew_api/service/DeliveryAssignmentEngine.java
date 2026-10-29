@@ -214,12 +214,19 @@ public class DeliveryAssignmentEngine {
                                 .respondedAt(now)
                                 .build()));
 
-        String dpName = userRepository.findById(dpUserId).map(User::getFullName).orElse(null);
+        User dpUser = userRepository.findById(dpUserId).orElse(null);
+        String dpName = dpUser == null ? null : dpUser.getFullName();
+        // v2.0 FR-3.2 step 7 — customer and shop see the dasher's name and rating.
+        Double dpRating = dpUser == null ? null : RatingDisplay.visible(
+                dpUser.getRatingAvg(), dpUser.getRatingCount(), configService.getRatingMinCountToShow());
+        Map<String, Object> dpInfo = new LinkedHashMap<>();
+        dpInfo.put("id", dpUserId);
+        dpInfo.put("fullName", dpName == null ? "" : dpName);
+        dpInfo.put("rating", dpRating);
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("orderId", orderId);
         payload.put("status", OrderStatus.ASSIGNED.name());
-        payload.put("deliveryPersonnel",
-                Map.of("id", dpUserId, "fullName", dpName == null ? "" : dpName));
+        payload.put("deliveryPersonnel", dpInfo);
 
         socketService.emitToUser(order.getCustomerId(), "order:assigned", payload);
         socketService.emitToUser(getShopOperatorUserId(order.getShopId()), "order:assigned", payload);
@@ -229,7 +236,9 @@ public class DeliveryAssignmentEngine {
         socketService.emitToUser(getShopOperatorUserId(order.getShopId()), "order:statusUpdate", payload);
         socketService.emitToUser(dpUserId, "order:statusUpdate", payload);
         pushNotificationService.send(order.getCustomerId(), "Rider assigned",
-                (dpName == null ? "A rider" : dpName) + " is picking up your order.",
+                (dpName == null ? "A rider" : dpName)
+                        + (dpRating == null ? "" : String.format(" (★ %.1f)", dpRating))
+                        + " is picking up your order.",
                 Map.of("orderId", orderId, "status", "ASSIGNED"));
 
         // Tell every other DP that had a pending offer for this order to dismiss their modal.
@@ -274,8 +283,8 @@ public class DeliveryAssignmentEngine {
     /** Customer average rating, shown only once they have enough ratings (FR-3.6). */
     private Double customerRating(String customerId) {
         return userRepository.findById(customerId)
-                .filter(u -> u.getRatingCount() >= configService.getRatingMinCountToShow())
-                .map(User::getRatingAvg)
+                .map(u -> RatingDisplay.visible(u.getRatingAvg(), u.getRatingCount(),
+                        configService.getRatingMinCountToShow()))
                 .orElse(null);
     }
 
