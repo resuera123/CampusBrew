@@ -31,6 +31,11 @@ public class SocketService {
         handler.emit("user:" + userId, event, payload);
     }
 
+    /** Whether the user has a live socket — used to fall back to push when the app is closed. */
+    public boolean isUserOnline(String userId) {
+        return handler.hasLiveSession("user:" + userId);
+    }
+
     public void emitToOrder(String orderId, String event, Object payload) {
         handler.emit("order:" + orderId, event, payload);
     }

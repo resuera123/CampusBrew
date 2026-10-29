@@ -11,4 +11,8 @@ import java.util.List;
 public interface ChatMessageRepository extends MongoRepository<ChatMessage, String> {
 
     List<ChatMessage> findByOrderIdAndChannelOrderByCreatedAtAsc(String orderId, ChatChannel channel);
+
+    /** Unread messages in a channel that someone other than {@code readerId} sent. */
+    List<ChatMessage> findByOrderIdAndChannelAndSenderIdNotAndReadAtIsNull(
+            String orderId, ChatChannel channel, String readerId);
 }

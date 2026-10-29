@@ -118,6 +118,12 @@ public class RealtimeSocketHandler extends TextWebSocketHandler {
         }
     }
 
+    /** True if at least one open session is in the room (e.g. the user has the app open). */
+    public boolean hasLiveSession(String room) {
+        Set<WebSocketSession> members = rooms.get(room);
+        return members != null && members.stream().anyMatch(WebSocketSession::isOpen);
+    }
+
     /** Sends one event to every live session in the room. No-op if the room is empty. */
     public void emit(String room, String event, Object payload) {
         Set<WebSocketSession> members = rooms.get(room);
