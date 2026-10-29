@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../constants/theme';
@@ -53,7 +53,7 @@ export default function ConfirmDialog({
             </View>
           )}
           <Text style={styles.title}>{title}</Text>
-          {message && <Text style={styles.message}>{message}</Text>}
+          {!!message && <Text style={styles.message}>{message}</Text>}
 
           <View style={styles.actions}>
             <TouchableOpacity
@@ -79,6 +79,45 @@ export default function ConfirmDialog({
       </View>
     </Modal>
   );
+}
+
+type ConfirmOptions = Omit<Props, 'visible' | 'busy' | 'onConfirm' | 'onCancel'>;
+
+/**
+ * Promise-style ConfirmDialog for one-off confirmations:
+ *   const { confirm, dialog } = useConfirm();
+ *   if (await confirm({ title: 'Delete item?', destructive: true })) { ... }
+ * Render `{dialog}` once anywhere in the screen.
+ */
+export function useConfirm() {
+  // Options stay set after closing so the text doesn't blank out during the fade.
+  const [options, setOptions] = useState<ConfirmOptions>({ title: '' });
+  const [open, setOpen] = useState(false);
+  const resolver = useRef<((ok: boolean) => void) | null>(null);
+
+  const confirm = useCallback((opts: ConfirmOptions) => {
+    resolver.current?.(false);
+    setOptions(opts);
+    setOpen(true);
+    return new Promise<boolean>((resolve) => { resolver.current = resolve; });
+  }, []);
+
+  const close = (ok: boolean) => {
+    resolver.current?.(ok);
+    resolver.current = null;
+    setOpen(false);
+  };
+
+  const dialog = (
+    <ConfirmDialog
+      {...options}
+      visible={open}
+      onConfirm={() => close(true)}
+      onCancel={() => close(false)}
+    />
+  );
+
+  return { confirm, dialog };
 }
 
 const styles = StyleSheet.create({

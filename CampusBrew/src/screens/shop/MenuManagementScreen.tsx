@@ -13,11 +13,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SIZES } from '../../constants/theme';
+import { useConfirm } from '../../components/ConfirmDialog';
 import { useAuth } from '../../context/AuthContext';
 import { ShopService, MenuItem } from '../../services/ShopService';
 import ItemEditorModal from './ItemEditorModal';
 
 export default function MenuManagementScreen({ route, navigation }: any) {
+  const { confirm, dialog } = useConfirm();
   const { token } = useAuth();
   const [shopId, setShopId] = useState<string | undefined>(route?.params?.shopId);
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -53,27 +55,21 @@ export default function MenuManagementScreen({ route, navigation }: any) {
     }, [load]),
   );
 
-  const handleDelete = (item: MenuItem) => {
-    Alert.alert(
-      'Delete item?',
-      `"${item.name}" will be removed from your menu.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            if (!token) return;
-            try {
-              await ShopService.deleteMenuItem(item.id, token);
-              await load();
-            } catch (e: any) {
-              Alert.alert('Failed to delete', e.message || 'Could not remove item');
-            }
-          },
-        },
-      ],
-    );
+  const handleDelete = async (item: MenuItem) => {
+    const ok = await confirm({
+      title: 'Delete item?',
+      message: `"${item.name}" will be removed from your menu.`,
+      confirmLabel: 'Delete',
+      destructive: true,
+      icon: 'trash-outline',
+    });
+    if (!ok || !token) return;
+    try {
+      await ShopService.deleteMenuItem(item.id, token);
+      await load();
+    } catch (e: any) {
+      Alert.alert('Failed to delete', e.message || 'Could not remove item');
+    }
   };
 
   if (loading) {
@@ -165,6 +161,7 @@ export default function MenuManagementScreen({ route, navigation }: any) {
           await load();
         }}
       />
+      {dialog}
     </SafeAreaView>
   );
 }

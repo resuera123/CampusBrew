@@ -10,11 +10,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { DeliveryService } from '../../services/DeliveryService';
+import { navigate } from '../../navigation/navigationRef';
 
 interface DeliveryOffer {
   orderId: string;
@@ -44,7 +44,6 @@ interface DeliveryOffer {
 export default function IncomingOrderModal() {
   const { token, user } = useAuth();
   const { socket } = useSocket();
-  const navigation = useNavigation<any>();
   const [offer, setOffer] = useState<DeliveryOffer | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(60);
   const [submitting, setSubmitting] = useState(false);
@@ -61,29 +60,19 @@ export default function IncomingOrderModal() {
       setSecondsLeft(payload.timeoutSeconds ?? 60);
     };
 
-    const onAssigned = () => {
-      // Backend confirmed assignment to this DP — close the modal and route to
-      // the assigned-delivery flow. navigate() is a no-op if the route isn't
-      // mounted on the current stack.
-      setOffer(null);
-      try { navigation.navigate('AssignedDelivery'); } catch { /* not on a delivery stack */ }
-    };
-
     const onClaimed = (payload: { orderId?: string }) => {
       // Another DP got there first — close the modal if it's showing this order.
       setOffer((current) => (current && current.orderId === payload?.orderId ? null : current));
     };
 
     socket.on('delivery:request', onRequest);
-    socket.on('order:assigned', onAssigned);
     socket.on('delivery:claimed', onClaimed);
 
     return () => {
       socket.off('delivery:request', onRequest);
-      socket.off('order:assigned', onAssigned);
       socket.off('delivery:claimed', onClaimed);
     };
-  }, [socket, isDP, navigation]);
+  }, [socket, isDP]);
 
   // Countdown ticker.
   useEffect(() => {
@@ -113,8 +102,11 @@ export default function IncomingOrderModal() {
     setSubmitting(true);
     try {
       await DeliveryService.acceptAssignment(offer.orderId, token);
-      // Close optimistically — the `order:assigned` socket event will navigate.
+      // NFR-P8 — go straight to the claimed order. (The server's `order:assigned`
+      // event goes to the customer and shop only, so waiting for it left the
+      // dasher on whatever screen they were on.)
       setOffer(null);
+      navigate('AssignedDelivery');
     } catch (e: any) {
       Alert.alert('Could not accept', e.message || 'Please try again.');
     } finally {

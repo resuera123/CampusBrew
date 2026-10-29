@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SIZES } from '../../constants/theme';
 import { ShopService, Shop, MenuItem } from '../../services/ShopService';
 import { useCart } from '../../context/CartContext';
@@ -61,9 +62,13 @@ export default function HomeScreen({ navigation }: any) {
     }
   }, [sortBy]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  // Reload whenever Home comes back into view — the tab stays mounted, so a
+  // rating sent from another screen would otherwise never show here.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
   const onRefresh = () => {
     setRefreshing(true);

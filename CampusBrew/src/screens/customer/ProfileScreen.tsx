@@ -1,14 +1,27 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import MyRatingCard from '../../components/MyRatingCard';
+import { DeliveryService, DeliveryPersonnelProfile } from '../../services/DeliveryService';
 
 export default function ProfileScreen({ navigation }: any) {
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const isVerified = user?.verificationStatus === 'VERIFIED';
+  const isDP = user?.role === 'DELIVERY_PERSONNEL';
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [dpProfile, setDpProfile] = useState<DeliveryPersonnelProfile | null>(null);
+
+  // v2.0 FR-3.6 — dashers see their own rating; refreshed each time the tab opens.
+  useFocusEffect(
+    useCallback(() => {
+      if (!isDP || !token) return;
+      DeliveryService.getMyProfile(token).then(setDpProfile).catch(() => {});
+    }, [isDP, token]),
+  );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -28,6 +41,12 @@ export default function ProfileScreen({ navigation }: any) {
           <Text style={styles.name}>{user?.fullName || 'User'}</Text>
           <Text style={styles.phone}>+63 912 345 6789</Text>
         </View>
+
+        {isDP && dpProfile && (
+          <View style={styles.ratingWrap}>
+            <MyRatingCard average={dpProfile.ratingAvg} count={dpProfile.ratingCount} />
+          </View>
+        )}
 
         <View style={styles.verificationSection}>
           <View style={styles.verificationRow}>
@@ -87,6 +106,7 @@ const styles = StyleSheet.create({
   avatar: { width: 96, height: 96, borderRadius: 48, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
   name: { fontSize: 20, fontWeight: '600', color: '#000000', marginBottom: 4 },
   phone: { fontSize: 14, color: '#3A3A3A' },
+  ratingWrap: { marginBottom: 24 },
   verificationSection: { marginBottom: 32 },
   verificationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   verificationLabel: { fontSize: 14, fontWeight: '500', color: '#3A3A3A' },

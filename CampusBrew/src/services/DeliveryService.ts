@@ -35,6 +35,8 @@ export interface DeliveryPersonnelProfile {
   incentiveActive: boolean;
   currentOrderId?: string | null;
   pickupRangeMeters?: number | null; // v2.0 FR-3.1
+  ratingAvg?: number | null; // v2.0 FR-3.6 — null until enough ratings
+  ratingCount?: number;
 }
 
 async function safeJson(res: Response): Promise<any> {

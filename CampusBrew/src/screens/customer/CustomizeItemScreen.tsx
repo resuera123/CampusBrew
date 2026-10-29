@@ -8,16 +8,17 @@ import {
   ScrollView,
   ActivityIndicator,
   Image,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../constants/theme';
+import { useConfirm } from '../../components/ConfirmDialog';
 import { ShopService, MenuItem } from '../../services/ShopService';
 import { useCart, computeUnitPrice, AddItemResult } from '../../context/CartContext';
 import AddToCartSheet from '../../components/AddToCartSheet';
 
 export default function CustomizeItemScreen({ navigation, route }: any) {
+  const { confirm, dialog } = useConfirm();
   const { menuItemId, shopId } = route.params || {};
   const { addItem, shopId: cartShopId } = useCart();
 
@@ -70,23 +71,18 @@ export default function CustomizeItemScreen({ navigation, route }: any) {
     setAddOns((prev) => (prev.includes(name) ? prev.filter((a) => a !== name) : [...prev, name]));
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!item) return;
 
     if (cartShopId && cartShopId !== item.shopId) {
-      Alert.alert(
-        'Switch shop?',
-        'Your cart has items from a different shop. Adding this will clear those items.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Switch',
-            style: 'destructive',
-            onPress: () => doAdd(),
-          },
-        ],
-      );
-      return;
+      const ok = await confirm({
+        title: 'Switch shop?',
+        message: 'Your cart has items from a different shop. Adding this will clear those items.',
+        confirmLabel: 'Switch',
+        destructive: true,
+        icon: 'swap-horizontal-outline',
+      });
+      if (!ok) return;
     }
     doAdd();
   };
@@ -275,6 +271,7 @@ export default function CustomizeItemScreen({ navigation, route }: any) {
         onViewCart={() => { setAddResult(null); navigation.navigate('Checkout'); }}
         onContinue={() => { setAddResult(null); navigation.goBack(); }}
       />
+      {dialog}
     </SafeAreaView>
   );
 }

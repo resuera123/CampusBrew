@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SIZES } from '../../constants/theme';
+import { useConfirm } from '../../components/ConfirmDialog';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { DeliveryService } from '../../services/DeliveryService';
@@ -31,6 +32,7 @@ interface Props {
  * first-wins atomically — losing the race surfaces a friendly "already claimed".
  */
 export default function AvailableDeliveriesScreen({ onClaimed }: Props) {
+  const { confirm, dialog } = useConfirm();
   const { token } = useAuth();
   const { socket } = useSocket();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -100,15 +102,14 @@ export default function AvailableDeliveriesScreen({ onClaimed }: Props) {
     }
   };
 
-  const confirmClaim = (order: Order) => {
-    Alert.alert(
-      'Accept this delivery?',
-      `${order.shopName ?? 'Shop'} → ${order.deliveryLocation}\n₱${order.totalAmount.toFixed(2)}`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Accept', onPress: () => handleClaim(order) },
-      ],
-    );
+  const confirmClaim = async (order: Order) => {
+    const ok = await confirm({
+      title: 'Accept this delivery?',
+      message: `${order.shopName ?? 'Shop'} → ${order.deliveryLocation}\n₱${order.totalAmount.toFixed(2)}`,
+      confirmLabel: 'Accept',
+      icon: 'bicycle-outline',
+    });
+    if (ok) handleClaim(order);
   };
 
   if (loading) {
@@ -167,6 +168,7 @@ export default function AvailableDeliveriesScreen({ onClaimed }: Props) {
           ))
         )}
       </ScrollView>
+      {dialog}
     </SafeAreaView>
   );
 }

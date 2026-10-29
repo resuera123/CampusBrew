@@ -5,7 +5,8 @@ import { COLORS } from '../constants/theme';
 
 /**
  * v2.0 FR-2.1 / FR-3.6 — "★ 4.6 (12)". The server sends a null average until the
- * ratee has enough ratings (rating.minCountToShow), which shows as "New" here.
+ * ratee has enough ratings (rating.minCountToShow), which shows as "New" here —
+ * with the count once there is one, so a fresh rating still visibly lands.
  */
 export default function RatingBadge({
   average,
@@ -22,7 +23,7 @@ export default function RatingBadge({
       <Ionicons name={rated ? 'star' : 'star-outline'} size={size} color={COLORS.gold} />
       <Text style={[styles.text, { fontSize: size }]}>
         {rated ? average!.toFixed(1) : 'New'}
-        {rated && count ? <Text style={styles.count}> ({count})</Text> : null}
+        {count ? <Text style={styles.count}> ({count})</Text> : null}
       </Text>
     </View>
   );

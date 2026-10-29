@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../constants/theme';
+import { useConfirm } from '../../components/ConfirmDialog';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { ChatService, ChatChannel, ChatMessage } from '../../services/ChatService';
@@ -39,6 +40,7 @@ const QUICK_REPLIES: Record<string, string[]> = {
 };
 
 export default function ChatScreen({ route, navigation }: any) {
+  const { confirm, dialog } = useConfirm();
   const { user, token } = useAuth();
   const { socket, connected } = useSocket();
   const orderId: string = route?.params?.orderId;
@@ -201,27 +203,21 @@ export default function ChatScreen({ route, navigation }: any) {
     emitMessage(m.clientId, m.text);
   };
 
-  const confirmReport = () => {
-    Alert.alert(
-      'Report conversation',
-      'This conversation will be kept for review by CampusBrew. Report it?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Report',
-          style: 'destructive',
-          onPress: async () => {
-            if (!token) return;
-            try {
-              await ChatService.report(orderId, channel, token);
-              setReported(true);
-            } catch (e: any) {
-              Alert.alert('Could not report', e.message ?? 'Please try again.');
-            }
-          },
-        },
-      ],
-    );
+  const confirmReport = async () => {
+    const ok = await confirm({
+      title: 'Report conversation?',
+      message: 'This conversation will be kept for review by CampusBrew.',
+      confirmLabel: 'Report',
+      destructive: true,
+      icon: 'flag-outline',
+    });
+    if (!ok || !token) return;
+    try {
+      await ChatService.report(orderId, channel, token);
+      setReported(true);
+    } catch (e: any) {
+      Alert.alert('Could not report', e.message ?? 'Please try again.');
+    }
   };
 
   const lastMineId = [...messages].reverse().find((m) => m.senderId === user?.userId && !m.status)?.id;
@@ -334,6 +330,7 @@ export default function ChatScreen({ route, navigation }: any) {
           </View>
         ))}
       </KeyboardAvoidingView>
+      {dialog}
     </SafeAreaView>
   );
 }

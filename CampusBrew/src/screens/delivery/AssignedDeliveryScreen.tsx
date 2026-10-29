@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SIZES } from '../../constants/theme';
+import { useConfirm } from '../../components/ConfirmDialog';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { useLocationStreamer } from '../../hooks/useLocationStreamer';
@@ -21,6 +22,7 @@ import { DeliveryService } from '../../services/DeliveryService';
 import { Order } from '../../services/OrderService';
 
 export default function AssignedDeliveryScreen({ navigation }: any) {
+  const { confirm, dialog } = useConfirm();
   const { token } = useAuth();
   const { socket } = useSocket();
   const [order, setOrder] = useState<Order | null>(null);
@@ -66,25 +68,24 @@ export default function AssignedDeliveryScreen({ navigation }: any) {
   // GCash: dasher confirms handover (payment already verified at checkout).
   const handleGcashComplete = async () => {
     if (!order || !token) return;
-    Alert.alert('Confirm delivery', 'Confirm the order was delivered?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Confirm',
-        onPress: async () => {
-          setSubmitting(true);
-          try {
-            await DeliveryService.confirmDelivery(order.id, token);
-            setOrder(null);
-            // v2.0 FR-3.6 — go straight to rating the customer and shop.
-            navigation.navigate('RateOrder', { orderId: order.id });
-          } catch (e: any) {
-            Alert.alert('Could not confirm', e.message || 'Please try again.');
-          } finally {
-            setSubmitting(false);
-          }
-        },
-      },
-    ]);
+    const ok = await confirm({
+      title: 'Confirm delivery?',
+      message: 'Confirm the order was handed to the customer.',
+      confirmLabel: 'Confirm',
+      icon: 'checkmark-done-outline',
+    });
+    if (!ok) return;
+    setSubmitting(true);
+    try {
+      await DeliveryService.confirmDelivery(order.id, token);
+      setOrder(null);
+      // v2.0 FR-3.6 — go straight to rating the customer and shop.
+      navigation.navigate('RateOrder', { orderId: order.id });
+    } catch (e: any) {
+      Alert.alert('Could not confirm', e.message || 'Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // v2.0 FR-4.2 — COD: record the cash collected. Completion happens once the
@@ -268,6 +269,7 @@ export default function AssignedDeliveryScreen({ navigation }: any) {
             : <Text style={styles.primaryBtnText}>Confirm Delivery</Text>}
         </TouchableOpacity>
       )}
+      {dialog}
     </SafeAreaView>
   );
 }

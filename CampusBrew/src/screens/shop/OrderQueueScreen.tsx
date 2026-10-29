@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SIZES } from '../../constants/theme';
+import { useConfirm } from '../../components/ConfirmDialog';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { Order, OrderStatus } from '../../services/OrderService';
@@ -29,6 +30,7 @@ const QUEUE_STATUSES: OrderStatus[] = [
 ];
 
 export default function OrderQueueScreen({ route, navigation }: any) {
+  const { confirm, dialog } = useConfirm();
   const { token } = useAuth();
   const { socket } = useSocket();
   const [shopId, setShopId] = useState<string | undefined>(route?.params?.shopId);
@@ -100,21 +102,19 @@ export default function OrderQueueScreen({ route, navigation }: any) {
     }
   };
 
-  const confirmReject = (order: Order) => {
+  const confirmReject = async (order: Order) => {
     const isInitial = order.orderStatus === 'PLACED';
-    const title = isInitial ? 'Reject order?' : 'Cancel order?';
-    const body = isInitial
-      ? 'The customer will be notified and a refund will be issued for paid orders.'
-      : 'This order will be cancelled and the customer notified. Refunds are issued for paid orders.';
-    const actionLabel = isInitial ? 'Reject' : 'Cancel Order';
-    Alert.alert(
-      title,
-      body,
-      [
-        { text: 'Keep', style: 'cancel' },
-        { text: actionLabel, style: 'destructive', onPress: () => handleAction(order.id, 'reject') },
-      ],
-    );
+    const ok = await confirm({
+      title: isInitial ? 'Reject order?' : 'Cancel order?',
+      message: isInitial
+        ? 'The customer will be notified and a refund will be issued for paid orders.'
+        : 'This order will be cancelled and the customer notified. Refunds are issued for paid orders.',
+      confirmLabel: isInitial ? 'Reject' : 'Cancel Order',
+      cancelLabel: 'Keep',
+      destructive: true,
+      icon: 'close-circle-outline',
+    });
+    if (ok) handleAction(order.id, 'reject');
   };
 
   if (loading) {
@@ -171,6 +171,7 @@ export default function OrderQueueScreen({ route, navigation }: any) {
           ))
         )}
       </ScrollView>
+      {dialog}
     </SafeAreaView>
   );
 }

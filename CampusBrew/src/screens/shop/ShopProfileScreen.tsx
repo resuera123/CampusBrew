@@ -16,6 +16,7 @@ import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { ShopService, Shop } from '../../services/ShopService';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import MyRatingCard from '../../components/MyRatingCard';
 
 export default function ShopProfileScreen({ navigation }: any) {
   const { token, user, logout } = useAuth();
@@ -82,6 +83,10 @@ export default function ShopProfileScreen({ navigation }: any) {
 
         <Text style={styles.shopName}>{shop?.shopName ?? '—'}</Text>
         <Text style={styles.operator}>Operated by {user?.fullName}</Text>
+
+        <View style={styles.ratingWrap}>
+          <MyRatingCard average={shop?.ratingAvg} count={shop?.ratingCount} />
+        </View>
 
         <View style={styles.section}>
           <Row icon="document-text-outline" label="Description" value={shop?.description || 'No description yet'} />
@@ -157,12 +162,13 @@ const styles = StyleSheet.create({
   placeholderImage: { justifyContent: 'center', alignItems: 'center' },
   shopName: { fontSize: SIZES.titleSize, fontWeight: '700', color: COLORS.text, marginTop: 4 },
   operator: { fontSize: SIZES.captionSize, color: COLORS.textSecondary, marginTop: 2 },
+  ratingWrap: { alignSelf: 'stretch', marginTop: 20 },
   section: {
     width: '100%',
     backgroundColor: COLORS.white,
     borderRadius: 12,
     paddingVertical: 4,
-    marginTop: 24,
+    marginTop: 16,
     marginBottom: 16,
   },
   row: {
