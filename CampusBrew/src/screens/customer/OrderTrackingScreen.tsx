@@ -230,6 +230,21 @@ export default function OrderTrackingScreen({ route, navigation }: any) {
           </TouchableOpacity>
         </View>
 
+        {/* v2.0 FR-3.6 — rating prompt once delivered (the server enforces the 24h window). */}
+        {order.orderStatus === 'DELIVERED' && (
+          <TouchableOpacity
+            style={styles.rateCard}
+            onPress={() => navigation.navigate('RateOrder', { orderId: order.id })}
+          >
+            <Ionicons name="star" size={20} color={COLORS.gold} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rateTitle}>Rate your order</Text>
+              <Text style={styles.rateSub}>Tell us how the shop and your dasher did.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+        )}
+
         {isCancelled ? (
           <View style={styles.cancelledBanner}>
             <Ionicons name="close-circle" size={22} color="#D93025" />
@@ -459,6 +474,13 @@ const styles = StyleSheet.create({
   },
   chatBtnDisabled: { opacity: 0.4 },
   chatBtnText: { color: COLORS.primary, fontSize: SIZES.captionSize, fontWeight: '600' },
+  rateCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: COLORS.white, borderRadius: 12, padding: 14, marginBottom: 16,
+    borderWidth: 1, borderColor: COLORS.goldLight,
+  },
+  rateTitle: { fontSize: 15, fontWeight: '700', color: COLORS.text },
+  rateSub: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, marginTop: 2 },
   sectionTitle: { fontSize: SIZES.bodySize, fontWeight: '600', color: COLORS.text, marginBottom: 10, marginTop: 6 },
   timelineCard: { backgroundColor: COLORS.white, borderRadius: 12, padding: 14, marginBottom: 16 },
   timelineRow: { flexDirection: 'row', alignItems: 'flex-start' },

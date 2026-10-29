@@ -74,9 +74,9 @@ export default function AssignedDeliveryScreen({ navigation }: any) {
           setSubmitting(true);
           try {
             await DeliveryService.confirmDelivery(order.id, token);
-            Alert.alert('Delivered', 'This order is complete.');
             setOrder(null);
-            navigation.goBack();
+            // v2.0 FR-3.6 — go straight to rating the customer and shop.
+            navigation.navigate('RateOrder', { orderId: order.id });
           } catch (e: any) {
             Alert.alert('Could not confirm', e.message || 'Please try again.');
           } finally {
@@ -100,15 +100,15 @@ export default function AssignedDeliveryScreen({ navigation }: any) {
     try {
       const updated = await DeliveryService.cashCollected(order.id, amount, token);
       if (updated.orderStatus === 'DELIVERED') {
-        const flagged = updated.paymentStatus === 'FLAGGED';
-        Alert.alert(
-          flagged ? 'Amounts did not match' : 'Delivered',
-          flagged
-            ? 'Your amount and the customer\'s don\'t match — this payment is flagged for review.'
-            : 'Cash confirmed by the customer. This order is complete.',
-        );
+        if (updated.paymentStatus === 'FLAGGED') {
+          Alert.alert(
+            'Amounts did not match',
+            'Your amount and the customer\'s don\'t match — this payment is flagged for review.',
+          );
+        }
         setOrder(null);
-        navigation.goBack();
+        // v2.0 FR-3.6 — go straight to rating the customer and shop.
+        navigation.navigate('RateOrder', { orderId: order.id });
       } else {
         setOrder(updated);
         Alert.alert('Cash recorded', 'Waiting for the customer to confirm the payment.');

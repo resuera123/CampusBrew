@@ -81,6 +81,11 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
         navigate('Chat', { orderId, channel: data.channel });
         return;
       }
+      // v2.0 FR-3.6 — a rating prompt opens the rating screen.
+      if (data?.type === 'rating') {
+        navigate('RateOrder', { orderId });
+        return;
+      }
       // Route to the role-appropriate screen for this order.
       if (user.role === 'DELIVERY_PERSONNEL') {
         navigate('AssignedDelivery', { orderId });

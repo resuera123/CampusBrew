@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { ratingWindowLikelyOpen } from '../../services/RatingService';
 import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { ShopService } from '../../services/ShopService';
@@ -114,6 +115,15 @@ export default function ShopOrderHistoryScreen({ navigation }: any) {
                     {isDelivered ? 'Delivered' : 'Cancelled'}
                   </Text>
                 </View>
+                {isDelivered && ratingWindowLikelyOpen(order.updatedAt) && (
+                  <TouchableOpacity
+                    style={styles.rateLink}
+                    onPress={() => navigation.navigate('RateOrder', { orderId: order.id })}
+                  >
+                    <Ionicons name="star-outline" size={14} color={COLORS.primary} />
+                    <Text style={styles.rateLinkText}>Rate dasher</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             );
           })
@@ -133,6 +143,8 @@ function formatDate(iso: string): string {
 }
 
 const styles = StyleSheet.create({
+  rateLink: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 4, marginTop: 8 },
+  rateLinkText: { fontSize: SIZES.smallSize, color: COLORS.primary, fontWeight: '600' },
   container: { flex: 1, backgroundColor: COLORS.backgroundSecondary },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.backgroundSecondary },
   topBar: {

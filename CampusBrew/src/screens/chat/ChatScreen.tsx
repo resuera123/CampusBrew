@@ -139,11 +139,14 @@ export default function ChatScreen({ route, navigation }: any) {
     socket.on('chat:read', onRead);
     socket.on('chat:error', onError);
     socket.on('order:statusUpdate', onStatus);
+    // Delivery is sent to the customer and shop on their own feeds, not the order room.
+    socket.on('order:delivered', onStatus);
     return () => {
       socket.off('chat:message', onMessage);
       socket.off('chat:read', onRead);
       socket.off('chat:error', onError);
       socket.off('order:statusUpdate', onStatus);
+      socket.off('order:delivered', onStatus);
     };
   }, [socket, orderId, channel, user?.userId, markRead, load]);
 

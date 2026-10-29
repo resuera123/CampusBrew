@@ -46,6 +46,7 @@ import ShopOrderHistoryScreen from '../screens/shop/ShopOrderHistoryScreen';
 
 // Shared screens
 import ChatScreen from '../screens/chat/ChatScreen';
+import RateOrderScreen from '../screens/rating/RateOrderScreen';
 
 // Bottom tab bar
 import BottomTabBar from '../components/BottomTabBar';
@@ -92,6 +93,7 @@ export function CustomerStack() {
       <Stack.Screen name="ReorderCart" component={ReorderCartScreen} />
       <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
+      <Stack.Screen name="RateOrder" component={RateOrderScreen} />
       <Stack.Screen name="Notifications" component={NotificationScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="PaymentCenter" component={PaymentCenterScreen} />
@@ -126,6 +128,7 @@ export function DeliveryStack() {
       <Stack.Screen name="DeliveryHistory" component={DeliveryHistoryScreen} />
       <Stack.Screen name="AssignedDelivery" component={AssignedDeliveryScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
+      <Stack.Screen name="RateOrder" component={RateOrderScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="PaymentCenter" component={PaymentCenterScreen} />
       <Stack.Screen name="PaymentReceipt" component={PaymentReceiptScreen} />
@@ -159,6 +162,7 @@ export function ShopStack() {
       <Stack.Screen name="ItemAvailability" component={ItemAvailabilityScreen} />
       <Stack.Screen name="ShopOrderHistory" component={ShopOrderHistoryScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
+      <Stack.Screen name="RateOrder" component={RateOrderScreen} />
       <Stack.Screen name="EditShopProfile" component={EditShopProfileScreen} />
       <Stack.Screen name="PaymentCenter" component={PaymentCenterScreen} />
       <Stack.Screen name="PaymentReceipt" component={PaymentReceiptScreen} />
