@@ -48,3 +48,7 @@ xendit.secretKey=<xendit-test-secret-key>
 xendit.callbackToken=<xendit-webhook-callback-token>
 xendit.successUrl=campusbrew://payment/success
 xendit.failureUrl=campusbrew://payment/failure
+
+# Default admin account (created on startup if missing)
+admin.email=admin@campusbrew.app
+admin.password=change-me

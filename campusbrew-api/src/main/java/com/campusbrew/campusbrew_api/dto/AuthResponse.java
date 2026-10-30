@@ -17,4 +17,6 @@ public class AuthResponse {
     private String fullName;
     private UserRole role;
     private VerificationStatus verificationStatus;
+    // Can switch between the customer and dasher sides.
+    private boolean dasherApproved;
 }

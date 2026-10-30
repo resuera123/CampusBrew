@@ -40,6 +40,11 @@ public class AuthService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already registered");
         }
+        // Dashers come from an approved application and admins are seeded, so
+        // sign-up only creates customers and shop operators.
+        if (request.getRole() != UserRole.CUSTOMER && request.getRole() != UserRole.SHOP_OPERATOR) {
+            throw new RuntimeException("Sign up as a customer or shop operator");
+        }
 
         User user = User.builder()
                 .fullName(request.getFullName())
@@ -65,19 +70,6 @@ public class AuthService {
                     .isOpen(false)
                     .build();
             shopRepository.save(shop);
-        }
-
-        // Auto-provision a DeliveryPersonnel profile so Module 3 has a record to toggle.
-        if (saved.getRole() == UserRole.DELIVERY_PERSONNEL) {
-            DeliveryPersonnel dp = DeliveryPersonnel.builder()
-                    .userId(saved.getId())
-                    .isActive(false)
-                    .totalDeliveries(0)
-                    .incentiveActive(false)
-                    .createdAt(java.util.Date.from(Instant.now()))
-                    .updatedAt(java.util.Date.from(Instant.now()))
-                    .build();
-            deliveryPersonnelRepository.save(dp);
         }
 
         String otp = generateOtp();
@@ -131,14 +123,72 @@ public class AuthService {
             throw new RuntimeException("Invalid email or password");
         }
 
-        String token = jwtService.generateToken(user);
+        if (user.isSuspended()) {
+            throw new RuntimeException("Your account is suspended. Contact CampusBrew support.");
+        }
 
+        return authResponse(user);
+    }
+
+    // ─── Customer ⇄ Dasher switch ───────────────────────────────
+
+    /** Whether this account may use the dasher side (approved application, or a legacy dasher account). */
+    public static boolean isDasher(User user) {
+        return user.isDasherApproved() || user.getRole() == UserRole.DELIVERY_PERSONNEL;
+    }
+
+    /**
+     * Switches the account's active side and returns a fresh session (the JWT
+     * carries the role). Going to the customer side takes the dasher offline, so
+     * no offers arrive while they're ordering; it's blocked mid-delivery.
+     */
+    public AuthResponse switchRole(String userId, UserRole target) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (target != UserRole.CUSTOMER && target != UserRole.DELIVERY_PERSONNEL) {
+            throw new RuntimeException("You can only switch between customer and dasher");
+        }
+        if (!isDasher(user)) {
+            throw new RuntimeException("Your dasher application hasn't been approved");
+        }
+
+        DeliveryPersonnel dp = deliveryPersonnelRepository.findByUserId(userId)
+                .orElseGet(() -> newDasherProfile(userId));
+        if (target == UserRole.CUSTOMER && dp.getCurrentOrderId() != null) {
+            throw new RuntimeException("Finish your current delivery before switching to customer");
+        }
+        if (target == UserRole.CUSTOMER) {
+            dp.setActive(false);
+        }
+        dp.setUpdatedAt(java.util.Date.from(Instant.now()));
+        deliveryPersonnelRepository.save(dp);
+
+        user.setDasherApproved(true);
+        user.setRole(target);
+        user.setUpdatedAt(java.util.Date.from(Instant.now()));
+        return authResponse(userRepository.save(user));
+    }
+
+    /** A blank, offline dasher profile (Module 3 needs a record to toggle). */
+    public static DeliveryPersonnel newDasherProfile(String userId) {
+        return DeliveryPersonnel.builder()
+                .userId(userId)
+                .isActive(false)
+                .totalDeliveries(0)
+                .incentiveActive(false)
+                .createdAt(java.util.Date.from(Instant.now()))
+                .updatedAt(java.util.Date.from(Instant.now()))
+                .build();
+    }
+
+    private AuthResponse authResponse(User user) {
         return AuthResponse.builder()
-                .token(token)
+                .token(jwtService.generateToken(user))
                 .userId(user.getId())
                 .fullName(user.getFullName())
                 .role(user.getRole())
                 .verificationStatus(user.getVerificationStatus())
+                .dasherApproved(isDasher(user))
                 .build();
     }
 

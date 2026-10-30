@@ -47,6 +47,15 @@ public class User {
     // v2.0 FR-3.4 — Expo push token for background notifications.
     private String expoPushToken;
 
+    // An admin approved this customer's dasher application, so they can switch
+    // between CUSTOMER and DELIVERY_PERSONNEL (role holds the active side).
+    private boolean dasherApproved;
+
+    // Set by an admin from a report; a suspended account can't log in or call the API.
+    private boolean suspended;
+    private String suspendedReason;
+    private Date suspendedAt;
+
     private Date createdAt;
     private Date updatedAt;
 }

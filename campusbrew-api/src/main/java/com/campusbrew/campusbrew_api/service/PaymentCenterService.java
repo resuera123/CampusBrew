@@ -8,12 +8,17 @@ import com.campusbrew.campusbrew_api.repository.PaymentRepository;
 import com.campusbrew.campusbrew_api.repository.ShopRepository;
 import com.campusbrew.campusbrew_api.repository.TransactionRepository;
 import com.campusbrew.campusbrew_api.repository.UserRepository;
+import com.campusbrew.campusbrew_api.model.Report;
+import com.campusbrew.campusbrew_api.model.ReportStatus;
+import com.campusbrew.campusbrew_api.model.ReportType;
+import com.campusbrew.campusbrew_api.repository.ReportRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -35,6 +40,7 @@ public class PaymentCenterService {
     private final TransactionRepository transactionRepository;
     private final OrderRepository orderRepository;
     private final ShopRepository shopRepository;
+    private final ReportRepository reportRepository;
 
     public PaymentCenterResponse forUser(String userId, String typeFilter) {
         User user = userRepository.findById(userId)
@@ -157,6 +163,18 @@ public class PaymentCenterService {
         p.setReported(true);
         p.setReportNote(note);
         paymentRepository.save(p);
+        // Queue it for the admin, once per payment while it's still open.
+        if (!reportRepository.existsByTypeAndPaymentIdAndStatus(ReportType.PAYMENT, paymentId, ReportStatus.OPEN)) {
+            reportRepository.save(Report.builder()
+                    .type(ReportType.PAYMENT)
+                    .reporterId(userId)
+                    .orderId(p.getOrderId())
+                    .paymentId(paymentId)
+                    .note(note)
+                    .status(ReportStatus.OPEN)
+                    .createdAt(new Date())
+                    .build());
+        }
     }
 
     // ---- helpers ----

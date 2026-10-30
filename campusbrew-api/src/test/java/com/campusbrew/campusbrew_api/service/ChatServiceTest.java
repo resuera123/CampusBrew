@@ -9,6 +9,7 @@ import com.campusbrew.campusbrew_api.model.OrderStatus;
 import com.campusbrew.campusbrew_api.model.Shop;
 import com.campusbrew.campusbrew_api.model.StatusHistoryEntry;
 import com.campusbrew.campusbrew_api.model.User;
+import com.campusbrew.campusbrew_api.repository.ReportRepository;
 import com.campusbrew.campusbrew_api.repository.ChatMessageRepository;
 import com.campusbrew.campusbrew_api.repository.OrderRepository;
 import com.campusbrew.campusbrew_api.repository.ShopRepository;
@@ -62,7 +63,8 @@ class ChatServiceTest {
         });
         when(socket.isUserOnline(anyString())).thenReturn(true);
 
-        service = new ChatService(chatRepo, orderRepo, shopRepo, userRepo, config, socket, push);
+        service = new ChatService(chatRepo, orderRepo, shopRepo, userRepo, config, socket, push,
+                mock(ReportRepository.class));
     }
 
     private Order order(OrderStatus status, String dp, Instant statusAt) {

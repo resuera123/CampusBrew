@@ -21,6 +21,7 @@ public class UserDTO {
     private String profilePicture;
     private String address;
     private String dateOfBirth;
+    private boolean dasherApproved;
 
     public static UserDTO fromUser(User user) {
         return UserDTO.builder()
@@ -34,6 +35,7 @@ public class UserDTO {
                 .studentId(user.getStudentId())
                 .phoneNumber(user.getPhoneNumber())
                 .profilePicture(user.getProfilePicture())
+                .dasherApproved(user.isDasherApproved() || user.getRole() == UserRole.DELIVERY_PERSONNEL)
                 .build();
     }
 }

@@ -2,6 +2,7 @@ package com.campusbrew.campusbrew_api.service;
 
 import com.campusbrew.campusbrew_api.dto.PaymentCenterResponse;
 import com.campusbrew.campusbrew_api.model.*;
+import com.campusbrew.campusbrew_api.repository.ReportRepository;
 import com.campusbrew.campusbrew_api.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,7 +36,8 @@ class PaymentCenterServiceTest {
         txRepo = mock(TransactionRepository.class);
         orderRepo = mock(OrderRepository.class);
         shopRepo = mock(ShopRepository.class);
-        service = new PaymentCenterService(userRepo, paymentRepo, txRepo, orderRepo, shopRepo);
+        service = new PaymentCenterService(userRepo, paymentRepo, txRepo, orderRepo, shopRepo,
+                mock(ReportRepository.class));
     }
 
     private void role(String userId, UserRole r) {

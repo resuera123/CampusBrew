@@ -6,10 +6,14 @@ import com.campusbrew.campusbrew_api.model.ChatChannel;
 import com.campusbrew.campusbrew_api.model.ChatMessage;
 import com.campusbrew.campusbrew_api.model.Order;
 import com.campusbrew.campusbrew_api.model.OrderStatus;
+import com.campusbrew.campusbrew_api.model.Report;
+import com.campusbrew.campusbrew_api.model.ReportStatus;
+import com.campusbrew.campusbrew_api.model.ReportType;
 import com.campusbrew.campusbrew_api.model.Shop;
 import com.campusbrew.campusbrew_api.model.User;
 import com.campusbrew.campusbrew_api.repository.ChatMessageRepository;
 import com.campusbrew.campusbrew_api.repository.OrderRepository;
+import com.campusbrew.campusbrew_api.repository.ReportRepository;
 import com.campusbrew.campusbrew_api.repository.ShopRepository;
 import com.campusbrew.campusbrew_api.repository.UserRepository;
 import com.campusbrew.campusbrew_api.websocket.InboundSocketHandler;
@@ -56,6 +60,7 @@ public class ChatService implements InboundSocketHandler {
     private final ConfigService configService;
     private final SocketService socketService;
     private final PushNotificationService pushNotificationService;
+    private final ReportRepository reportRepository;
 
     @Override
     public String event() {
@@ -187,6 +192,18 @@ public class ChatService implements InboundSocketHandler {
                 .findByOrderIdAndChannelOrderByCreatedAtAsc(orderId, channel);
         messages.forEach(m -> m.setReported(true));
         chatMessageRepository.saveAll(messages);
+        // Queue it for the admin, once per conversation while it's still open.
+        if (!reportRepository.existsByTypeAndOrderIdAndChannelAndStatus(
+                ReportType.CHAT, orderId, channel, ReportStatus.OPEN)) {
+            reportRepository.save(Report.builder()
+                    .type(ReportType.CHAT)
+                    .reporterId(userId)
+                    .orderId(orderId)
+                    .channel(channel)
+                    .status(ReportStatus.OPEN)
+                    .createdAt(new Date())
+                    .build());
+        }
         log.info("Chat reported: order={} channel={} by={}", orderId, channel, userId);
     }
 
@@ -267,6 +284,13 @@ public class ChatService implements InboundSocketHandler {
     }
 
     /** The customer plus the shop operator or dasher, depending on the channel. */
+    /** The customer and the shop operator or dasher of a channel (admin report review). */
+    public List<String> participantIds(String orderId, ChatChannel channel) {
+        Participants p = participants(requireOrder(orderId), channel);
+        return java.util.stream.Stream.of(p.customerId(), p.counterpartId())
+                .filter(Objects::nonNull).toList();
+    }
+
     private record Participants(String customerId, String counterpartId) {
         boolean includes(String userId) {
             return userId != null && (userId.equals(customerId) || userId.equals(counterpartId));
