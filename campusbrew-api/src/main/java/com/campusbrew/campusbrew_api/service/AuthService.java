@@ -37,31 +37,35 @@ public class AuthService {
     // ─── 1.1 Registration ───────────────────────────────────────
 
     public void register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already registered");
-        }
         // Dashers come from an approved application and admins are seeded, so
         // sign-up only creates customers and shop operators.
         if (request.getRole() != UserRole.CUSTOMER && request.getRole() != UserRole.SHOP_OPERATOR) {
             throw new RuntimeException("Sign up as a customer or shop operator");
         }
 
-        User user = User.builder()
-                .fullName(request.getFullName())
+        // An address that never finished email verification (e.g. the code email
+        // failed to send) can sign up again; the details are replaced.
+        User existing = userRepository.findByEmail(request.getEmail()).orElse(null);
+        if (existing != null && existing.isEmailVerified()) {
+            throw new RuntimeException("Email already registered");
+        }
+
+        User user = existing != null ? existing : User.builder()
                 .email(request.getEmail())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole())
                 .verificationStatus(VerificationStatus.UNVERIFIED)
                 .emailVerified(false)
                 .createdAt(java.util.Date.from(Instant.now()))
-                .updatedAt(java.util.Date.from(Instant.now()))
                 .build();
+        user.setFullName(request.getFullName());
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setRole(request.getRole());
+        user.setUpdatedAt(java.util.Date.from(Instant.now()));
 
         User saved = userRepository.save(user);
 
         // Auto-provision a blank Shop for SHOP_OPERATOR users so they have something
         // to manage in the dashboard. They fill in the details via Edit Shop Profile.
-        if (saved.getRole() == UserRole.SHOP_OPERATOR) {
+        if (saved.getRole() == UserRole.SHOP_OPERATOR && shopRepository.findByOperatorId(saved.getId()).isEmpty()) {
             Shop shop = Shop.builder()
                     .operatorId(saved.getId())
                     .shopName(saved.getFullName() != null ? saved.getFullName() + "'s Shop" : "Untitled Shop")

@@ -52,3 +52,8 @@ xendit.failureUrl=campusbrew://payment/failure
 # Default admin account (created on startup if missing)
 admin.email=admin@campusbrew.app
 admin.password=change-me
+
+# Optional: send code emails through Brevo's HTTPS API instead of Gmail SMTP
+# (needed on Render's free plan, which blocks SMTP ports). Leave blank to use spring.mail.*.
+brevo.apiKey=
+mail.from=<sender-verified-in-brevo>
