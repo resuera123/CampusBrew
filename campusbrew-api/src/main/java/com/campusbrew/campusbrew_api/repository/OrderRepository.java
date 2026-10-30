@@ -19,6 +19,9 @@ public interface OrderRepository extends MongoRepository<Order, String> {
 
     List<Order> findByShopIdOrderByCreatedAtDesc(String shopId);
 
+    // FR-4.6 sales report: a shop's orders created since a date (filtered by delivery time after).
+    List<Order> findByShopIdAndCreatedAtGreaterThanEqual(String shopId, java.util.Date from);
+
     /** Marketplace pool: READY_FOR_PICKUP orders that no DP has claimed yet. */
     List<Order> findByOrderStatusAndDeliveryPersonnelIdIsNullOrderByReadyAtAsc(OrderStatus status);
 
