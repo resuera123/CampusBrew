@@ -21,6 +21,10 @@ const TAB_CONFIG: Record<string, { icon: string; iconFocused: string; label: str
   ShopDashboard: { icon: 'home-outline', iconFocused: 'home', label: 'Home' },
   ShopOrders: { icon: 'bag-outline', iconFocused: 'bag', label: 'Orders' },
   ShopProfile: { icon: 'person-outline', iconFocused: 'person', label: 'Profile' },
+  // Admin tabs
+  AdminApplications: { icon: 'document-text-outline', iconFocused: 'document-text', label: 'Applications' },
+  AdminReports: { icon: 'flag-outline', iconFocused: 'flag', label: 'Reports' },
+  AdminProfile: { icon: 'person-outline', iconFocused: 'person', label: 'Profile' },
 };
 
 export default function BottomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {

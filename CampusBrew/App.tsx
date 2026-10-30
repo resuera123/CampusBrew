@@ -8,6 +8,7 @@ import { CartProvider } from './src/context/CartContext';
 import { SocketProvider } from './src/context/SocketContext';
 import { NotificationsProvider } from './src/context/NotificationsContext';
 import {
+  AdminStack,
   AuthStack,
   CustomerStack,
   DeliveryStack,
@@ -40,6 +41,8 @@ function RootNavigator() {
       return <DeliveryStack />;
     case 'SHOP_OPERATOR':
       return <ShopStack />;
+    case 'ADMIN':
+      return <AdminStack />;
     case 'CUSTOMER':
     default:
       return <CustomerStack />;

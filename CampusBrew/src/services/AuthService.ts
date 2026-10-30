@@ -4,7 +4,8 @@ export interface RegisterRequest {
   fullName: string;
   email: string;
   password: string;
-  role: 'CUSTOMER' | 'DELIVERY_PERSONNEL' | 'SHOP_OPERATOR';
+  // Dashers come from an approved application; admins are seeded on the server.
+  role: 'CUSTOMER' | 'SHOP_OPERATOR';
 }
 
 export interface LoginRequest {
@@ -18,6 +19,8 @@ export interface AuthResponse {
   fullName: string;
   role: string;
   verificationStatus: string;
+  /** Can switch between the customer and dasher sides. */
+  dasherApproved?: boolean;
 }
 
 // Safe JSON parser — handles empty or non-JSON responses

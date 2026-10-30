@@ -1,27 +1,58 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
-import ConfirmDialog from '../../components/ConfirmDialog';
+import ConfirmDialog, { useConfirm } from '../../components/ConfirmDialog';
 import MyRatingCard from '../../components/MyRatingCard';
 import { DeliveryService, DeliveryPersonnelProfile } from '../../services/DeliveryService';
+import { DasherApplicationService, DasherStatus } from '../../services/DasherApplicationService';
 
 export default function ProfileScreen({ navigation }: any) {
-  const { user, token, logout } = useAuth();
+  const { user, token, logout, setSession } = useAuth();
   const isVerified = user?.verificationStatus === 'VERIFIED';
   const isDP = user?.role === 'DELIVERY_PERSONNEL';
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [dpProfile, setDpProfile] = useState<DeliveryPersonnelProfile | null>(null);
+  const [dasher, setDasher] = useState<DasherStatus | null>(null);
+  const [switching, setSwitching] = useState(false);
+  const { confirm, notify, dialog } = useConfirm();
 
-  // v2.0 FR-3.6 — dashers see their own rating; refreshed each time the tab opens.
+  // v2.0 FR-3.6 — dashers see their own rating; customers see where their
+  // dasher application stands. Both refresh each time the tab opens.
   useFocusEffect(
     useCallback(() => {
-      if (!isDP || !token) return;
-      DeliveryService.getMyProfile(token).then(setDpProfile).catch(() => {});
+      if (!token) return;
+      if (isDP) {
+        DeliveryService.getMyProfile(token).then(setDpProfile).catch(() => {});
+      } else {
+        DasherApplicationService.status(token).then(setDasher).catch(() => {});
+      }
     }, [isDP, token]),
   );
+
+  const switchTo = async (role: 'CUSTOMER' | 'DELIVERY_PERSONNEL') => {
+    if (!token) return;
+    const toDasher = role === 'DELIVERY_PERSONNEL';
+    const ok = await confirm({
+      title: toDasher ? 'Log in as Dasher?' : 'Order as Customer?',
+      message: toDasher
+        ? "You'll switch to the dasher side. Go online from the dasher home to get offers."
+        : "You'll go offline as a dasher, so no offers will come in while you order.",
+      confirmLabel: 'Switch',
+      icon: toDasher ? 'bicycle-outline' : 'cafe-outline',
+    });
+    if (!ok) return;
+    setSwitching(true);
+    try {
+      await setSession(await DasherApplicationService.switchRole(role, token));
+    } catch (e: any) {
+      notify('Could not switch', e.message ?? 'Please try again.', { icon: 'alert-circle-outline' });
+    } finally {
+      setSwitching(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -64,7 +95,32 @@ export default function ProfileScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.outlinedButton} onPress={() => navigation.navigate('EditProfile')} activeOpacity={0.7}>
+        {isDP ? (
+          <TouchableOpacity
+            style={[styles.primaryButton, switching && styles.buttonDisabled]}
+            onPress={() => switchTo('CUSTOMER')}
+            disabled={switching}
+            activeOpacity={0.85}
+          >
+            {switching ? <ActivityIndicator color="#FFFFFF" /> : (
+              <>
+                <Ionicons name="cafe-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                <Text style={styles.primaryButtonText}>Order as Customer</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        ) : (
+          dasher && (
+            <DasherButton
+              status={dasher}
+              busy={switching}
+              onApply={() => navigation.navigate('DasherApplication')}
+              onSwitch={() => switchTo('DELIVERY_PERSONNEL')}
+            />
+          )
+        )}
+
+        <TouchableOpacity style={[styles.outlinedButton, { marginTop: 16 }]} onPress={() => navigation.navigate('EditProfile')} activeOpacity={0.7}>
           <Text style={styles.outlinedButtonText}>Edit Profile</Text>
         </TouchableOpacity>
 
@@ -92,7 +148,83 @@ export default function ProfileScreen({ navigation }: any) {
           logout();
         }}
       />
+      {dialog}
     </SafeAreaView>
+  );
+}
+
+/**
+ * Customer side: Log in as Dasher once approved; otherwise Become a Dasher —
+ * greyed out with a note until the account is verified, and replaced by a
+ * status line while an application is under review.
+ */
+function DasherButton({
+  status,
+  busy,
+  onApply,
+  onSwitch,
+}: {
+  status: DasherStatus;
+  busy: boolean;
+  onApply: () => void;
+  onSwitch: () => void;
+}) {
+  if (status.dasherApproved) {
+    return (
+      <TouchableOpacity
+        style={[styles.primaryButton, busy && styles.buttonDisabled]}
+        onPress={onSwitch}
+        disabled={busy}
+        activeOpacity={0.85}
+      >
+        {busy ? <ActivityIndicator color="#FFFFFF" /> : (
+          <>
+            <Ionicons name="bicycle-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Text style={styles.primaryButtonText}>Log in as Dasher</Text>
+          </>
+        )}
+      </TouchableOpacity>
+    );
+  }
+
+  if (status.applicationStatus === 'PENDING') {
+    return (
+      <View>
+        <View style={[styles.primaryButton, styles.buttonDisabled]}>
+          <Ionicons name="time-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+          <Text style={styles.primaryButtonText}>Application under review</Text>
+        </View>
+        <Text style={styles.dasherNote}>We'll notify you once an admin has reviewed it.</Text>
+      </View>
+    );
+  }
+
+  const locked = !status.verified;
+  return (
+    <View>
+      {status.applicationStatus === 'REJECTED' && (
+        <View style={styles.rejectedCard}>
+          <Text style={styles.rejectedTitle}>Your last application wasn't approved</Text>
+          {!!status.rejectionReason && <Text style={styles.rejectedText}>Reason: {status.rejectionReason}</Text>}
+          <Text style={styles.rejectedText}>You can fix this and apply again.</Text>
+        </View>
+      )}
+      <TouchableOpacity
+        style={[styles.primaryButton, locked && styles.buttonLocked]}
+        onPress={onApply}
+        disabled={locked}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="bicycle-outline" size={20} color={locked ? '#8A8A8A' : '#FFFFFF'} style={{ marginRight: 8 }} />
+        <Text style={[styles.primaryButtonText, locked && styles.lockedText]}>Become a Dasher</Text>
+      </TouchableOpacity>
+      {locked && (
+        <Text style={styles.dasherNote}>
+          <Ionicons name="lock-closed" size={12} color="#3A3A3A" /> You must be verified to apply. Verify your
+          CIT-U account above first.
+        </Text>
+      )}
+    </View>
   );
 }
 
@@ -117,6 +249,15 @@ const styles = StyleSheet.create({
   badgeTextGold: { color: '#FFFFFF' },
   badgeTextGray: { color: '#3A3A3A' },
   verifyLink: { fontSize: 14, fontWeight: '600', color: '#94353E' },
+  primaryButton: { backgroundColor: '#94353E', borderRadius: 24, height: 48, justifyContent: 'center', alignItems: 'center', flexDirection: 'row' },
+  primaryButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  buttonDisabled: { opacity: 0.6 },
+  buttonLocked: { backgroundColor: '#E8E8E8' },
+  lockedText: { color: '#8A8A8A' },
+  dasherNote: { fontSize: 13, color: '#3A3A3A', marginTop: 8, textAlign: 'center' },
+  rejectedCard: { backgroundColor: '#FCE8E8', borderRadius: 12, padding: 12, marginBottom: 12 },
+  rejectedTitle: { fontSize: 14, fontWeight: '600', color: '#D93025' },
+  rejectedText: { fontSize: 13, color: '#3A3A3A', marginTop: 4 },
   outlinedButton: { borderWidth: 2, borderColor: '#94353E', borderRadius: 24, height: 48, justifyContent: 'center', alignItems: 'center', flexDirection: 'row' },
   outlinedButtonText: { fontSize: 16, fontWeight: '600', color: '#94353E' },
 });

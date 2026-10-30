@@ -17,11 +17,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { AuthService } from '../../services/AuthService';
 import { COLORS, SIZES } from '../../constants/theme';
 
-type Role = 'CUSTOMER' | 'DELIVERY_PERSONNEL' | 'SHOP_OPERATOR';
+type Role = 'CUSTOMER' | 'SHOP_OPERATOR';
 
+// Dashers apply from their customer profile (Become a Dasher), so there's no
+// dasher option here.
 const ROLE_OPTIONS: { label: string; value: Role }[] = [
   { label: 'Student Customer', value: 'CUSTOMER' },
-  { label: 'Delivery Personnel', value: 'DELIVERY_PERSONNEL' },
   { label: 'Shop Operator', value: 'SHOP_OPERATOR' },
 ];
 

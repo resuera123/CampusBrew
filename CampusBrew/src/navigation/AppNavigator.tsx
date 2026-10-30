@@ -26,6 +26,7 @@ import ProfileScreen from '../screens/customer/ProfileScreen';
 import EditProfileScreen from '../screens/customer/EditProfileScreen';
 import PaymentCenterScreen from '../screens/customer/PaymentCenterScreen';
 import PaymentReceiptScreen from '../screens/customer/PaymentReceiptScreen';
+import DasherApplicationScreen from '../screens/customer/DasherApplicationScreen';
 
 // Delivery screens
 import DeliveryDashboardScreen from '../screens/delivery/DeliveryDashboardScreen';
@@ -45,6 +46,13 @@ import EditShopProfileScreen from '../screens/shop/EditShopProfileScreen';
 import ShopOrderHistoryScreen from '../screens/shop/ShopOrderHistoryScreen';
 import SalesByItemScreen from '../screens/shop/SalesByItemScreen';
 import ItemTrendScreen from '../screens/shop/ItemTrendScreen';
+
+// Admin screens
+import AdminApplicationsScreen from '../screens/admin/AdminApplicationsScreen';
+import AdminApplicationDetailScreen from '../screens/admin/AdminApplicationDetailScreen';
+import AdminReportsScreen from '../screens/admin/AdminReportsScreen';
+import AdminReportDetailScreen from '../screens/admin/AdminReportDetailScreen';
+import AdminProfileScreen from '../screens/admin/AdminProfileScreen';
 
 // Shared screens
 import ChatScreen from '../screens/chat/ChatScreen';
@@ -102,6 +110,7 @@ export function CustomerStack() {
       <Stack.Screen name="PaymentReceipt" component={PaymentReceiptScreen} />
       <Stack.Screen name="AccountVerification" component={AccountVerificationScreen} />
       <Stack.Screen name="VerifiedSuccess" component={VerifiedSuccessScreen} />
+      <Stack.Screen name="DasherApplication" component={DasherApplicationScreen} />
     </Stack.Navigator>
   );
 }
@@ -172,6 +181,31 @@ export function ShopStack() {
       <Stack.Screen name="PaymentReceipt" component={PaymentReceiptScreen} />
       <Stack.Screen name="AccountVerification" component={AccountVerificationScreen} />
       <Stack.Screen name="VerifiedSuccess" component={VerifiedSuccessScreen} />
+    </Stack.Navigator>
+  );
+}
+
+// ─── Admin Tabs ─────────────────────────────────────────────────
+
+function AdminHomeTabs() {
+  return (
+    <Tab.Navigator
+      tabBar={(props) => <BottomTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
+    >
+      <Tab.Screen name="AdminApplications" component={AdminApplicationsScreen} />
+      <Tab.Screen name="AdminReports" component={AdminReportsScreen} />
+      <Tab.Screen name="AdminProfile" component={AdminProfileScreen} />
+    </Tab.Navigator>
+  );
+}
+
+export function AdminStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="AdminTabs" component={AdminHomeTabs} />
+      <Stack.Screen name="AdminApplicationDetail" component={AdminApplicationDetailScreen} />
+      <Stack.Screen name="AdminReportDetail" component={AdminReportDetailScreen} />
     </Stack.Navigator>
   );
 }

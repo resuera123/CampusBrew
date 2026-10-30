@@ -74,6 +74,11 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as
         { orderId?: string; type?: string; channel?: string } | undefined;
+      // A dasher application decision opens the customer's profile.
+      if (data?.type === 'application') {
+        navigate('CustomerTabs', { screen: 'Profile' });
+        return;
+      }
       const orderId = data?.orderId;
       if (!orderId) return;
       // v2.0 FR-3.5 — a chat push opens that conversation for every role.
