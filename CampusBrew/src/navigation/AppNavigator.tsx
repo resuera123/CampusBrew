@@ -46,6 +46,7 @@ import EditShopProfileScreen from '../screens/shop/EditShopProfileScreen';
 import ShopOrderHistoryScreen from '../screens/shop/ShopOrderHistoryScreen';
 import SalesByItemScreen from '../screens/shop/SalesByItemScreen';
 import ItemTrendScreen from '../screens/shop/ItemTrendScreen';
+import SalesReportScreen from '../screens/shop/SalesReportScreen';
 
 // Admin screens
 import AdminApplicationsScreen from '../screens/admin/AdminApplicationsScreen';
@@ -174,6 +175,7 @@ export function ShopStack() {
       <Stack.Screen name="ShopOrderHistory" component={ShopOrderHistoryScreen} />
       <Stack.Screen name="SalesByItem" component={SalesByItemScreen} />
       <Stack.Screen name="ItemTrend" component={ItemTrendScreen} />
+      <Stack.Screen name="SalesReport" component={SalesReportScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen name="RateOrder" component={RateOrderScreen} />
       <Stack.Screen name="EditShopProfile" component={EditShopProfileScreen} />

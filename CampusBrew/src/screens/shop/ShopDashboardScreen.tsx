@@ -119,7 +119,7 @@ export default function ShopDashboardScreen({ navigation }: any) {
 
         {error && <Text style={styles.errorText}>{error}</Text>}
 
-        <View style={styles.salesCard}>
+        <TouchableOpacity style={styles.salesCard} onPress={() => navigation.navigate('SalesReport')} activeOpacity={0.8}>
           <View style={styles.salesIconWrap}>
             <Ionicons name="trending-up-outline" size={22} color={COLORS.primary} />
           </View>
@@ -130,7 +130,8 @@ export default function ShopDashboardScreen({ navigation }: any) {
               {totalOrders} order{totalOrders !== 1 ? 's' : ''} delivered · beverages only
             </Text>
           </View>
-        </View>
+          <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
+        </TouchableOpacity>
 
         <View style={styles.statRow}>
           <StatCard
@@ -175,6 +176,12 @@ export default function ShopDashboardScreen({ navigation }: any) {
           label="Item Availability"
           subtitle="Toggle items in/out of stock"
           onPress={() => navigation.navigate('ItemAvailability', { shopId: shop?.id })}
+        />
+        <ActionRow
+          icon="stats-chart-outline"
+          label="Sales Report"
+          subtitle="Daily and weekly sales, peak hours, payments"
+          onPress={() => navigation.navigate('SalesReport')}
         />
         <ActionRow
           icon="bar-chart-outline"
