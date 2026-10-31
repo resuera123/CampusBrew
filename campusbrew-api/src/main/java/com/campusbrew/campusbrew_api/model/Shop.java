@@ -33,4 +33,14 @@ public class Shop {
     // (shown only once ratingCount >= rating.minCountToShow).
     private double ratingAvg;
     private int ratingCount;
+
+    // Admin approval of the shop application. New shops start false (hidden,
+    // can't open); null on shops from before approvals existed, which count as approved.
+    private Boolean approved;
+
+    /** Approved, or a shop from before approvals existed. */
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public boolean isApprovedShop() {
+        return !Boolean.FALSE.equals(approved);
+    }
 }

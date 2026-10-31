@@ -31,12 +31,17 @@ public class ShopService {
     private final OrderRepository orderRepository;
     private final ConfigService configService;
 
+    // Customers only ever see approved shops.
     public List<ShopDTO> getAllActiveShops(String sort) {
-        return sorted(shopRepository.findByIsOpenTrue(), sort);
+        return sorted(approvedOnly(shopRepository.findByIsOpenTrue()), sort);
     }
 
     public List<ShopDTO> getAllShops(String sort) {
-        return sorted(shopRepository.findAll(), sort);
+        return sorted(approvedOnly(shopRepository.findAll()), sort);
+    }
+
+    private static List<Shop> approvedOnly(List<Shop> shops) {
+        return shops.stream().filter(Shop::isApprovedShop).toList();
     }
 
     /**
@@ -78,6 +83,7 @@ public class ShopService {
         // get a blank shop created on first access so they can start managing it.
         Shop fresh = Shop.builder()
                 .operatorId(operatorUserId)
+                .approved(false)
                 .shopName(user.getFullName() != null ? user.getFullName() + "'s Shop" : "Untitled Shop")
                 .description("")
                 .location("")
@@ -105,7 +111,12 @@ public class ShopService {
         if (query == null || query.isBlank()) {
             return List.of();
         }
-        return menuItemRepository.findByNameContainingIgnoreCase(query).stream()
+        List<MenuItem> matches = menuItemRepository.findByNameContainingIgnoreCase(query);
+        java.util.Set<String> hidden = new java.util.HashSet<>();
+        shopRepository.findAllById(matches.stream().map(MenuItem::getShopId).distinct().toList())
+                .forEach(s -> { if (!s.isApprovedShop()) hidden.add(s.getId()); });
+        return matches.stream()
+                .filter(m -> !hidden.contains(m.getShopId()))
                 .map(MenuItemDTO::fromMenuItem)
                 .collect(Collectors.toList());
     }
@@ -164,6 +175,9 @@ public class ShopService {
         if (dto.getLocation() != null) shop.setLocation(dto.getLocation());
         if (dto.getShopImage() != null) shop.setShopImage(dto.getShopImage());
         if (dto.getEstimatedPrepTime() != null) shop.setEstimatedPrepTime(dto.getEstimatedPrepTime());
+        if (Boolean.TRUE.equals(dto.getIsOpen()) && !shop.isApprovedShop()) {
+            throw new RuntimeException("Your shop needs admin approval before it can open");
+        }
         if (dto.getIsOpen() != null) shop.setOpen(dto.getIsOpen());
 
         return toDTO(shopRepository.save(shop));

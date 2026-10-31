@@ -7,6 +7,7 @@ import com.campusbrew.campusbrew_api.repository.UserRepository;
 import com.campusbrew.campusbrew_api.service.AdminService;
 import com.campusbrew.campusbrew_api.service.DasherApplicationService;
 import com.campusbrew.campusbrew_api.service.JwtService;
+import com.campusbrew.campusbrew_api.service.ShopApplicationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +17,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * Admin console: dasher applications, user reports and suspensions. Every call
+ * Admin console: dasher and shop applications, user reports and suspensions. Every call
  * checks that the caller's account is an ADMIN (403 otherwise).
  */
 @RestController
@@ -25,6 +26,7 @@ import java.util.function.Function;
 public class AdminController {
 
     private final DasherApplicationService applicationService;
+    private final ShopApplicationService shopApplicationService;
     private final AdminService adminService;
     private final UserRepository userRepository;
     private final JwtService jwtService;
@@ -56,6 +58,35 @@ public class AdminController {
             @PathVariable String id,
             @RequestBody Map<String, String> body) {
         return asAdmin(authHeader, admin -> applicationService.reject(admin, id, body.get("reason")));
+    }
+
+    // ─── Shop applications ──────────────────────────────────────
+
+    /** status = PENDING (default) | APPROVED | REJECTED | ALL */
+    @GetMapping("/shop-applications")
+    public ResponseEntity<?> shopApplications(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(defaultValue = "PENDING") String status) {
+        return asAdmin(authHeader, admin -> shopApplicationService.list(
+                "ALL".equalsIgnoreCase(status) ? null : ApplicationStatus.valueOf(status.toUpperCase())));
+    }
+
+    @GetMapping("/shop-applications/{id}")
+    public ResponseEntity<?> shopApplication(@RequestHeader("Authorization") String authHeader, @PathVariable String id) {
+        return asAdmin(authHeader, admin -> shopApplicationService.get(id));
+    }
+
+    @PutMapping("/shop-applications/{id}/approve")
+    public ResponseEntity<?> approveShop(@RequestHeader("Authorization") String authHeader, @PathVariable String id) {
+        return asAdmin(authHeader, admin -> shopApplicationService.approve(admin, id));
+    }
+
+    @PutMapping("/shop-applications/{id}/reject")
+    public ResponseEntity<?> rejectShop(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable String id,
+            @RequestBody Map<String, String> body) {
+        return asAdmin(authHeader, admin -> shopApplicationService.reject(admin, id, body.get("reason")));
     }
 
     // ─── Reports ────────────────────────────────────────────────

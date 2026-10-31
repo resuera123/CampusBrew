@@ -27,6 +27,9 @@ public class ShopDTO {
 
     private String estimatedPrepTime;
 
+    // False until an admin approves the shop's application (hidden from customers).
+    private boolean approved;
+
     public static ShopDTO fromShop(Shop shop, int ratingMinCountToShow) {
         return ShopDTO.builder()
                 .id(shop.getId())
@@ -39,6 +42,7 @@ public class ShopDTO {
                 .ratingCount(shop.getRatingCount())
                 .isOpen(shop.isOpen())
                 .estimatedPrepTime(shop.getEstimatedPrepTime())
+                .approved(shop.isApprovedShop())
                 .build();
     }
 }

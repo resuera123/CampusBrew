@@ -50,6 +50,9 @@ public class OrderService {
 
         Shop shop = shopRepository.findById(dto.getShopId())
                 .orElseThrow(() -> new RuntimeException("Shop not found"));
+        if (!shop.isApprovedShop()) {
+            throw new RuntimeException("This shop isn't taking orders yet");
+        }
 
         if (dto.getPaymentMethod() == PaymentMethod.COD
                 && user.getVerificationStatus() != VerificationStatus.VERIFIED) {

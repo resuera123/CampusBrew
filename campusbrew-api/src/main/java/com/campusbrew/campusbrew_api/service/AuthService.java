@@ -72,6 +72,7 @@ public class AuthService {
                     .description("")
                     .location("")
                     .isOpen(false)
+                    .approved(false) // hidden until an admin approves its application
                     .build();
             shopRepository.save(shop);
         }
