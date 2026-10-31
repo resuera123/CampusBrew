@@ -17,6 +17,7 @@ import { useSocket } from '../../context/SocketContext';
 import { ShopService, Shop } from '../../services/ShopService';
 import { ShopOrderService } from '../../services/ShopOrderService';
 import SalesByItemChart from '../../components/SalesByItemChart';
+import ShopApprovalBanner from '../../components/ShopApprovalBanner';
 
 export default function ShopDashboardScreen({ navigation }: any) {
   const { token } = useAuth();
@@ -118,6 +119,10 @@ export default function ShopDashboardScreen({ navigation }: any) {
         </View>
 
         {error && <Text style={styles.errorText}>{error}</Text>}
+
+        {shop?.approved === false && (
+          <ShopApprovalBanner token={token} onApply={() => navigation.navigate('ShopApplication')} />
+        )}
 
         <TouchableOpacity style={styles.salesCard} onPress={() => navigation.navigate('SalesReport')} activeOpacity={0.8}>
           <View style={styles.salesIconWrap}>

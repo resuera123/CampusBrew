@@ -28,6 +28,26 @@ export interface AdminApplication {
   createdAt: string;
 }
 
+export interface AdminShopApplication {
+  id: string;
+  userId: string;
+  shopId: string;
+  accountName?: string | null;
+  email?: string | null;
+  stallName: string;
+  location: string;
+  operatorName: string;
+  phoneNumber: string;
+  agreedToRules: boolean;
+  /** Only on the detail view. */
+  stallPhoto?: string | null;
+  idPhoto?: string | null;
+  status: ApplicationStatus;
+  rejectionReason?: string | null;
+  reviewedAt?: string | null;
+  createdAt: string;
+}
+
 export type ReportStatus = 'OPEN' | 'RESOLVED';
 
 export interface AdminReport {
@@ -86,6 +106,30 @@ export const AdminService = {
 
   async reject(id: string, reason: string, token: string): Promise<AdminApplication> {
     const res = await fetch(`${base}/applications/${id}/reject`, {
+      method: 'PUT',
+      headers: authHeaders(token),
+      body: JSON.stringify({ reason }),
+    });
+    return parse(res, 'Could not reject');
+  },
+
+  async shopApplications(status: ApplicationStatus | 'ALL', token: string): Promise<AdminShopApplication[]> {
+    const res = await fetch(`${base}/shop-applications?status=${status}`, { headers: authHeaders(token) });
+    return parse(res, 'Failed to load shop applications');
+  },
+
+  async shopApplication(id: string, token: string): Promise<AdminShopApplication> {
+    const res = await fetch(`${base}/shop-applications/${id}`, { headers: authHeaders(token) });
+    return parse(res, 'Failed to load the application');
+  },
+
+  async approveShop(id: string, token: string): Promise<AdminShopApplication> {
+    const res = await fetch(`${base}/shop-applications/${id}/approve`, { method: 'PUT', headers: authHeaders(token) });
+    return parse(res, 'Could not approve');
+  },
+
+  async rejectShop(id: string, reason: string, token: string): Promise<AdminShopApplication> {
+    const res = await fetch(`${base}/shop-applications/${id}/reject`, {
       method: 'PUT',
       headers: authHeaders(token),
       body: JSON.stringify({ reason }),

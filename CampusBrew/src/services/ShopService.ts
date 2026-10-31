@@ -55,6 +55,8 @@ export interface Shop {
   ratingCount: number;
   isOpen: boolean;
   estimatedPrepTime?: string;
+  /** False until an admin approves the shop's application (hidden from customers). */
+  approved?: boolean;
 }
 
 export interface SizeOption {

@@ -26,6 +26,8 @@ export default function EditShopProfileScreen({ route, navigation }: any) {
   const [openTime, setOpenTime] = useState('');
   const [closeTime, setCloseTime] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  // A shop can't open until an admin approves its application.
+  const [approved, setApproved] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +48,7 @@ export default function EditShopProfileScreen({ route, navigation }: any) {
         setOpenTime(shop.operatingHours?.openTime ?? '');
         setCloseTime(shop.operatingHours?.closeTime ?? '');
         setIsOpen(!!shop.isOpen);
+        setApproved(shop.approved !== false);
       } catch (e: any) {
         setError(e.message || 'Could not load shop');
       } finally {
@@ -141,12 +144,15 @@ export default function EditShopProfileScreen({ route, navigation }: any) {
           <View>
             <Text style={styles.label}>Shop Open</Text>
             <Text style={styles.toggleSub}>
-              {isOpen ? 'Accepting orders' : 'Not accepting orders'}
+              {!approved
+                ? 'Available once an admin approves your shop'
+                : isOpen ? 'Accepting orders' : 'Not accepting orders'}
             </Text>
           </View>
           <Switch
             value={isOpen}
             onValueChange={setIsOpen}
+            disabled={!approved}
             trackColor={{ true: COLORS.primary, false: COLORS.border }}
             thumbColor={COLORS.white}
           />

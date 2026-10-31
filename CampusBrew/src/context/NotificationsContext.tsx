@@ -79,6 +79,11 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
         navigate('CustomerTabs', { screen: 'Profile' });
         return;
       }
+      // A shop application decision opens the shop dashboard.
+      if (data?.type === 'shop-application') {
+        navigate('ShopTabs', { screen: 'ShopDashboard' });
+        return;
+      }
       const orderId = data?.orderId;
       if (!orderId) return;
       // v2.0 FR-3.5 — a chat push opens that conversation for every role.

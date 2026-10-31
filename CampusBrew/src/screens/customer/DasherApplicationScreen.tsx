@@ -13,12 +13,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { DasherApplicationService } from '../../services/DasherApplicationService';
+import { pickPhoto } from '../../utils/photos';
 
 /**
  * Become a Dasher — a verified customer's application, reviewed by an admin.
@@ -61,36 +60,11 @@ export default function DasherApplicationScreen({ navigation }: any) {
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const pickPhoto = async (key: PhotoKey, source: 'camera' | 'library', camera: 'front' | 'back') => {
+  const addPhoto = async (key: PhotoKey, source: 'camera' | 'library', camera: 'front' | 'back') => {
     try {
-      const permission = source === 'camera'
-        ? await ImagePicker.requestCameraPermissionsAsync()
-        : await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        notify('Permission needed', `Allow ${source === 'camera' ? 'camera' : 'photo'} access to add this photo.`, {
-          icon: 'lock-closed-outline',
-        });
-        return;
-      }
-      const options: ImagePicker.ImagePickerOptions = {
-        mediaTypes: ['images'],
-        quality: 1,
-        cameraType: camera === 'front' ? ImagePicker.CameraType.front : ImagePicker.CameraType.back,
-      };
-      const result = source === 'camera'
-        ? await ImagePicker.launchCameraAsync(options)
-        : await ImagePicker.launchImageLibraryAsync(options);
-      if (result.canceled || !result.assets?.[0]) return;
-
       setProcessing(key);
-      const asset = result.assets[0];
-      const resize = asset.width >= asset.height ? { width: 1024 } : { height: 1024 };
-      const small = await manipulateAsync(asset.uri, [{ resize }], {
-        compress: 0.6,
-        format: SaveFormat.JPEG,
-        base64: true,
-      });
-      setPhotos((prev) => ({ ...prev, [key]: `data:image/jpeg;base64,${small.base64}` }));
+      const uri = await pickPhoto(source, camera);
+      if (uri) setPhotos((prev) => ({ ...prev, [key]: uri }));
     } catch (e: any) {
       notify('Could not add photo', e.message ?? 'Please try again.', { icon: 'alert-circle-outline' });
     } finally {
@@ -229,7 +203,7 @@ export default function DasherApplicationScreen({ navigation }: any) {
                   <View style={styles.photoButtons}>
                     <TouchableOpacity
                       style={styles.photoBtn}
-                      onPress={() => pickPhoto(p.key, 'camera', p.camera)}
+                      onPress={() => addPhoto(p.key, 'camera', p.camera)}
                       disabled={processing != null}
                     >
                       <Ionicons name="camera-outline" size={16} color={COLORS.primary} />
@@ -237,7 +211,7 @@ export default function DasherApplicationScreen({ navigation }: any) {
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.photoBtn}
-                      onPress={() => pickPhoto(p.key, 'library', p.camera)}
+                      onPress={() => addPhoto(p.key, 'library', p.camera)}
                       disabled={processing != null}
                     >
                       <Ionicons name="images-outline" size={16} color={COLORS.primary} />

@@ -47,10 +47,12 @@ import ShopOrderHistoryScreen from '../screens/shop/ShopOrderHistoryScreen';
 import SalesByItemScreen from '../screens/shop/SalesByItemScreen';
 import ItemTrendScreen from '../screens/shop/ItemTrendScreen';
 import SalesReportScreen from '../screens/shop/SalesReportScreen';
+import ShopApplicationScreen from '../screens/shop/ShopApplicationScreen';
 
 // Admin screens
 import AdminApplicationsScreen from '../screens/admin/AdminApplicationsScreen';
 import AdminApplicationDetailScreen from '../screens/admin/AdminApplicationDetailScreen';
+import AdminShopApplicationDetailScreen from '../screens/admin/AdminShopApplicationDetailScreen';
 import AdminReportsScreen from '../screens/admin/AdminReportsScreen';
 import AdminReportDetailScreen from '../screens/admin/AdminReportDetailScreen';
 import AdminProfileScreen from '../screens/admin/AdminProfileScreen';
@@ -176,6 +178,7 @@ export function ShopStack() {
       <Stack.Screen name="SalesByItem" component={SalesByItemScreen} />
       <Stack.Screen name="ItemTrend" component={ItemTrendScreen} />
       <Stack.Screen name="SalesReport" component={SalesReportScreen} />
+      <Stack.Screen name="ShopApplication" component={ShopApplicationScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen name="RateOrder" component={RateOrderScreen} />
       <Stack.Screen name="EditShopProfile" component={EditShopProfileScreen} />
@@ -207,6 +210,7 @@ export function AdminStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="AdminTabs" component={AdminHomeTabs} />
       <Stack.Screen name="AdminApplicationDetail" component={AdminApplicationDetailScreen} />
+      <Stack.Screen name="AdminShopApplicationDetail" component={AdminShopApplicationDetailScreen} />
       <Stack.Screen name="AdminReportDetail" component={AdminReportDetailScreen} />
     </Stack.Navigator>
   );
