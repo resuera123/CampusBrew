@@ -97,7 +97,7 @@ export default function SignUpScreen({ navigation }: any) {
               placeholder="Email"
               placeholderTextColor={COLORS.textSecondary}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(t) => setEmail(t.replace(/\s/g, ''))}
               keyboardType="email-address"
               autoCapitalize="none"
             />

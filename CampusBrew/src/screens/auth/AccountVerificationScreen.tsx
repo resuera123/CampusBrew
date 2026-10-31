@@ -71,7 +71,7 @@ export default function AccountVerificationScreen({ navigation }: any) {
           <View style={styles.inputRow}>
             <View style={[styles.inputContainer, { flex: 1 }]}>
               <Ionicons name="mail-outline" size={20} color="#3A3A3A" style={{ marginRight: 12 }} />
-              <TextInput style={styles.input} placeholder="you@cit.edu" placeholderTextColor="#3A3A3A" value={citEmail} onChangeText={setCitEmail} keyboardType="email-address" autoCapitalize="none" />
+              <TextInput style={styles.input} placeholder="you@cit.edu" placeholderTextColor="#3A3A3A" value={citEmail} onChangeText={(t) => setCitEmail(t.replace(/\s/g, ''))} keyboardType="email-address" autoCapitalize="none" />
             </View>
             <TouchableOpacity style={[styles.sendOtpButton, sendingOtp && { opacity: 0.5 }]} onPress={handleSendOtp} disabled={sendingOtp}>
               {sendingOtp ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.sendOtpText}>Send</Text>}

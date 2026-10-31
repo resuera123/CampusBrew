@@ -52,7 +52,7 @@ export default function ForgotPasswordScreen({ navigation }: any) {
               placeholder="Email"
               placeholderTextColor="#3A3A3A"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(t) => setEmail(t.replace(/\s/g, ''))}
               keyboardType="email-address"
               autoCapitalize="none"
             />
