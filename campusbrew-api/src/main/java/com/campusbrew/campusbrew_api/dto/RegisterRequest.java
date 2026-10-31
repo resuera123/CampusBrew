@@ -21,4 +21,9 @@ public class RegisterRequest {
     private String password;
 
     private UserRole role;
+
+    // Phone keyboards often add a space after an autocompleted address.
+    public void setEmail(String email) {
+        this.email = email == null ? null : email.trim();
+    }
 }

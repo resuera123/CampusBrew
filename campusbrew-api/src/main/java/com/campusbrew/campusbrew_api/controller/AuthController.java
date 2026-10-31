@@ -90,4 +90,14 @@ public class AuthController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
+
+    /** A field that fails @Valid (e.g. a malformed email) answers with a readable message. */
+    @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
+    public ResponseEntity<?> invalid(org.springframework.web.bind.MethodArgumentNotValidException e) {
+        org.springframework.validation.FieldError field = e.getBindingResult().getFieldError();
+        String message = field == null ? "Check the details you entered"
+                : "email".equals(field.getField()) ? "Enter a valid email address"
+                : field.getDefaultMessage();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", message));
+    }
 }

@@ -13,4 +13,9 @@ public class LoginRequest {
 
     @NotBlank
     private String password;
+
+    // Phone keyboards often add a space after an autocompleted address.
+    public void setEmail(String email) {
+        this.email = email == null ? null : email.trim();
+    }
 }

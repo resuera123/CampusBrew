@@ -28,6 +28,9 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
+                // Spring's error page: without this, a request that fails validation
+                // is forwarded here and blocked, reaching the app as an empty 403.
+                .requestMatchers("/error").permitAll()
                 // Verification and user endpoints accept JWT manually in controller,
                 // so we permit them here and validate the token in the controller itself.
                 .requestMatchers("/api/verification/**").permitAll()
