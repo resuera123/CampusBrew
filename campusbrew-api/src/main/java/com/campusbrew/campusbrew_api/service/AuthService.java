@@ -84,7 +84,7 @@ public class AuthService {
 
     public void verifyOtp(OtpRequest request) {
         Otp otp = otpRepository
-                .findByEmailAndTypeOrderByCreatedAtDesc(request.getEmail(), OtpType.REGISTRATION)
+                .findFirstByEmailAndTypeOrderByCreatedAtDesc(request.getEmail(), OtpType.REGISTRATION)
                 .orElseThrow(() -> new RuntimeException("OTP not found"));
 
         if (otp.getExpiresAt().isBefore(Instant.now())) {
@@ -214,7 +214,7 @@ public class AuthService {
     public void resetPassword(String email, String code, String newPassword) {
         // Validate the code
         Otp otp = otpRepository
-                .findByEmailAndTypeOrderByCreatedAtDesc(email, OtpType.PASSWORD_RESET)
+                .findFirstByEmailAndTypeOrderByCreatedAtDesc(email, OtpType.PASSWORD_RESET)
                 .orElseThrow(() -> new RuntimeException("Reset code not found. Please request a new one."));
 
         if (otp.getExpiresAt().isBefore(Instant.now())) {
@@ -248,6 +248,8 @@ public class AuthService {
     }
 
     private void saveOtp(String email, String code, OtpType type) {
+        // Only the latest code is valid (sign-up can be retried for the same address).
+        otpRepository.deleteByEmailAndType(email, type);
         Otp otp = Otp.builder()
                 .email(email)
                 .code(code)

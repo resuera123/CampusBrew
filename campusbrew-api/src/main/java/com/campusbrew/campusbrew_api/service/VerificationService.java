@@ -75,7 +75,7 @@ public class VerificationService {
 
         // Verify OTP
         Otp otpRecord = otpRepository
-                .findByEmailAndTypeOrderByCreatedAtDesc(schoolEmail, OtpType.VERIFICATION)
+                .findFirstByEmailAndTypeOrderByCreatedAtDesc(schoolEmail, OtpType.VERIFICATION)
                 .orElseThrow(() -> new RuntimeException("Verification code not found. Please request a new one."));
 
         if (otpRecord.getExpiresAt().isBefore(Instant.now())) {

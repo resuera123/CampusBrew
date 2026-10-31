@@ -10,7 +10,8 @@ import java.util.Optional;
 @Repository
 public interface OtpRepository extends MongoRepository<Otp, String> {
 
-    Optional<Otp> findByEmailAndTypeOrderByCreatedAtDesc(String email, OtpType type);
+    // The newest code; findFirst so a stray older code can never make this fail.
+    Optional<Otp> findFirstByEmailAndTypeOrderByCreatedAtDesc(String email, OtpType type);
 
     void deleteByEmailAndType(String email, OtpType type);
 }

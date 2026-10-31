@@ -21,15 +21,17 @@ import static org.mockito.Mockito.*;
 class RegisterRetryTest {
 
     private UserRepository userRepo;
+    private OtpRepository otpRepo;
     private AuthService service;
 
     @BeforeEach
     void setUp() {
         userRepo = mock(UserRepository.class);
+        otpRepo = mock(OtpRepository.class);
         PasswordEncoder encoder = mock(PasswordEncoder.class);
         when(encoder.encode(any())).thenAnswer(i -> "hash:" + i.getArgument(0));
         when(userRepo.save(any(User.class))).thenAnswer(i -> i.getArgument(0));
-        service = new AuthService(userRepo, mock(OtpRepository.class), mock(ShopRepository.class),
+        service = new AuthService(userRepo, otpRepo, mock(ShopRepository.class),
                 mock(DeliveryPersonnelRepository.class), mock(JwtService.class), mock(EmailService.class), encoder);
     }
 
@@ -53,6 +55,8 @@ class RegisterRetryTest {
         assertThat(stuck.getFullName()).isEqualTo("Craig Salgado");
         assertThat(stuck.getPasswordHash()).isEqualTo("hash:new-password");
         verify(userRepo).save(stuck); // same account, not a second one
+        // The old code is replaced, so verifying finds exactly one.
+        verify(otpRepo).deleteByEmailAndType("craig@gmail.com", com.campusbrew.campusbrew_api.model.OtpType.REGISTRATION);
     }
 
     @Test
