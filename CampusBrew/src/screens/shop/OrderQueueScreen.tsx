@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +18,7 @@ import { useSocket } from '../../context/SocketContext';
 import { Order, OrderStatus } from '../../services/OrderService';
 import { ShopOrderService } from '../../services/ShopOrderService';
 import { ShopService } from '../../services/ShopService';
+import { showAlert } from '../../components/AppAlert';
 
 const POLL_INTERVAL_MS = 5000;
 const QUEUE_STATUSES: OrderStatus[] = [
@@ -96,7 +96,7 @@ export default function OrderQueueScreen({ route, navigation }: any) {
       else await ShopOrderService.markReady(orderId, token);
       await fetchOrders();
     } catch (e: any) {
-      Alert.alert('Action failed', e.message || 'Unable to update order');
+      showAlert('Action failed', e.message || 'Unable to update order');
     } finally {
       setActingOrderId(null);
     }

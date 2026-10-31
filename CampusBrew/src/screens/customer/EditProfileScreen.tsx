@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, ScrollView, KeyboardAvoidingView, Platform,
+  ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
+import { showAlert } from '../../components/AppAlert';
 
 export default function EditProfileScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -17,17 +18,17 @@ export default function EditProfileScreen({ navigation }: any) {
 
   const handleSave = async () => {
     if (!fullName) {
-      Alert.alert('Error', 'Full name is required');
+      showAlert('Error', 'Full name is required');
       return;
     }
     setLoading(true);
     try {
       // TODO: call PUT /api/users/me when UserController is built
-      Alert.alert('Success', 'Profile updated!', [
+      showAlert('Success', 'Profile updated!', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      showAlert('Error', error.message);
     } finally {
       setLoading(false);
     }

@@ -7,7 +7,6 @@ import {
   StyleSheet,
   StatusBar,
   ScrollView,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,6 +16,7 @@ import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { PaymentMethod } from '../../services/OrderService';
 import { placeOrderWithPayment } from '../../services/PaymentService';
+import { showAlert } from '../../components/AppAlert';
 
 // Customer-visible delivery charge. Backend's PLATFORM_COMMISSION (₱5) is
 // taken from this amount — not shown as a separate line on checkout.
@@ -51,19 +51,19 @@ export default function CheckoutScreen({ navigation }: any) {
 
   const handleConfirm = async () => {
     if (items.length === 0 || !shopId) {
-      Alert.alert('Cart is empty', 'Add some items before checking out.');
+      showAlert('Cart is empty', 'Add some items before checking out.');
       return;
     }
     if (!deliveryLocation.trim()) {
-      Alert.alert('Delivery location required', 'Tell us where to deliver your order.');
+      showAlert('Delivery location required', 'Tell us where to deliver your order.');
       return;
     }
     if (paymentMethod === 'COD' && !isVerified) {
-      Alert.alert('Verification required', 'Cash on Delivery is only available for verified CIT-U accounts.');
+      showAlert('Verification required', 'Cash on Delivery is only available for verified CIT-U accounts.');
       return;
     }
     if (!token) {
-      Alert.alert('Please log in', 'You need to be logged in to place an order.');
+      showAlert('Please log in', 'You need to be logged in to place an order.');
       return;
     }
 
@@ -99,16 +99,16 @@ export default function CheckoutScreen({ navigation }: any) {
         navigation.replace('OrderTracking', { orderId: result.orderId });
       } else if (result.status === 'FAILED' || result.status === 'EXPIRED') {
         // Keep the cart so they can retry; no order was created.
-        Alert.alert('Payment not completed',
+        showAlert('Payment not completed',
           'Your GCash payment was not completed, so no order was placed.');
       } else {
         // PENDING — they closed the checkout before we saw the payment land.
-        Alert.alert('Payment pending',
+        showAlert('Payment pending',
           'We didn\'t get confirmation of your payment. If you were charged, your '
           + 'order will appear shortly — check your order history.');
       }
     } catch (e: any) {
-      Alert.alert('Could not place order', e.message || 'Try again.');
+      showAlert('Could not place order', e.message || 'Try again.');
     } finally {
       setPlacing(false);
     }
@@ -245,11 +245,11 @@ export default function CheckoutScreen({ navigation }: any) {
             selected={paymentMethod === 'COD'}
             onPress={() => {
               if (!isVerified) {
-                Alert.alert('Verify your account', 'Cash on Delivery is unlocked when you verify your CIT-U email.');
+                showAlert('Verify your account', 'Cash on Delivery is unlocked when you verify your CIT-U email.');
                 return;
               }
               if (total > COD_LIMIT) {
-                Alert.alert(`Over ₱${COD_LIMIT}`, `Cash on Delivery is only for orders up to ₱${COD_LIMIT}. Please pay with GCash.`);
+                showAlert(`Over ₱${COD_LIMIT}`, `Cash on Delivery is only for orders up to ₱${COD_LIMIT}. Please pay with GCash.`);
                 return;
               }
               setPaymentMethod('COD');

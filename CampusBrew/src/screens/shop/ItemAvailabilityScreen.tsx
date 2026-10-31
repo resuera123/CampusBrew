@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   RefreshControl,
   Switch,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { ShopService, MenuItem } from '../../services/ShopService';
+import { showAlert } from '../../components/AppAlert';
 
 export default function ItemAvailabilityScreen({ route, navigation }: any) {
   const { token } = useAuth();
@@ -62,7 +62,7 @@ export default function ItemAvailabilityScreen({ route, navigation }: any) {
     } catch (e: any) {
       // Revert on failure
       setItems((prev) => prev.map((it) => (it.id === item.id ? { ...it, isAvailable: !next } : it)));
-      Alert.alert('Update failed', e.message || 'Could not update availability');
+      showAlert('Update failed', e.message || 'Could not update availability');
     } finally {
       setUpdatingId(null);
     }

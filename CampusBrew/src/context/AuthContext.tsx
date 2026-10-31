@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { AuthService, AuthResponse } from '../services/AuthService';
+import { showAlert } from '../components/AppAlert';
 
 interface AuthContextType {
   user: AuthResponse | null;
@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           if (body?.suspended) {
             signingOut.current = true;
             await clearSession();
-            Alert.alert('Account suspended', body.error ?? 'Your account is suspended.');
+            showAlert('Account suspended', body.error ?? 'Your account is suspended.');
             signingOut.current = false;
           }
         } catch {

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
+  ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthService } from '../../services/AuthService';
+import { showAlert } from '../../components/AppAlert';
 
 export default function ForgotPasswordScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
@@ -13,7 +14,7 @@ export default function ForgotPasswordScreen({ navigation }: any) {
 
   const handleSendCode = async () => {
     if (!email) {
-      Alert.alert('Error', 'Please enter your email');
+      showAlert('Error', 'Please enter your email');
       return;
     }
     setLoading(true);
@@ -21,7 +22,7 @@ export default function ForgotPasswordScreen({ navigation }: any) {
       await AuthService.forgotPassword(email);
       navigation.navigate('ResetPassword', { email });
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      showAlert('Error', error.message);
     } finally {
       setLoading(false);
     }

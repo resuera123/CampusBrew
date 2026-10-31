@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -16,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { AuthService } from '../../services/AuthService';
 import { COLORS, SIZES } from '../../constants/theme';
+import { showAlert } from '../../components/AppAlert';
 
 type Role = 'CUSTOMER' | 'SHOP_OPERATOR';
 
@@ -39,15 +39,15 @@ export default function SignUpScreen({ navigation }: any) {
 
   const handleSignUp = async () => {
     if (!fullName || !email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showAlert('Error', 'Please fill in all fields');
       return;
     }
     if (!role) {
-      Alert.alert('Error', 'Please select a role');
+      showAlert('Error', 'Please select a role');
       return;
     }
     if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters');
+      showAlert('Error', 'Password must be at least 8 characters');
       return;
     }
     setLoading(true);
@@ -55,7 +55,7 @@ export default function SignUpScreen({ navigation }: any) {
       await AuthService.register({ fullName, email, password, role });
       navigation.navigate('OTPVerification', { email });
     } catch (error: any) {
-      Alert.alert('Registration Failed', error.message);
+      showAlert('Registration Failed', error.message);
     } finally {
       setLoading(false);
     }

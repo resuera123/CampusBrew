@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +14,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { DeliveryService } from '../../services/DeliveryService';
 import { navigate } from '../../navigation/navigationRef';
+import { showAlert } from '../../components/AppAlert';
 
 interface DeliveryOffer {
   orderId: string;
@@ -108,7 +108,7 @@ export default function IncomingOrderModal() {
       setOffer(null);
       navigate('AssignedDelivery');
     } catch (e: any) {
-      Alert.alert('Could not accept', e.message || 'Please try again.');
+      showAlert('Could not accept', e.message || 'Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -121,7 +121,7 @@ export default function IncomingOrderModal() {
       await DeliveryService.declineAssignment(offer.orderId, token);
       setOffer(null);
     } catch (e: any) {
-      Alert.alert('Could not decline', e.message || 'Please try again.');
+      showAlert('Could not decline', e.message || 'Please try again.');
     } finally {
       setSubmitting(false);
     }

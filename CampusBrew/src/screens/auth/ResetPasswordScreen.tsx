@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView,
+  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthService } from '../../services/AuthService';
+import { showAlert } from '../../components/AppAlert';
 
 export default function ResetPasswordScreen({ route, navigation }: any) {
   const { email } = route.params;
@@ -18,25 +19,25 @@ export default function ResetPasswordScreen({ route, navigation }: any) {
 
   const handleReset = async () => {
     if (!code || !newPassword || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showAlert('Error', 'Please fill in all fields');
       return;
     }
     if (newPassword.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters');
+      showAlert('Error', 'Password must be at least 8 characters');
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      showAlert('Error', 'Passwords do not match');
       return;
     }
     setLoading(true);
     try {
       await AuthService.resetPassword(email, code, newPassword);
-      Alert.alert('Success', 'Password reset successfully!', [
+      showAlert('Success', 'Password reset successfully!', [
         { text: 'OK', onPress: () => navigation.navigate('Login') },
       ]);
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      showAlert('Error', error.message);
     } finally {
       setLoading(false);
     }

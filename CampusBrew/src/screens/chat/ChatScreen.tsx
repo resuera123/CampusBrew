@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +17,7 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { ChatService, ChatChannel, ChatMessage } from '../../services/ChatService';
+import { showAlert } from '../../components/AppAlert';
 
 /**
  * v2.0 FR-3.5 — order chat. Customers switch between the Shop and Dasher
@@ -216,7 +216,7 @@ export default function ChatScreen({ route, navigation }: any) {
       await ChatService.report(orderId, channel, token);
       setReported(true);
     } catch (e: any) {
-      Alert.alert('Could not report', e.message ?? 'Please try again.');
+      showAlert('Could not report', e.message ?? 'Please try again.');
     }
   };
 

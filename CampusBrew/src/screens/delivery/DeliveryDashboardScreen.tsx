@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   RefreshControl,
   Switch,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +17,7 @@ import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { DeliveryService, DeliveryPersonnelProfile, EarningsTotal, DaySchedule } from '../../services/DeliveryService';
+import { showAlert } from '../../components/AppAlert';
 
 export default function DeliveryDashboardScreen({ navigation }: any) {
   const { token, user } = useAuth();
@@ -117,7 +117,7 @@ export default function DeliveryDashboardScreen({ navigation }: any) {
       const updated = await DeliveryService.setAvailability(next, token);
       setProfile(updated);
     } catch (e: any) {
-      Alert.alert('Could not update status', e.message || 'Please try again.');
+      showAlert('Could not update status', e.message || 'Please try again.');
     } finally {
       setTogglingActive(false);
     }

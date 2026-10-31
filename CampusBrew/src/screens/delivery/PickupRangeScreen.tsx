@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, StatusBar, TouchableOpacity, ScrollView, ActivityIndicator, Alert,
+  View, Text, StyleSheet, StatusBar, TouchableOpacity, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { DeliveryService } from '../../services/DeliveryService';
+import { showAlert } from '../../components/AppAlert';
 
 // v2.0 FR-3.1 — how far from the shop the dasher will accept first offers.
 // null = campus default (no range cap); the 60s re-broadcast ignores range anyway.
@@ -32,7 +33,7 @@ export default function PickupRangeScreen({ navigation, route }: any) {
       route.params?.onSaved?.(meters);
       navigation.goBack();
     } catch (e: any) {
-      Alert.alert('Could not save', e.message || 'Try again.');
+      showAlert('Could not save', e.message || 'Try again.');
     } finally {
       setSaving(false);
     }

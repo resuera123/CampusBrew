@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +16,7 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import { useAuth } from '../../context/AuthContext';
 import { ShopService, MenuItem } from '../../services/ShopService';
 import ItemEditorModal from './ItemEditorModal';
+import { showAlert } from '../../components/AppAlert';
 
 export default function MenuManagementScreen({ route, navigation }: any) {
   const { confirm, dialog } = useConfirm();
@@ -68,7 +68,7 @@ export default function MenuManagementScreen({ route, navigation }: any) {
       await ShopService.deleteMenuItem(item.id, token);
       await load();
     } catch (e: any) {
-      Alert.alert('Failed to delete', e.message || 'Could not remove item');
+      showAlert('Failed to delete', e.message || 'Could not remove item');
     }
   };
 

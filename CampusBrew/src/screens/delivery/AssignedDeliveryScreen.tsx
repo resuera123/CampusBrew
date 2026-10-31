@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   TextInput,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +19,7 @@ import { useSocket } from '../../context/SocketContext';
 import { useLocationStreamer } from '../../hooks/useLocationStreamer';
 import { DeliveryService } from '../../services/DeliveryService';
 import { Order } from '../../services/OrderService';
+import { showAlert } from '../../components/AppAlert';
 
 export default function AssignedDeliveryScreen({ navigation }: any) {
   const { confirm, dialog } = useConfirm();
@@ -59,7 +59,7 @@ export default function AssignedDeliveryScreen({ navigation }: any) {
       const updated = await DeliveryService.markPickedUp(order.id, token);
       setOrder(updated);
     } catch (e: any) {
-      Alert.alert('Could not mark picked up', e.message || 'Please try again.');
+      showAlert('Could not mark picked up', e.message || 'Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -82,7 +82,7 @@ export default function AssignedDeliveryScreen({ navigation }: any) {
       // v2.0 FR-3.6 — go straight to rating the customer and shop.
       navigation.navigate('RateOrder', { orderId: order.id });
     } catch (e: any) {
-      Alert.alert('Could not confirm', e.message || 'Please try again.');
+      showAlert('Could not confirm', e.message || 'Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -94,7 +94,7 @@ export default function AssignedDeliveryScreen({ navigation }: any) {
     if (!order || !token) return;
     const amount = parseFloat(cashInput);
     if (isNaN(amount) || amount < 0) {
-      Alert.alert('Enter the amount', 'Enter the cash amount you collected.');
+      showAlert('Enter the amount', 'Enter the cash amount you collected.');
       return;
     }
     setSubmitting(true);
@@ -102,7 +102,7 @@ export default function AssignedDeliveryScreen({ navigation }: any) {
       const updated = await DeliveryService.cashCollected(order.id, amount, token);
       if (updated.orderStatus === 'DELIVERED') {
         if (updated.paymentStatus === 'FLAGGED') {
-          Alert.alert(
+          showAlert(
             'Amounts did not match',
             'Your amount and the customer\'s don\'t match — this payment is flagged for review.',
           );
@@ -112,10 +112,10 @@ export default function AssignedDeliveryScreen({ navigation }: any) {
         navigation.navigate('RateOrder', { orderId: order.id });
       } else {
         setOrder(updated);
-        Alert.alert('Cash recorded', 'Waiting for the customer to confirm the payment.');
+        showAlert('Cash recorded', 'Waiting for the customer to confirm the payment.');
       }
     } catch (e: any) {
-      Alert.alert('Could not record', e.message || 'Please try again.');
+      showAlert('Could not record', e.message || 'Please try again.');
     } finally {
       setSubmitting(false);
     }

@@ -8,13 +8,13 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { OrderService, Order, OrderStatus } from '../../services/OrderService';
+import { showAlert } from '../../components/AppAlert';
 
 function formatDate(iso?: string) {
   if (!iso) return '';
@@ -79,7 +79,7 @@ export default function OrderHistoryScreen({ navigation }: any) {
       const payload = await OrderService.reorder(orderId, token);
       navigation.navigate('ReorderCart', { payload });
     } catch (e: any) {
-      Alert.alert('Could not reorder', e.message || 'Try again.');
+      showAlert('Could not reorder', e.message || 'Try again.');
     } finally {
       setReorderingId(null);
     }

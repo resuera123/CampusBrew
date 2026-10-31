@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +17,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { DeliveryService } from '../../services/DeliveryService';
 import { Order } from '../../services/OrderService';
+import { showAlert } from '../../components/AppAlert';
 
 const POLL_INTERVAL_MS = 5000;
 const EXPIRY_MS = 10 * 60 * 1000; // matches backend delivery.orderExpiry.minutes
@@ -94,7 +94,7 @@ export default function AvailableDeliveriesScreen({ onClaimed }: Props) {
       setOrders((prev) => prev.filter((o) => o.id !== order.id));
       onClaimed?.();
     } catch (e: any) {
-      Alert.alert('Could not claim', e.message || 'Try another order.');
+      showAlert('Could not claim', e.message || 'Try another order.');
       // Refresh the list — the order may have been claimed by someone else.
       load();
     } finally {

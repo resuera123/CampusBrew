@@ -6,13 +6,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS, SIZES } from '../../constants/theme';
+import { showAlert } from '../../components/AppAlert';
 
 export default function LoginScreen({ navigation }: any) {
   const { login } = useAuth();
@@ -23,14 +23,14 @@ export default function LoginScreen({ navigation }: any) {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showAlert('Error', 'Please fill in all fields');
       return;
     }
     setLoading(true);
     try {
       await login(email, password);
     } catch (error: any) {
-      Alert.alert('Login Failed', error.message);
+      showAlert('Login Failed', error.message);
     } finally {
       setLoading(false);
     }

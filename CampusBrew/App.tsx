@@ -15,6 +15,7 @@ import {
   ShopStack,
 } from './src/navigation/AppNavigator';
 import IncomingOrderModal from './src/screens/delivery/IncomingOrderModal';
+import { AppAlertHost } from './src/components/AppAlert';
 import { COLORS } from './src/constants/theme';
 import { navigationRef } from './src/navigation/navigationRef';
 
@@ -63,6 +64,7 @@ export default function App() {
                 <NavigationContainer ref={navigationRef}>
                   <RootNavigator />
                   <IncomingOrderModal />
+                  <AppAlertHost />
                 </NavigationContainer>
               </CartProvider>
             </NotificationsProvider>

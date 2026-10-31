@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, StatusBar, TouchableOpacity, ScrollView, TextInput, Alert, ActivityIndicator,
+  View, Text, StyleSheet, StatusBar, TouchableOpacity, ScrollView, TextInput, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { PaymentCenterService, PaymentCenterEntry } from '../../services/PaymentCenterService';
+import { showAlert } from '../../components/AppAlert';
 
 // v2.0 FR-4.8 — receipt + "Report a Problem" (payments only).
 export default function PaymentReceiptScreen({ navigation, route }: any) {
@@ -21,7 +22,7 @@ export default function PaymentReceiptScreen({ navigation, route }: any) {
 
   const submitReport = async () => {
     if (!token || !note.trim()) {
-      Alert.alert('Add a note', 'Tell us what went wrong with this payment.');
+      showAlert('Add a note', 'Tell us what went wrong with this payment.');
       return;
     }
     setSubmitting(true);
@@ -29,9 +30,9 @@ export default function PaymentReceiptScreen({ navigation, route }: any) {
       await PaymentCenterService.report(entry.id, note.trim(), token);
       setReported(true);
       setReporting(false);
-      Alert.alert('Reported', 'Thanks — we\'ll look into this payment.');
+      showAlert('Reported', 'Thanks — we\'ll look into this payment.');
     } catch (e: any) {
-      Alert.alert('Could not report', e.message || 'Try again.');
+      showAlert('Could not report', e.message || 'Try again.');
     } finally {
       setSubmitting(false);
     }

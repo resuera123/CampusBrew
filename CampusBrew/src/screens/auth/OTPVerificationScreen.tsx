@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { AuthService } from '../../services/AuthService';
 import { COLORS, SIZES } from '../../constants/theme';
+import { showAlert } from '../../components/AppAlert';
 
 export default function OTPVerificationScreen({ route, navigation }: any) {
   const { email } = route.params;
@@ -41,17 +41,17 @@ export default function OTPVerificationScreen({ route, navigation }: any) {
   const handleVerify = async () => {
     const otpString = otp.join('');
     if (otpString.length !== 6) {
-      Alert.alert('Error', 'Please enter the complete 6-digit code');
+      showAlert('Error', 'Please enter the complete 6-digit code');
       return;
     }
     setLoading(true);
     try {
       await AuthService.verifyOtp(email, otpString);
-      Alert.alert('Success', 'Email verified! You can now log in.', [
+      showAlert('Success', 'Email verified! You can now log in.', [
         { text: 'OK', onPress: () => navigation.navigate('Login') },
       ]);
     } catch (error: any) {
-      Alert.alert('Verification Failed', error.message);
+      showAlert('Verification Failed', error.message);
     } finally {
       setLoading(false);
     }
@@ -61,9 +61,9 @@ export default function OTPVerificationScreen({ route, navigation }: any) {
     setResending(true);
     try {
       await AuthService.resendOtp(email);
-      Alert.alert('Sent', 'A new OTP has been sent to your email');
+      showAlert('Sent', 'A new OTP has been sent to your email');
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      showAlert('Error', error.message);
     } finally {
       setResending(false);
     }

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView,
+  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { AuthService } from '../../services/AuthService';
+import { showAlert } from '../../components/AppAlert';
 
 export default function AccountVerificationScreen({ navigation }: any) {
   const { token, updateUser } = useAuth();
@@ -18,15 +19,15 @@ export default function AccountVerificationScreen({ navigation }: any) {
 
   const handleSendOtp = async () => {
     if (!citEmail.endsWith('@cit.edu')) {
-      Alert.alert('Error', 'Please enter a valid @cit.edu email');
+      showAlert('Error', 'Please enter a valid @cit.edu email');
       return;
     }
     setSendingOtp(true);
     try {
       await AuthService.sendVerificationOtp(citEmail, token!);
-      Alert.alert('Sent', 'OTP sent to your CIT-U email');
+      showAlert('Sent', 'OTP sent to your CIT-U email');
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      showAlert('Error', error.message);
     } finally {
       setSendingOtp(false);
     }
@@ -34,7 +35,7 @@ export default function AccountVerificationScreen({ navigation }: any) {
 
   const handleSubmit = async () => {
     if (!citEmail || !emailOtp || !studentId) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showAlert('Error', 'Please fill in all fields');
       return;
     }
     setLoading(true);
@@ -44,7 +45,7 @@ export default function AccountVerificationScreen({ navigation }: any) {
       await updateUser({ verificationStatus: 'VERIFIED' });
       navigation.navigate('VerifiedSuccess');
     } catch (error: any) {
-      Alert.alert('Verification Failed', error.message);
+      showAlert('Verification Failed', error.message);
     } finally {
       setLoading(false);
     }

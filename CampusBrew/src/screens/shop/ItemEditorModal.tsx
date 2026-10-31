@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
   Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,6 +21,7 @@ import {
   SizeOption,
   AddOnOption,
 } from '../../services/ShopService';
+import { showAlert } from '../../components/AppAlert';
 
 interface Props {
   visible: boolean;
@@ -111,9 +111,9 @@ export default function ItemEditorModal({ visible, shopId, item, onClose, onSave
   const handleSave = async () => {
     if (!token) return;
     const priceNum = parseFloat(price);
-    if (!name.trim()) return Alert.alert('Validation', 'Name is required');
-    if (Number.isNaN(priceNum) || priceNum < 0) return Alert.alert('Validation', 'Enter a valid price');
-    if (!category.trim()) return Alert.alert('Validation', 'Category is required');
+    if (!name.trim()) return showAlert('Validation', 'Name is required');
+    if (Number.isNaN(priceNum) || priceNum < 0) return showAlert('Validation', 'Enter a valid price');
+    if (!category.trim()) return showAlert('Validation', 'Category is required');
 
     const customizationOptions = normalize({ sizes, sugarLevels, temperatures, addOns });
 
@@ -150,7 +150,7 @@ export default function ItemEditorModal({ visible, shopId, item, onClose, onSave
       }
       onSaved();
     } catch (e: any) {
-      Alert.alert('Save failed', e.message || 'Could not save item');
+      showAlert('Save failed', e.message || 'Could not save item');
     } finally {
       setSaving(false);
     }

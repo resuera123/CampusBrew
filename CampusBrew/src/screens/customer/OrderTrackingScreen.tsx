@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   RefreshControl,
   TextInput,
-  Alert,
   AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +19,7 @@ import { useSocket } from '../../context/SocketContext';
 import { OrderService, Order, OrderStatus, StatusHistoryEntry } from '../../services/OrderService';
 import LiveMapView from '../../components/LiveMapView';
 import RatingBadge from '../../components/RatingBadge';
+import { showAlert } from '../../components/AppAlert';
 
 const TIMELINE_STEPS: { status: OrderStatus; label: string; description: string }[] = [
   { status: 'PLACED', label: 'Order Placed', description: 'Your order has been sent to the shop.' },
@@ -68,7 +68,7 @@ export default function OrderTrackingScreen({ route, navigation }: any) {
     if (!order || !token) return;
     const amount = parseFloat(confirmInput || String(order.totalAmount));
     if (isNaN(amount) || amount < 0) {
-      Alert.alert('Enter the amount', 'Enter the cash amount you paid.');
+      showAlert('Enter the amount', 'Enter the cash amount you paid.');
       return;
     }
     setConfirming(true);
@@ -76,15 +76,15 @@ export default function OrderTrackingScreen({ route, navigation }: any) {
       const updated = await OrderService.confirmPayment(order.id, amount, token);
       setOrder(updated);
       if (updated.paymentStatus === 'FLAGGED') {
-        Alert.alert('Amounts did not match',
+        showAlert('Amounts did not match',
           'The amount you confirmed differs from what the dasher recorded — this payment is flagged for review.');
       } else if (updated.paymentStatus === 'PAID_COD') {
-        Alert.alert('Payment confirmed', 'Thanks! Your order is complete.');
+        showAlert('Payment confirmed', 'Thanks! Your order is complete.');
       } else {
-        Alert.alert('Confirmed', 'Waiting for the dasher to record the cash collected.');
+        showAlert('Confirmed', 'Waiting for the dasher to record the cash collected.');
       }
     } catch (e: any) {
-      Alert.alert('Could not confirm', e.message || 'Please try again.');
+      showAlert('Could not confirm', e.message || 'Please try again.');
     } finally {
       setConfirming(false);
     }
