@@ -100,7 +100,10 @@ export default function HomeScreen({ navigation }: any) {
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
 
       <View style={styles.topBar}>
-        <Text style={styles.topBarTitle}>CIT-U Campus Beverage Delivery</Text>
+        <View style={styles.brandLockup}>
+          <Text style={styles.eyebrow}>CIT-U CAMPUS</Text>
+          <Text style={styles.topBarTitle}>CampusBrew</Text>
+        </View>
         <TouchableOpacity
           style={styles.topBarIcon}
           onPress={() => navigation.navigate('Notifications')}
@@ -133,6 +136,15 @@ export default function HomeScreen({ navigation }: any) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
         }
       >
+        <View style={styles.welcomeCard}>
+          <View style={styles.welcomeCopy}>
+            <Text style={styles.welcomeEyebrow}>YOUR NEXT BREAK</Text>
+            <Text style={styles.welcomeTitle}>A better study break starts here.</Text>
+            <Text style={styles.welcomeSubtitle}>Fresh drinks from your campus favorites, delivered to you.</Text>
+          </View>
+          <Ionicons name="cafe" size={54} color={COLORS.goldLight} />
+        </View>
+
         {/* Search */}
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={18} color={COLORS.textSecondary} style={{ marginRight: 8 }} />
@@ -278,16 +290,16 @@ export default function HomeScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.backgroundSecondary },
   topBar: {
-    height: 56,
+    minHeight: 68,
     backgroundColor: COLORS.background,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
   },
-  topBarTitle: { fontSize: 14, fontWeight: '600', color: COLORS.text, flex: 1 },
+  brandLockup: { flex: 1 },
+  eyebrow: { fontSize: 9, letterSpacing: 1.4, fontWeight: '700', color: COLORS.primaryLight, marginBottom: 2 },
+  topBarTitle: { fontSize: 20, fontWeight: '800', color: COLORS.espresso },
   topBarIcon: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
   cartBadge: {
     position: 'absolute',
@@ -304,7 +316,22 @@ const styles = StyleSheet.create({
   cartBadgeText: { color: COLORS.white, fontSize: 10, fontWeight: '700' },
 
   content: { flex: 1 },
-  contentContainer: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 120 },
+  contentContainer: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: SIZES.screenBottom },
+
+  welcomeCard: {
+    minHeight: 142,
+    borderRadius: 22,
+    backgroundColor: COLORS.espresso,
+    padding: 20,
+    marginBottom: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  welcomeCopy: { flex: 1, paddingRight: 10 },
+  welcomeEyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 1.4, color: COLORS.goldLight, marginBottom: 8 },
+  welcomeTitle: { fontSize: 22, lineHeight: 27, fontWeight: '800', color: COLORS.white },
+  welcomeSubtitle: { fontSize: 12, lineHeight: 17, color: COLORS.creamDark, marginTop: 8 },
 
   searchContainer: {
     flexDirection: 'row',
@@ -312,7 +339,7 @@ const styles = StyleSheet.create({
     height: SIZES.inputHeight,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: SIZES.inputBorderRadius,
+    borderRadius: 14,
     backgroundColor: COLORS.background,
     paddingHorizontal: 14,
     marginBottom: 20,
@@ -332,9 +359,14 @@ const styles = StyleSheet.create({
   shopCard: {
     width: 140,
     backgroundColor: COLORS.background,
-    borderRadius: 12,
+    borderRadius: SIZES.cardRadius,
     padding: 12,
     marginRight: 12,
+    shadowColor: COLORS.espresso,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   shopImage: {
     height: 56,
@@ -371,14 +403,19 @@ const styles = StyleSheet.create({
   popularCard: {
     width: '48%',
     backgroundColor: COLORS.background,
-    borderRadius: 12,
+    borderRadius: SIZES.cardRadius,
     padding: 12,
     marginBottom: 12,
+    shadowColor: COLORS.espresso,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   popularImage: {
-    height: 64,
-    borderRadius: 8,
-    backgroundColor: COLORS.backgroundSecondary,
+    height: 112,
+    borderRadius: 12,
+    backgroundColor: COLORS.cream,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,

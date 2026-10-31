@@ -6,6 +6,9 @@ export const COLORS = {
   primary: '#94353E',        // CIT-U Maroon
   primaryHover: '#7A2C33',   // Darker maroon for pressed states
   primaryLight: '#B85C65',   // Lighter maroon for secondary badges
+  espresso: '#3B1F20',       // Warm coffee brown for hero surfaces
+  cream: '#FFF8EF',          // Café-inspired highlight surface
+  creamDark: '#F6EBDD',
 
   // Accent
   gold: '#F4C600',           // Gold — rewards, verification, incentives
@@ -13,10 +16,10 @@ export const COLORS = {
 
   // Neutrals
   black: '#000000',
-  text: '#000000',           // Primary text
+  text: '#241719',           // Primary text
   textSecondary: '#3A3A3A',  // Secondary text, placeholders, captions
   background: '#FFFFFF',     // Screen backgrounds
-  backgroundSecondary: '#F5F5F5', // Cards, input backgrounds, sections
+  backgroundSecondary: '#F8F5F2', // Cards, input backgrounds, sections
   border: '#E8E8E8',         // Input borders, dividers
   white: '#FFFFFF',
 
@@ -51,6 +54,9 @@ export const SIZES = {
   // Spacing
   screenPadding: 16,
   formGap: 16,
+  cardRadius: 16,
+  smallRadius: 10,
+  screenBottom: 120,
 
   // Text
   titleSize: 24,

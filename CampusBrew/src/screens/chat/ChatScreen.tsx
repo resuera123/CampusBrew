@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.backgroundSecondary },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SIZES.screenPadding },
   topBar: {
-    height: 56,
+    height: 64,
     backgroundColor: COLORS.background,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
   bubbleWrap: { marginBottom: 10, maxWidth: '80%' },
   wrapMine: { alignSelf: 'flex-end', alignItems: 'flex-end' },
   wrapTheirs: { alignSelf: 'flex-start', alignItems: 'flex-start' },
-  bubble: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14 },
+  bubble: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 16 },
   bubbleMine: { backgroundColor: COLORS.primary, borderBottomRightRadius: 4 },
   bubbleTheirs: {
     backgroundColor: COLORS.white,
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
   quickChip: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
   },

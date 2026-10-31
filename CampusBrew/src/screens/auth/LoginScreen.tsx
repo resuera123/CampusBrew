@@ -125,12 +125,13 @@ export default function LoginScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.backgroundSecondary,
   },
   inner: {
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: SIZES.screenPadding,
+    paddingVertical: 24,
   },
 
   // Logo section
@@ -146,6 +147,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
+    shadowColor: COLORS.espresso,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    elevation: 5,
   },
   tagline: {
     fontSize: SIZES.captionSize,
@@ -164,8 +170,13 @@ const styles = StyleSheet.create({
     height: SIZES.inputHeight,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: SIZES.inputBorderRadius,
-    backgroundColor: COLORS.background,
+    borderRadius: SIZES.smallRadius,
+    backgroundColor: COLORS.white,
+    shadowColor: COLORS.espresso,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 5,
+    elevation: 1,
     paddingHorizontal: 16,
   },
   inputIcon: {

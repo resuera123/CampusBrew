@@ -54,7 +54,7 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
           <TouchableOpacity
             key={route.key}
             onPress={onPress}
-            style={styles.tab}
+            style={[styles.tab, isFocused && styles.tabFocused]}
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityState={isFocused ? { selected: true } : {}}
@@ -83,24 +83,38 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
 
 const styles = StyleSheet.create({
   container: {
-    height: 64,
+    height: 76,
     backgroundColor: COLORS.background,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 32,
+    paddingHorizontal: 24,
+    paddingBottom: 8,
+    shadowColor: COLORS.espresso,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 10,
   },
   tab: {
+    minWidth: 64,
+    minHeight: 52,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
+    borderRadius: 16,
+    paddingHorizontal: 10,
+  },
+  tabFocused: {
+    backgroundColor: COLORS.cream,
   },
   label: {
-    fontSize: 12,
+    fontSize: 11,
+    color: COLORS.textSecondary,
   },
   labelActive: {
     fontWeight: '600',
+    color: COLORS.primary,
   },
 });

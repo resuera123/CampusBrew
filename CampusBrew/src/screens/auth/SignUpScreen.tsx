@@ -213,7 +213,7 @@ export default function SignUpScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.backgroundSecondary,
   },
   inner: {
     flexGrow: 1,
@@ -235,6 +235,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
+    shadowColor: COLORS.espresso,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    elevation: 5,
   },
   title: {
     fontSize: SIZES.headingSize,
@@ -254,8 +259,13 @@ const styles = StyleSheet.create({
     height: SIZES.inputHeight,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: SIZES.inputBorderRadius,
-    backgroundColor: COLORS.background,
+    borderRadius: SIZES.smallRadius,
+    backgroundColor: COLORS.white,
+    shadowColor: COLORS.espresso,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 5,
+    elevation: 1,
     paddingHorizontal: 16,
   },
   inputIcon: {
@@ -276,8 +286,8 @@ const styles = StyleSheet.create({
     height: SIZES.inputHeight,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: SIZES.inputBorderRadius,
-    backgroundColor: COLORS.background,
+    borderRadius: SIZES.smallRadius,
+    backgroundColor: COLORS.white,
     paddingHorizontal: 16,
   },
   selectText: {

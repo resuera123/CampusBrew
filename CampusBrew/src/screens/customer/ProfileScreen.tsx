@@ -8,6 +8,7 @@ import ConfirmDialog, { useConfirm } from '../../components/ConfirmDialog';
 import MyRatingCard from '../../components/MyRatingCard';
 import { DeliveryService, DeliveryPersonnelProfile } from '../../services/DeliveryService';
 import { DasherApplicationService, DasherStatus } from '../../services/DasherApplicationService';
+import { COLORS, SIZES } from '../../constants/theme';
 
 export default function ProfileScreen({ navigation }: any) {
   const { user, token, logout, setSession } = useAuth();
@@ -229,15 +230,15 @@ function DasherButton({
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
-  topBar: { height: 56, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E8E8E8', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 },
+  safeArea: { flex: 1, backgroundColor: COLORS.backgroundSecondary },
+  topBar: { height: 64, backgroundColor: COLORS.background, borderBottomWidth: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 },
   backButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  topBarTitle: { fontSize: 18, fontWeight: '600', color: '#000000' },
+  topBarTitle: { fontSize: 18, fontWeight: '700', color: COLORS.espresso },
   content: { paddingHorizontal: 16, paddingTop: 32, paddingBottom: 40 },
   avatarSection: { alignItems: 'center', marginBottom: 32 },
-  avatar: { width: 96, height: 96, borderRadius: 48, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  name: { fontSize: 20, fontWeight: '600', color: '#000000', marginBottom: 4 },
-  phone: { fontSize: 14, color: '#3A3A3A' },
+  avatar: { width: 96, height: 96, borderRadius: 48, backgroundColor: COLORS.cream, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  name: { fontSize: 20, fontWeight: '700', color: COLORS.espresso, marginBottom: 4 },
+  phone: { fontSize: 14, color: COLORS.textSecondary },
   ratingWrap: { marginBottom: 24 },
   verificationSection: { marginBottom: 32 },
   verificationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
@@ -248,9 +249,9 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 12, fontWeight: '600' },
   badgeTextGold: { color: '#FFFFFF' },
   badgeTextGray: { color: '#3A3A3A' },
-  verifyLink: { fontSize: 14, fontWeight: '600', color: '#94353E' },
-  primaryButton: { backgroundColor: '#94353E', borderRadius: 24, height: 48, justifyContent: 'center', alignItems: 'center', flexDirection: 'row' },
-  primaryButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  verifyLink: { fontSize: 14, fontWeight: '600', color: COLORS.primary },
+  primaryButton: { backgroundColor: COLORS.primary, borderRadius: SIZES.buttonBorderRadius, height: 48, justifyContent: 'center', alignItems: 'center', flexDirection: 'row' },
+  primaryButtonText: { fontSize: 16, fontWeight: '600', color: COLORS.white },
   buttonDisabled: { opacity: 0.6 },
   buttonLocked: { backgroundColor: '#E8E8E8' },
   lockedText: { color: '#8A8A8A' },
@@ -258,6 +259,6 @@ const styles = StyleSheet.create({
   rejectedCard: { backgroundColor: '#FCE8E8', borderRadius: 12, padding: 12, marginBottom: 12 },
   rejectedTitle: { fontSize: 14, fontWeight: '600', color: '#D93025' },
   rejectedText: { fontSize: 13, color: '#3A3A3A', marginTop: 4 },
-  outlinedButton: { borderWidth: 2, borderColor: '#94353E', borderRadius: 24, height: 48, justifyContent: 'center', alignItems: 'center', flexDirection: 'row' },
-  outlinedButtonText: { fontSize: 16, fontWeight: '600', color: '#94353E' },
+  outlinedButton: { borderWidth: 1, borderColor: COLORS.primary, borderRadius: SIZES.buttonBorderRadius, height: 48, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', backgroundColor: COLORS.white },
+  outlinedButtonText: { fontSize: 16, fontWeight: '600', color: COLORS.primary },
 });
