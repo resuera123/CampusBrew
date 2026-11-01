@@ -2,8 +2,8 @@
 :root {
   --candle: #EFE9D7;
   --coral:  #7D2826;
-  --heading-font: "Playfair Display", Georgia, serif;
-  --body-font: "Inter", Arial, sans-serif;
+  --heading-font: "Poppins", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --body-font: "Poppins", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 /* Inner pages (About, Contact, Download) — Candle background, Coral text */
@@ -151,7 +151,6 @@
   padding: 14px 26px;
   border: 1px solid var(--coral);
   font-family: var(--heading-font);
-  font-style: italic;
   font-size: 14px;
   cursor: pointer;
   transition: background .3s, color .3s;
@@ -243,4 +242,15 @@
   .page-hero { padding: 48px 22px 16px; }
   .page-section { padding: 28px 22px; }
   .platform { border-radius: 14px; }
+}
+
+.avatar {
+  overflow: hidden;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
