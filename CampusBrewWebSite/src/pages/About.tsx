@@ -62,10 +62,10 @@ const scope = [
 
 // Add each member's role, e.g. "Project Manager", "Lead Developer"
 const team = [
-  { name: "Jefferus J. Resuera Jr.", role: "Team Member", photo: "/team/Jeff.jpg" },
-  { name: "Rhyz Nhicco C. Libetario", role: "Team Member", photo: "/team/rhyz.png" },
-  { name: "John Emilio G. Noel", role: "Team Member", photo: "/team/noel.jpg" },
-  { name: "Craig Zachary L. Salgado", role: "Team Member", photo: "/team/craig.jpg" },
+  { name: "Jefferus J. Resuera Jr.", role: "Project Manager", photo: "/team/Jeff.jpg" },
+  { name: "Rhyz Nhicco C. Libetario", role: "QA Engineer", photo: "/team/rhyz.png" },
+  { name: "John Emilio G. Noel", role: "Full-Stack Developer", photo: "/team/noel.jpg" },
+  { name: "Craig Zachary L. Salgado", role: "Frontend Developer", photo: "/team/craig.jpg" },
 ];
 /* ==================================== */
 
