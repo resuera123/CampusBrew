@@ -62,10 +62,10 @@ const scope = [
 
 // Add each member's role, e.g. "Project Manager", "Lead Developer"
 const team = [
-  { name: "Jefferus J. Resuera Jr.", role: "Team Member" },
-  { name: "Rhyz Nhicco C. Libetario", role: "Team Member" },
-  { name: "John Emilio G. Noel", role: "Team Member" },
-  { name: "Craig Zachary L. Salgado", role: "Team Member" },
+  { name: "Jefferus J. Resuera Jr.", role: "Team Member", photo: "/team/Jeff.jpg" },
+  { name: "Rhyz Nhicco C. Libetario", role: "Team Member", photo: "/team/rhyz.png" },
+  { name: "John Emilio G. Noel", role: "Team Member", photo: "/team/noel.jpg" },
+  { name: "Craig Zachary L. Salgado", role: "Team Member", photo: "/team/craig.jpg" },
 ];
 /* ==================================== */
 
@@ -145,7 +145,13 @@ export default function About() {
         <div className="card-grid">
           {team.map((m) => (
             <div key={m.name} className="card team-card">
-              <div className="avatar" aria-hidden="true">{initials(m.name)}</div>
+              <div className="avatar">
+                {m.photo ? (
+                  <img src={m.photo} alt={m.name} loading="lazy" />
+                ) : (
+                  <span aria-hidden="true">{initials(m.name)}</span>
+                )}
+              </div>
               <h3>{m.name}</h3>
               <p>{m.role}</p>
             </div>

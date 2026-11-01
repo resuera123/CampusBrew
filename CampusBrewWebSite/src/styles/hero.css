@@ -4,8 +4,8 @@
   --fallback-right: linear-gradient(180deg, #eceeed, #d9dcdb);
 
   --text-color: #ffffff;
-  --heading-font: "Playfair Display", Georgia, serif;
-  --body-font: "Inter", Arial, sans-serif;
+  --heading-font: "Poppins", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --body-font: "Poppins", system-ui, -apple-system, "Segoe UI", sans-serif;
 
   --ease: cubic-bezier(.22, 1, .36, 1);
 }
@@ -178,7 +178,6 @@ h1 {
   padding: 14px 24px;
   border: 1px solid rgba(255, 255, 255, .7);
   font-family: var(--heading-font);
-  font-style: italic;
   font-size: 13px;
   background: rgba(255, 255, 255, .04);
   backdrop-filter: blur(2px);
