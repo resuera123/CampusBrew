@@ -332,13 +332,39 @@
     font: inherit; 
 }
 
-.admin-login button { 
-    padding: 12px; 
-    border: 0; 
-    border-radius: 8px; 
-    background: #7D2826; 
-    color: #EFE9D7; 
-    font: inherit; cursor: pointer; 
+.admin-login button {
+    padding: 12px;
+    border: 0;
+    border-radius: 8px;
+    background: #7D2826;
+    color: #EFE9D7;
+    font: inherit; cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.admin-login button:disabled { opacity: .8; cursor: wait; }
+.admin-login input:disabled { opacity: .6; }
+
+.admin-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(239, 233, 215, .35);
+    border-top-color: #EFE9D7;
+    border-radius: 50%;
+    animation: admin-spin .8s linear infinite;
+}
+@keyframes admin-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+    .admin-spinner { animation-duration: 2.4s; }
+}
+
+.admin-login-note {
+    font-size: 13px;
+    line-height: 1.4;
+    text-align: center;
+    color: rgba(43, 13, 12, .75);
 }
 
 @media (max-width: 720px) {
