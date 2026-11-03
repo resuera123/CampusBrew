@@ -100,6 +100,7 @@ nav {
 .nav-link:hover::after { transform: scaleX(1); transform-origin: left; }
 
 .logo { display: block; text-align: center; line-height: 1.2; }
+.logo .mark { display: block; height: 34px; width: auto; margin: 0 auto 6px; }
 .logo .name {
   display: block;
   font-family: var(--heading-font);
@@ -200,6 +201,7 @@ h1 {
   nav { padding: 16px 5vw; font-size: 13px; }
   .nav-left, .nav-right { gap: 16px; }
   .logo .name { font-size: 15px; }
+  .logo .mark { height: 26px; margin-bottom: 4px; }
   .tagline { font-size: 11px; }
   .btn-wrap { margin-top: 48px; }
 }

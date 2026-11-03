@@ -23,6 +23,7 @@ export default function Navbar({ brand, left, right, variant = "overlay" }: Navb
 
       <Fade delay={1.1} className="from-top">
         <Link to="/" className="logo">
+          <img className="mark" src="/logo-mark-cream.png" alt="" aria-hidden="true" />
           <span className="name">{brand.name}</span>
           <span className="sub">{brand.subtitle}</span>
         </Link>

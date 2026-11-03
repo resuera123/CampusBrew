@@ -22,9 +22,12 @@ export default function AdminDashboard() {
     <div className="admin-page">
       <div className="admin">
         <header className="admin-header">
-          <div>
-            <h1>CampusBrew Admin</h1>
-            <p className="admin-sub">Review applications and handle reports</p>
+          <div className="admin-brand">
+            <img src="/logo-badge.png" alt="" aria-hidden="true" />
+            <div>
+              <h1>CampusBrew Admin</h1>
+              <p className="admin-sub">Review applications and handle reports</p>
+            </div>
           </div>
           <button className="admin-logout" onClick={() => setConfirmLogout(true)}>Log out</button>
         </header>
