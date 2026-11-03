@@ -300,37 +300,81 @@
 
 /* ---------- Login ---------- */
 .admin-login { 
+    position: relative;
     min-height: 100vh;
-     display: grid; 
-     place-items: center; 
-     background: #2b0d0c; 
-     padding: 24px; 
-    }
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    background: #2b0d0c; 
+    padding: 24px; 
+    overflow: hidden;
+}
 
 .admin-login form {
+  position: relative;
+  z-index: 1;
   display: flex; 
   flex-direction: column;
-   gap: 12px; 
-   width: 100%; 
-   max-width: 340px;
-  padding: 32px; 
-  border-radius: 16px; 
+  gap: 12px; 
+  box-sizing: border-box; /* padding inside the width, so it fits a phone screen */
+  width: 100%;
+  max-width: 360px;
+  padding: 32px;
+  border-radius: 18px; 
   background: #EFE9D7;
   color: #2b0d0c;
+  box-shadow: 0 24px 60px rgba(20, 5, 4, .45), 0 2px 6px rgba(20, 5, 4, .25);
 }
+
+.admin-login-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: #7D2826;
+  color: #EFE9D7;
+}
+.admin-login-badge svg { width: 26px; height: 26px; }
 
 .admin-login h1 { 
     font-size: 24px; 
     line-height: 1.2; 
-    margin-bottom: 8px; 
+    margin: 4px 0 0; 
     text-shadow: none; 
 }
-.admin-login input { 
-    padding: 12px; 
-    border-radius: 8px; 
-    border: 1px solid rgba(125, 40, 38, .35); 
-    font: inherit; 
+.admin-login-sub {
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: rgba(43, 13, 12, .7);
 }
+.admin-login input { 
+    box-sizing: border-box;
+    width: 100%;
+    padding: 12px; 
+    border-radius: 10px; 
+    border: 1px solid rgba(125, 40, 38, .35); 
+    background: #fbf8ef;
+    color: #2b0d0c;
+    font: inherit; 
+    transition: border-color .15s, box-shadow .15s;
+}
+.admin-login input:focus {
+    outline: none;
+    border-color: #7D2826;
+    box-shadow: 0 0 0 3px rgba(125, 40, 38, .18);
+}
+
+.admin-login-back {
+    position: relative;
+    z-index: 1;
+    font-size: 14px;
+    color: rgba(239, 233, 215, .8);
+    text-decoration: none;
+}
+.admin-login-back:hover { color: #EFE9D7; text-decoration: underline; }
 
 .admin-login button {
     padding: 12px;
@@ -344,6 +388,9 @@
     justify-content: center;
     gap: 8px;
 }
+.admin-login button { margin-top: 4px; font-weight: 600; transition: background .15s; }
+.admin-login button:hover:not(:disabled) { background: #6a2120; }
+.admin-login button:focus-visible { outline: 3px solid rgba(125, 40, 38, .35); outline-offset: 2px; }
 .admin-login button:disabled { opacity: .8; cursor: wait; }
 .admin-login input:disabled { opacity: .6; }
 

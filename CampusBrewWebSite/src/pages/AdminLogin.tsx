@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api, setToken, clearToken } from "../lib/api";
+import BrewBackground from "../components/BrewBackground";
 import "../styles/admin.css";
 
 // After this long, tell the admin why: the free backend sleeps when idle and
@@ -43,8 +44,17 @@ export default function AdminLogin() {
 
   return (
     <div className="admin-login">
+      <BrewBackground />
       <form onSubmit={handleSubmit} aria-busy={loading}>
+        <div className="admin-login-badge" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 9h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" />
+            <path d="M16 11h1.5a2.5 2.5 0 0 1 0 5H16" />
+            <path d="M8 5.5c-.6-.8 0-1.7.6-2.2M12 5.5c-.6-.8 0-1.7.6-2.2" />
+          </svg>
+        </div>
         <h1>CampusBrew Admin</h1>
+        <p className="admin-login-sub">Sign in to review applications and reports.</p>
         <input
           type="email"
           placeholder="Email"
@@ -72,6 +82,7 @@ export default function AdminLogin() {
           </p>
         )}
       </form>
+      <Link to="/" className="admin-login-back">← Back to site</Link>
     </div>
   );
 }
