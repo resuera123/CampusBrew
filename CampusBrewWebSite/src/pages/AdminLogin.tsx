@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { api, setToken, clearToken } from "../lib/api";
 import BrewBackground from "../components/BrewBackground";
 import "../styles/admin.css";
@@ -76,7 +76,6 @@ export default function AdminLogin() {
           </p>
         )}
       </form>
-      <Link to="/" className="admin-login-back">← Back to site</Link>
     </div>
   );
 }

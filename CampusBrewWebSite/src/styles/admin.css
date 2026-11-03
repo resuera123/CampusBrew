@@ -329,15 +329,17 @@
 }
 
 .admin-login-badge {
+  align-self: center;
   width: 56px;
   height: 56px;
   border-radius: 13px;
 }
 
-.admin-login h1 { 
-    font-size: 24px; 
-    line-height: 1.2; 
-    margin: 4px 0 0; 
+.admin-login h1 {
+    font-size: 24px;
+    line-height: 1.2;
+    text-align: center;
+    margin: 4px 0 0;
     text-shadow: none; 
 }
 .admin-login-sub {
@@ -362,14 +364,6 @@
     box-shadow: 0 0 0 3px rgba(125, 40, 38, .18);
 }
 
-.admin-login-back {
-    position: relative;
-    z-index: 1;
-    font-size: 14px;
-    color: rgba(239, 233, 215, .8);
-    text-decoration: none;
-}
-.admin-login-back:hover { color: #EFE9D7; text-decoration: underline; }
 
 .admin-login button {
     padding: 12px;
