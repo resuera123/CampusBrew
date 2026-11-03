@@ -28,6 +28,7 @@ export default function Download() {
 
       <section className="page-section">
         <div className="card download-card">
+          <img className="download-icon" src="/logo-badge.png" alt="CampusBrew app icon" />
           <p className="meta">Version {app.version} · {app.size}</p>
           <div className="download-actions">
             <a href={app.androidFile} download className="btn-solid">

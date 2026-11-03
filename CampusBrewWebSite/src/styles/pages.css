@@ -207,8 +207,33 @@
 .form-note { font-size: 14px; }
 
 /* ---------- Download ---------- */
-.download-card { text-align: center; padding: 36px 24px; }
-.download-card .meta { font-size: 13px; opacity: .7; margin-bottom: 20px; }
+/* Reversed panel (maroon with cream), as in the brand sheet, so the download
+   stands out from the cream page card. */
+.download-card {
+  text-align: center;
+  padding: 40px 24px;
+  border: 0;
+  border-radius: 16px;
+  color: var(--candle);
+  background:
+    radial-gradient(70% 90% at 50% 0%, rgba(190, 82, 74, .35), transparent 70%),
+    linear-gradient(160deg, var(--coral), #4a1716);
+  box-shadow: 0 14px 34px rgba(43, 13, 12, .28);
+}
+.download-icon {
+  display: block;
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 16px;
+  border-radius: 20px;
+  /* Cream ring keeps the maroon icon visible on the maroon panel. */
+  box-shadow: 0 0 0 3px rgba(239, 233, 215, .9), 0 10px 24px rgba(20, 5, 4, .45);
+}
+.download-card .meta { font-size: 13px; opacity: .85; margin-bottom: 22px; letter-spacing: .02em; }
+.download-card .btn-solid { background: var(--candle); color: var(--coral); border-color: var(--candle); font-weight: 600; }
+.download-card .btn-solid:hover { background: transparent; color: var(--candle); }
+.download-card .btn-ghost { color: var(--candle); border-color: rgba(239, 233, 215, .6); }
+.download-card .btn-ghost.is-disabled { opacity: .6; }
 .download-actions {
   display: flex;
   gap: 14px;
