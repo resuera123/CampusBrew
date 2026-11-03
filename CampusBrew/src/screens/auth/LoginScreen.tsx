@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS, SIZES } from '../../constants/theme';
 import { showAlert } from '../../components/AppAlert';
+import BrandLogo from '../../components/BrandLogo';
 
 export default function LoginScreen({ navigation }: any) {
   const { login } = useAuth();
@@ -44,9 +45,7 @@ export default function LoginScreen({ navigation }: any) {
       <View style={styles.inner}>
         {/* Logo */}
         <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Ionicons name="cafe" size={SIZES.logoIconSize} color={COLORS.white} />
-          </View>
+          <BrandLogo wordmark />
           <Text style={styles.tagline}>CIT-U Campus Beverage Delivery</Text>
         </View>
 
@@ -139,21 +138,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 48,
   },
-  logoCircle: {
-    width: SIZES.logoSize,
-    height: SIZES.logoSize,
-    borderRadius: SIZES.logoSize / 2,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: COLORS.espresso,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    elevation: 5,
-  },
   tagline: {
+    marginTop: 4,
     fontSize: SIZES.captionSize,
     color: COLORS.textSecondary,
   },

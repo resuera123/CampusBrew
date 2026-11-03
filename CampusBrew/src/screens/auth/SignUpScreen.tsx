@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { AuthService } from '../../services/AuthService';
 import { COLORS, SIZES } from '../../constants/theme';
 import { showAlert } from '../../components/AppAlert';
+import BrandLogo from '../../components/BrandLogo';
 
 type Role = 'CUSTOMER' | 'SHOP_OPERATOR';
 
@@ -69,8 +70,8 @@ export default function SignUpScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={styles.inner}>
         {/* Logo */}
         <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Ionicons name="cafe" size={36} color={COLORS.white} />
+          <View style={styles.logo}>
+            <BrandLogo size={72} />
           </View>
           <Text style={styles.title}>Create your account</Text>
         </View>
@@ -227,20 +228,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 32,
   },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-    shadowColor: COLORS.espresso,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    elevation: 5,
-  },
+  logo: { marginBottom: 12 },
   title: {
     fontSize: SIZES.headingSize,
     fontWeight: '600',
