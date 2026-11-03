@@ -37,6 +37,10 @@ export default function ApplicationsPanel({ base }: { base: string }) {
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState("");
+  // The list leaves the photos out (they're large); opening an item fetches the
+  // full application. Tracks which id is loading so a late reply can't overwrite
+  // a different application.
+  const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setError("");
@@ -52,9 +56,17 @@ export default function ApplicationsPanel({ base }: { base: string }) {
     setMode("view");
     setReason("");
     setActionError("");
+    setLoadingId(item.id);
+    api<Item>(`${base}/${item.id}`)
+      .then((full) => setSelected((cur) => (cur?.id === full.id ? full : cur)))
+      .catch((e) => setActionError(`Couldn't load the photos: ${(e as Error).message}`))
+      .finally(() => setLoadingId((id) => (id === item.id ? null : id)));
   }
 
-  const closeModal = useCallback(() => setSelected(null), []);
+  const closeModal = useCallback(() => {
+    setSelected(null);
+    setLoadingId(null);
+  }, []);
 
   async function approve() {
     if (!selected) return;
@@ -162,7 +174,9 @@ export default function ApplicationsPanel({ base }: { base: string }) {
                         <img src={selected[k] as string} alt={label(k)} />
                       </a>
                     ) : (
-                      <div className="admin-nophoto">No photo uploaded</div>
+                      <div className="admin-nophoto">
+                        {loadingId === selected.id ? "Loading photo…" : "No photo uploaded"}
+                      </div>
                     )}
                     <figcaption>{label(k)}</figcaption>
                   </figure>
