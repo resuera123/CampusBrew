@@ -479,8 +479,15 @@ public class OrderService {
 
         socketService.emitToUser(order.getCustomerId(), "order:statusUpdate", payload);
         socketService.emitToOrder(order.getId(), "order:statusUpdate", payload);
-        shopRepository.findById(order.getShopId()).ifPresent(s ->
-                socketService.emitToUser(s.getOperatorId(), "order:statusUpdate", payload));
+        shopRepository.findById(order.getShopId()).ifPresent(s -> {
+            socketService.emitToUser(s.getOperatorId(), "order:statusUpdate", payload);
+            // A new order (COD at checkout, GCash once paid) also reaches the operator
+            // as a push, so it isn't missed while the app is closed.
+            if (next == OrderStatus.PLACED) {
+                pushNotificationService.send(s.getOperatorId(), "New order received", shopOrderSummary(order),
+                        Map.of("orderId", order.getId(), "status", next.name(), "type", "shop-order"));
+            }
+        });
         if (order.getDeliveryPersonnelId() != null) {
             socketService.emitToUser(order.getDeliveryPersonnelId(), "order:statusUpdate", payload);
         }
@@ -492,6 +499,18 @@ public class OrderService {
             pushNotificationService.send(order.getCustomerId(), msg[0], msg[1],
                     Map.of("orderId", order.getId(), "status", next.name()));
         }
+    }
+
+    /** "Order #A1B2C3 · 2 items · ₱104.00 · GCash" for the shop's new-order push. */
+    static String shopOrderSummary(Order order) {
+        int items = order.getItems() == null ? 0
+                : order.getItems().stream().mapToInt(i -> i.getQuantity()).sum();
+        String id = order.getId() == null ? "" : order.getId();
+        String shortId = id.length() > 6 ? id.substring(id.length() - 6) : id;
+        String method = order.getPaymentMethod() == null ? ""
+                : order.getPaymentMethod() == PaymentMethod.COD ? " · COD" : " · GCash";
+        return String.format("Order #%s · %d item%s · ₱%.2f%s",
+                shortId.toUpperCase(), items, items == 1 ? "" : "s", order.getBeverageSubtotal(), method);
     }
 
     /** Customer-facing push copy per order status, or null when no push is warranted. */
