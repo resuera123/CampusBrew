@@ -61,8 +61,8 @@
 }
 
 .admin button.danger { 
-    background: #b3261e; 
-    border-color: #b3261e; 
+    background: #5f1d1b; 
+    border-color: #5f1d1b; 
 }
 
 .admin-logout { 
@@ -497,15 +497,15 @@
   border-color: #7D2826;
 }
 
-/* Log out / Reject: red */
+/* Log out / Reject / Suspend: deep maroon, on-brand but clearly the serious choice */
 .modal .modal-actions button.danger {
-  background: #b3261e;
-  border-color: #b3261e;
+  background: #5f1d1b;
+  border-color: #5f1d1b;
   color: #fff;
 }
 .modal .modal-actions button.danger:hover:not(:disabled) {
-  background: #8e1c16;
-  border-color: #8e1c16;
+  background: #4a1716;
+  border-color: #4a1716;
 }
 
 /* Close (X) button */
