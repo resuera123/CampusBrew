@@ -1,13 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { api } from "../../lib/api";
+import { useAdminList, matches, refOf } from "../../lib/adminList";
 import Modal from "./Modal";
+import Lightbox from "./Lightbox";
+import Toolbar from "./Toolbar";
 
 type Item = Record<string, unknown> & { id: string; status?: string };
 type Mode = "view" | "approve" | "reject";
 
 const STATUSES = ["PENDING", "APPROVED", "REJECTED", "ALL"];
 const TITLE_KEYS = ["stallName", "shopName", "fullName", "accountName", "operatorName"];
-const HIDE = new Set(["id", "userId", "shopId", "status", "createdAt", "reviewedAt", "rejectionReason"]);
+const HIDE = new Set(["id", "ref", "reapplied", "userId", "shopId", "status", "createdAt", "reviewedAt", "rejectionReason"]);
 
 const isPhotoKey = (k: string) => /(photo|image|selfie)$/i.test(k);
 const isImg = (v: unknown): v is string =>
@@ -27,10 +30,11 @@ const titleOf = (item: Item) =>
   (TITLE_KEYS.map((k) => item[k]).find((v) => typeof v === "string" && v) as string | undefined) ??
   "Application";
 
-export default function ApplicationsPanel({ base }: { base: string }) {
+export default function ApplicationsPanel({ base, noun = "application" }: { base: string; noun?: string }) {
   const [status, setStatus] = useState("PENDING");
-  const [items, setItems] = useState<Item[]>([]);
-  const [error, setError] = useState("");
+  const { items, error, refreshing, reload: load } = useAdminList<Item>(`${base}?status=${status}`);
+  const [query, setQuery] = useState("");
+  const [viewing, setViewing] = useState<{ src: string; caption: string } | null>(null);
 
   const [selected, setSelected] = useState<Item | null>(null);
   const [mode, setMode] = useState<Mode>("view");
@@ -41,15 +45,6 @@ export default function ApplicationsPanel({ base }: { base: string }) {
   // full application. Tracks which id is loading so a late reply can't overwrite
   // a different application.
   const [loadingId, setLoadingId] = useState<string | null>(null);
-
-  const load = useCallback(() => {
-    setError("");
-    api<Item[]>(`${base}?status=${status}`)
-      .then(setItems)
-      .catch((e) => setError(e.message));
-  }, [base, status]);
-
-  useEffect(load, [load]);
 
   function openItem(item: Item) {
     setSelected(item);
@@ -106,22 +101,30 @@ export default function ApplicationsPanel({ base }: { base: string }) {
     ? Object.entries(selected).filter(([k, v]) => !HIDE.has(k) && !isPhotoKey(k) && v !== null && v !== "")
     : [];
   const selStatus = selected?.status ?? "PENDING";
+  const shown = items.filter((item) =>
+    matches(query, refOf(item), item.id, ...TITLE_KEYS.map((k) => item[k]), item.email, item.schoolEmail, item.studentId));
 
   return (
     <section>
-      <div className="admin-filters">
-        {STATUSES.map((s) => (
-          <button key={s} className={s === status ? "active" : ""} onClick={() => setStatus(s)}>
-            {s.charAt(0) + s.slice(1).toLowerCase()}
-          </button>
-        ))}
-      </div>
+      <Toolbar
+        statuses={STATUSES}
+        status={status}
+        onStatus={setStatus}
+        query={query}
+        onQuery={setQuery}
+        placeholder={`Search ${noun}s by ID or name`}
+        onRefresh={load}
+        refreshing={refreshing}
+      />
 
       {error && <p className="admin-error">{error}</p>}
-      {!error && items.length === 0 && <p className="admin-empty">Nothing here.</p>}
+      {!error && !refreshing && items.length === 0 && <p className="admin-empty">Nothing here.</p>}
+      {!error && items.length > 0 && shown.length === 0 && (
+        <p className="admin-empty">No {noun}s match “{query}”.</p>
+      )}
 
       <div className="admin-list">
-        {items.map((item) => {
+        {shown.map((item) => {
           const st = item.status ?? "PENDING";
           const sub = [item.email, typeof item.createdAt === "string" ? show(item.createdAt) : null]
             .filter(Boolean)
@@ -135,10 +138,12 @@ export default function ApplicationsPanel({ base }: { base: string }) {
               onClick={() => openItem(item)}
               onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && openItem(item)}
             >
+              <span className="admin-ref">{refOf(item)}</span>
               <div className="admin-row-main">
                 <strong>{titleOf(item)}</strong>
                 <span>{sub}</span>
               </div>
+              {item.reapplied === true && <span className="badge reapplied">Re-Applied</span>}
               <span className={`badge ${st.toLowerCase()}`}>{st}</span>
               <span className="admin-chevron" aria-hidden="true">›</span>
             </div>
@@ -146,11 +151,12 @@ export default function ApplicationsPanel({ base }: { base: string }) {
         })}
       </div>
 
-      <Modal open={!!selected} onClose={closeModal} title={selected ? titleOf(selected) : ""} wide>
+      <Modal open={!!selected} onClose={closeModal} title={selected ? `${refOf(selected)} · ${titleOf(selected)}` : ""} wide>
         {selected && (
           <>
             <div className="modal-statusline">
               <span className={`badge ${selStatus.toLowerCase()}`}>{selStatus}</span>
+              {selected.reapplied === true && <span className="badge reapplied">Re-Applied</span>}
               {typeof selected.createdAt === "string" && (
                 <span className="admin-sub">Submitted {show(selected.createdAt)}</span>
               )}
@@ -170,9 +176,15 @@ export default function ApplicationsPanel({ base }: { base: string }) {
                 {photoKeys.map((k) => (
                   <figure key={k}>
                     {isImg(selected[k]) ? (
-                      <a href={selected[k] as string} target="_blank" rel="noreferrer">
+                      <button
+                        type="button"
+                        className="admin-photo-btn"
+                        onClick={() => setViewing({ src: selected[k] as string, caption: label(k) })}
+                        title="Click to enlarge"
+                      >
                         <img src={selected[k] as string} alt={label(k)} />
-                      </a>
+                        <span className="admin-photo-zoom" aria-hidden="true">⤢</span>
+                      </button>
                     ) : (
                       <div className="admin-nophoto">
                         {loadingId === selected.id ? "Loading photo…" : "No photo uploaded"}
@@ -199,6 +211,11 @@ export default function ApplicationsPanel({ base }: { base: string }) {
 
             {selStatus === "PENDING" && mode === "view" && (
               <div className="modal-actions">
+                {selected.reapplied === true && (
+                  <span className="badge reapplied" title="This applicant was rejected before and applied again">
+                    Re-Applied
+                  </span>
+                )}
                 <button onClick={() => setMode("approve")}>Approve</button>
                 <button className="danger" onClick={() => setMode("reject")}>Reject</button>
               </div>
@@ -235,6 +252,7 @@ export default function ApplicationsPanel({ base }: { base: string }) {
           </>
         )}
       </Modal>
+      <Lightbox src={viewing?.src ?? null} caption={viewing?.caption} onClose={() => setViewing(null)} />
     </section>
   );
 }
