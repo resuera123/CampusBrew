@@ -50,6 +50,17 @@ public class DasherApplicationController {
         }
     }
 
+    /** The last application with its photos, to prefill a reapplication (204 if none). */
+    @GetMapping("/dasher-application/latest")
+    public ResponseEntity<?> latest(@RequestHeader("Authorization") String authHeader) {
+        try {
+            var last = applicationService.latestOwn(userIdFrom(authHeader));
+            return last == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(last);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     /** Body {"role": "CUSTOMER" | "DELIVERY_PERSONNEL"}; returns a fresh session. */
     @PutMapping("/role")
     public ResponseEntity<?> switchRole(
@@ -67,6 +78,16 @@ public class DasherApplicationController {
     public ResponseEntity<?> shopStatus(@RequestHeader("Authorization") String authHeader) {
         try {
             return ResponseEntity.ok(shopApplicationService.status(userIdFrom(authHeader)));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/shop-application/latest")
+    public ResponseEntity<?> latestShop(@RequestHeader("Authorization") String authHeader) {
+        try {
+            var last = shopApplicationService.latestOwn(userIdFrom(authHeader));
+            return last == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(last);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         }

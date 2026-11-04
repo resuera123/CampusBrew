@@ -14,6 +14,7 @@ import java.util.List;
 @Builder
 public class ReportDTO {
     private String id;
+    private String ref;
     private ReportType type;
     private ReportStatus status;
     private Date createdAt;

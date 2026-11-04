@@ -19,10 +19,12 @@ import java.util.Date;
 @AllArgsConstructor
 @Builder
 @Document(collection = "dasherApplications")
-public class DasherApplication {
+public class DasherApplication implements Referenced {
 
     @Id
     private String id;
+
+    private String ref;
 
     @Indexed
     private String userId;
@@ -48,4 +50,9 @@ public class DasherApplication {
     private Date reviewedAt;
 
     private Date createdAt;
+
+    @Override
+    public String refPrefix() {
+        return "DA";
+    }
 }

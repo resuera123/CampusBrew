@@ -29,7 +29,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-/** v2.0 FR-4.6 — daily / weekly sales report. */
+/** v2.0 FR-4.6 — daily / weekly / monthly / annual sales report. */
 class SalesReportServiceTest {
 
     private final List<Order> orders = new ArrayList<>();
@@ -144,6 +144,43 @@ class SalesReportServiceTest {
         assertThat(service.report("op", "day", 1).getLabel()).isEqualTo("Yesterday");
         assertThat(service.report("op", "week", 1).getLabel()).isEqualTo("Last week");
         assertThat(service.report("op", "day", 0).getPeakLabel()).isNull();
+    }
+
+    @Test
+    void monthReportHasOneBarPerDayAndComparesToLastMonth() {
+        LocalDate first = today.withDayOfMonth(1);
+        order(OrderStatus.DELIVERED, first, 10, 120, PaymentMethod.GCASH);
+        order(OrderStatus.DELIVERED, first.minusDays(1), 10, 60, PaymentMethod.COD); // last month
+
+        SalesReportDTO r = service.report("op", "month", 0);
+
+        assertThat(r.getRange()).isEqualTo("month");
+        assertThat(r.getLabel()).isEqualTo("This month");
+        assertThat(r.getBuckets()).hasSize(first.lengthOfMonth());
+        assertThat(r.getBuckets().get(0).getLabel()).isEqualTo("1");
+        assertThat(r.getSales()).isEqualTo(120);
+        assertThat(r.getPrevSales()).isEqualTo(60);
+        assertThat(r.getPeakLabel()).isEqualTo(first.getMonth().getDisplayName(java.time.format.TextStyle.SHORT,
+                java.util.Locale.ENGLISH) + " 1");
+    }
+
+    @Test
+    void yearReportHasTwelveMonths() {
+        LocalDate jan1 = today.withDayOfYear(1);
+        order(OrderStatus.DELIVERED, jan1, 10, 90, PaymentMethod.GCASH);
+        order(OrderStatus.DELIVERED, jan1.minusDays(1), 10, 40, PaymentMethod.GCASH); // Dec 31 last year
+
+        SalesReportDTO r = service.report("op", "year", 0);
+
+        assertThat(r.getLabel()).isEqualTo("This year");
+        assertThat(r.getBuckets()).extracting(SalesReportDTO.Bucket::getLabel)
+                .containsExactly("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
+        assertThat(r.getSales()).isEqualTo(90);
+        assertThat(r.getPrevSales()).isEqualTo(40);
+        assertThat(r.getPeakLabel()).isEqualTo("Jan");
+        assertThat(service.report("op", "year", 1).getLabel()).isEqualTo("Last year");
+        assertThat(service.report("op", "year", 2).getLabel()).isEqualTo(String.valueOf(today.getYear() - 2));
+        assertThat(service.report("op", "month", 1).getLabel()).isEqualTo("Last month");
     }
 
     @Test

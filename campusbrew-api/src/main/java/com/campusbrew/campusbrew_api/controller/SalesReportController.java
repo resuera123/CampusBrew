@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 /**
- * v2.0 FR-4.6 — the operator's daily / weekly sales report. Under /api/shops/**
+ * v2.0 FR-4.6 — the operator's daily / weekly / monthly / annual sales report. Under /api/shops/**
  * (permitted in SecurityConfig); the JWT is validated here and the operator's own
  * shop is used.
  */
@@ -22,7 +22,7 @@ public class SalesReportController {
     private final SalesReportService salesReportService;
     private final JwtService jwtService;
 
-    /** range = "day" (default) or "week"; offset = periods back (0 = today / this week). */
+    /** range = "day" (default), "week", "month" or "year"; offset = periods back (0 = the current one). */
     @GetMapping
     public ResponseEntity<?> report(
             @RequestHeader("Authorization") String authHeader,

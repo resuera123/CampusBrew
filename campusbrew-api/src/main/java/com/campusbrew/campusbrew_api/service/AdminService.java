@@ -1,6 +1,7 @@
 package com.campusbrew.campusbrew_api.service;
 
 import com.campusbrew.campusbrew_api.dto.ReportDTO;
+import com.campusbrew.campusbrew_api.dto.SuspendedUserDTO;
 import com.campusbrew.campusbrew_api.model.ChatMessage;
 import com.campusbrew.campusbrew_api.model.Order;
 import com.campusbrew.campusbrew_api.model.Payment;
@@ -134,6 +135,13 @@ public class AdminService {
         userRepository.save(user);
     }
 
+    /** Every suspended account, most recently suspended first. */
+    public List<SuspendedUserDTO> suspendedUsers() {
+        return userRepository.findBySuspendedTrueOrderBySuspendedAtDesc().stream()
+                .map(SuspendedUserDTO::from)
+                .toList();
+    }
+
     // ─── Helpers ────────────────────────────────────────────────
 
     private ReportDTO.ReportDTOBuilder summary(Report r) {
@@ -141,6 +149,7 @@ public class AdminService {
                 : userRepository.findById(r.getReporterId()).map(User::getFullName).orElse(null);
         return ReportDTO.builder()
                 .id(r.getId())
+                .ref(r.getRef())
                 .type(r.getType())
                 .status(r.getStatus())
                 .createdAt(r.getCreatedAt())

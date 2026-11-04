@@ -18,10 +18,12 @@ import java.util.Date;
 @AllArgsConstructor
 @Builder
 @Document(collection = "reports")
-public class Report {
+public class Report implements Referenced {
 
     @Id
     private String id;
+
+    private String ref;
 
     private ReportType type;
     private String reporterId;
@@ -36,4 +38,9 @@ public class Report {
     private Date resolvedAt;
 
     private Date createdAt;
+
+    @Override
+    public String refPrefix() {
+        return "RPT";
+    }
 }

@@ -33,8 +33,8 @@ import java.util.stream.Collectors;
 import static com.campusbrew.campusbrew_api.service.ItemSalesService.CAMPUS_ZONE;
 
 /**
- * v2.0 FR-4.6 — daily / weekly sales report for the shop: totals with a comparison
- * to the period before, sales by hour or by day, GCash vs COD, the top items, the
+ * v2.0 FR-4.6 — daily / weekly / monthly / annual sales report for the shop: totals
+ * with a comparison to the period before, sales by hour, day or month, GCash vs COD, the top items, the
  * delivered orders, and what was lost to cancellations.
  *
  * An order counts in the period it was delivered (or cancelled), in Philippine time,
@@ -48,23 +48,57 @@ public class SalesReportService {
     static final int FIRST_HOUR = 6;
     static final int LAST_HOUR = 21;
     static final int MAX_OFFSET = 52;
+    /** A month or a year can hold hundreds of orders; the list shows the latest ones. */
+    static final int MAX_ORDER_LINES = 100;
     private static final DateTimeFormatter SHORT_DATE = DateTimeFormatter.ofPattern("MMM d", Locale.ENGLISH);
 
     private final OrderRepository orderRepository;
     private final ShopRepository shopRepository;
     private final UserRepository userRepository;
 
+    /** The length of a report period. */
+    enum Period {
+        DAY, WEEK, MONTH, YEAR;
+
+        static Period of(String range) {
+            if (range == null) return DAY;
+            return switch (range.toLowerCase(Locale.ROOT)) {
+                case "week" -> WEEK;
+                case "month" -> MONTH;
+                case "year" -> YEAR;
+                default -> DAY;
+            };
+        }
+
+        /** The first day of the period {@code back} periods before the one containing today. */
+        LocalDate start(LocalDate today, int back) {
+            return switch (this) {
+                case DAY -> today.minusDays(back);
+                case WEEK -> today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).minusWeeks(back);
+                case MONTH -> today.withDayOfMonth(1).minusMonths(back);
+                case YEAR -> today.withDayOfYear(1).minusYears(back);
+            };
+        }
+
+        LocalDate plus(LocalDate day, int n) {
+            return switch (this) {
+                case DAY -> day.plusDays(n);
+                case WEEK -> day.plusWeeks(n);
+                case MONTH -> day.plusMonths(n);
+                case YEAR -> day.plusYears(n);
+            };
+        }
+    }
+
     public SalesReportDTO report(String operatorUserId, String range, int offset) {
         Shop shop = requireOwnedShop(operatorUserId);
-        boolean week = "week".equalsIgnoreCase(range);
+        Period period = Period.of(range);
         int back = Math.max(0, Math.min(offset, MAX_OFFSET));
 
         LocalDate today = LocalDate.now(CAMPUS_ZONE);
-        LocalDate from = week
-                ? today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).minusWeeks(back)
-                : today.minusDays(back);
-        LocalDate to = week ? from.plusWeeks(1) : from.plusDays(1);
-        LocalDate prevFrom = week ? from.minusWeeks(1) : from.minusDays(1);
+        LocalDate from = period.start(today, back);
+        LocalDate to = period.plus(from, 1);
+        LocalDate prevFrom = period.plus(from, -1);
 
         // Orders are delivered within hours of being placed, so a day of slack is plenty.
         List<Order> orders = orderRepository.findByShopIdAndCreatedAtGreaterThanEqual(
@@ -76,12 +110,17 @@ public class SalesReportService {
 
         double sales = sum(delivered);
         double prevSales = sum(prevDelivered);
-        List<SalesReportDTO.Bucket> buckets = week ? byDay(delivered, from) : byHour(delivered);
+        List<SalesReportDTO.Bucket> buckets = switch (period) {
+            case DAY -> byHour(delivered);
+            case WEEK -> byDay(delivered, from, 7, d -> d.getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.ENGLISH));
+            case MONTH -> byDay(delivered, from, from.lengthOfMonth(), d -> String.valueOf(d.getDayOfMonth()));
+            case YEAR -> byMonth(delivered, from);
+        };
 
         return SalesReportDTO.builder()
-                .range(week ? "week" : "day")
+                .range(period.name().toLowerCase(Locale.ROOT))
                 .offset(back)
-                .label(label(week, back, from, to))
+                .label(label(period, back, from, to))
                 .sales(round(sales))
                 .orders(delivered.size())
                 .avgOrder(round(average(sales, delivered.size())))
@@ -92,7 +131,7 @@ public class SalesReportService {
                 .cancelledSales(round(sum(cancelled)))
                 .refundedOrders((int) cancelled.stream().filter(SalesReportService::refunded).count())
                 .buckets(buckets)
-                .peakLabel(peak(buckets, week))
+                .peakLabel(peak(buckets, period, from))
                 .gcashSales(round(sum(byMethod(delivered, PaymentMethod.GCASH))))
                 .gcashOrders(byMethod(delivered, PaymentMethod.GCASH).size())
                 .codSales(round(sum(byMethod(delivered, PaymentMethod.COD))))
@@ -101,6 +140,7 @@ public class SalesReportService {
                 .orderList(delivered.stream()
                         .sorted(Comparator.comparing((Order o) -> o.reachedAt(OrderStatus.DELIVERED),
                                 Comparator.nullsLast(Comparator.reverseOrder())))
+                        .limit(MAX_ORDER_LINES)
                         .map(SalesReportService::line)
                         .toList())
                 .build();
@@ -134,14 +174,25 @@ public class SalesReportService {
         return buckets;
     }
 
-    private static List<SalesReportDTO.Bucket> byDay(List<Order> delivered, LocalDate monday) {
+    private static List<SalesReportDTO.Bucket> byDay(
+            List<Order> delivered, LocalDate first, int days, java.util.function.Function<LocalDate, String> label) {
         Map<LocalDate, List<Order>> byDay = delivered.stream()
                 .collect(Collectors.groupingBy(o -> zoned(o).toLocalDate()));
         List<SalesReportDTO.Bucket> buckets = new ArrayList<>();
-        for (int i = 0; i < 7; i++) {
-            LocalDate day = monday.plusDays(i);
-            buckets.add(bucket(day.getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.ENGLISH),
-                    byDay.getOrDefault(day, List.of())));
+        for (int i = 0; i < days; i++) {
+            LocalDate day = first.plusDays(i);
+            buckets.add(bucket(label.apply(day), byDay.getOrDefault(day, List.of())));
+        }
+        return buckets;
+    }
+
+    private static List<SalesReportDTO.Bucket> byMonth(List<Order> delivered, LocalDate january) {
+        Map<Integer, List<Order>> byMonth = delivered.stream()
+                .collect(Collectors.groupingBy(o -> zoned(o).getMonthValue()));
+        List<SalesReportDTO.Bucket> buckets = new ArrayList<>();
+        for (int m = 1; m <= 12; m++) {
+            buckets.add(bucket(january.withMonth(m).getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH),
+                    byMonth.getOrDefault(m, List.of())));
         }
         return buckets;
     }
@@ -150,16 +201,18 @@ public class SalesReportService {
         return SalesReportDTO.Bucket.builder().label(label).sales(round(sum(orders))).orders(orders.size()).build();
     }
 
-    /** "12–1 PM" (hour) or "Wed" (day); null when nothing sold. */
-    static String peak(List<SalesReportDTO.Bucket> buckets, boolean week) {
+    /** "12–1 PM" (day), "Wed" (week), "Nov 14" (month) or "Mar" (year); null when nothing sold. */
+    static String peak(List<SalesReportDTO.Bucket> buckets, Period period, LocalDate from) {
         SalesReportDTO.Bucket best = buckets.stream()
                 .filter(b -> b.getSales() > 0)
                 .max(Comparator.comparingDouble(SalesReportDTO.Bucket::getSales))
                 .orElse(null);
         if (best == null) return null;
-        if (week) return best.getLabel();
-        int h = hourOf(best.getLabel());
-        return hourRange(h);
+        return switch (period) {
+            case DAY -> hourRange(hourOf(best.getLabel()));
+            case MONTH -> SHORT_DATE.format(from.withDayOfMonth(Integer.parseInt(best.getLabel())));
+            default -> best.getLabel();
+        };
     }
 
     static String hourLabel(int h) {
@@ -185,11 +238,21 @@ public class SalesReportService {
                 : start + " " + startHalf + "–" + end + " " + endHalf;
     }
 
-    private static String label(boolean week, int back, LocalDate from, LocalDate to) {
-        if (week) {
+    private static String label(Period period, int back, LocalDate from, LocalDate to) {
+        if (period == Period.WEEK) {
             if (back == 0) return "This week";
             if (back == 1) return "Last week";
             return SHORT_DATE.format(from) + " – " + SHORT_DATE.format(to.minusDays(1));
+        }
+        if (period == Period.MONTH) {
+            if (back == 0) return "This month";
+            if (back == 1) return "Last month";
+            return from.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH) + " " + from.getYear();
+        }
+        if (period == Period.YEAR) {
+            if (back == 0) return "This year";
+            if (back == 1) return "Last year";
+            return String.valueOf(from.getYear());
         }
         if (back == 0) return "Today";
         if (back == 1) return "Yesterday";

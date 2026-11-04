@@ -88,6 +88,13 @@ public class DasherApplicationService {
         return status(userId);
     }
 
+    /** The applicant's own last application, photos included, so a reapplication starts from it. */
+    public DasherApplicationDTO latestOwn(String userId) {
+        DasherApplication last = applicationRepository.findByUserIdNewestFirst(userId).stream().findFirst().orElse(null);
+        if (last == null) return null;
+        return DasherApplicationDTO.from(applicationRepository.findById(last.getId()).orElse(last), null, true);
+    }
+
     // ─── Admin ──────────────────────────────────────────────────
 
     /** Pending applications oldest first (a queue); null status = everything, newest first. */
@@ -96,13 +103,13 @@ public class DasherApplicationService {
                 ? applicationRepository.findAllNewestFirst()
                 : applicationRepository.findByStatusOldestFirst(status);
         return apps.stream()
-                .map(a -> DasherApplicationDTO.from(a, userRepository.findById(a.getUserId()).orElse(null), false))
+                .map(a -> dto(a, false))
                 .toList();
     }
 
     public DasherApplicationDTO get(String id) {
         DasherApplication a = requireApplication(id);
-        return DasherApplicationDTO.from(a, userRepository.findById(a.getUserId()).orElse(null), true);
+        return dto(a, true);
     }
 
     public DasherApplicationDTO approve(String adminId, String id) {
@@ -121,7 +128,7 @@ public class DasherApplicationService {
         applicationRepository.save(a);
         notify(user.getId(), "You're a CampusBrew dasher!",
                 "Your application was approved. Open your profile and tap Log in as Dasher.");
-        return DasherApplicationDTO.from(a, user, false);
+        return dto(a, false);
     }
 
     public DasherApplicationDTO reject(String adminId, String id, String reason) {
@@ -136,10 +143,16 @@ public class DasherApplicationService {
         applicationRepository.save(a);
         notify(a.getUserId(), "Dasher application not approved",
                 "Reason: " + a.getRejectionReason() + " You can apply again from your profile.");
-        return DasherApplicationDTO.from(a, userRepository.findById(a.getUserId()).orElse(null), false);
+        return dto(a, false);
     }
 
     // ─── Helpers ────────────────────────────────────────────────
+
+    private DasherApplicationDTO dto(DasherApplication a, boolean withPhotos) {
+        boolean reapplied = a.getCreatedAt() != null
+                && applicationRepository.countByUserIdAndCreatedAtBefore(a.getUserId(), a.getCreatedAt()) > 0;
+        return DasherApplicationDTO.from(a, userRepository.findById(a.getUserId()).orElse(null), withPhotos, reapplied);
+    }
 
     static void validate(DasherApplicationRequest r) {
         if (r == null) throw new IllegalArgumentException("Fill in the application");

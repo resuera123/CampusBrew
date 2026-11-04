@@ -8,6 +8,8 @@ import com.campusbrew.campusbrew_api.service.AdminService;
 import com.campusbrew.campusbrew_api.service.DasherApplicationService;
 import com.campusbrew.campusbrew_api.service.JwtService;
 import com.campusbrew.campusbrew_api.service.ShopApplicationService;
+import com.campusbrew.campusbrew_api.service.SupportService;
+import com.campusbrew.campusbrew_api.service.VerificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +19,8 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * Admin console: dasher and shop applications, user reports and suspensions. Every call
+ * Admin console: verification requests, dasher and shop applications, user reports,
+ * support messages and suspensions. Every call
  * checks that the caller's account is an ADMIN (403 otherwise).
  */
 @RestController
@@ -28,8 +31,39 @@ public class AdminController {
     private final DasherApplicationService applicationService;
     private final ShopApplicationService shopApplicationService;
     private final AdminService adminService;
+    private final VerificationService verificationService;
+    private final SupportService supportService;
     private final UserRepository userRepository;
     private final JwtService jwtService;
+
+    // ─── Verification requests ──────────────────────────────────
+
+    /** status = PENDING (default) | APPROVED | REJECTED | ALL */
+    @GetMapping("/verifications")
+    public ResponseEntity<?> verifications(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(defaultValue = "PENDING") String status) {
+        return asAdmin(authHeader, admin -> verificationService.list(
+                "ALL".equalsIgnoreCase(status) ? null : ApplicationStatus.valueOf(status.toUpperCase())));
+    }
+
+    @GetMapping("/verifications/{id}")
+    public ResponseEntity<?> verification(@RequestHeader("Authorization") String authHeader, @PathVariable String id) {
+        return asAdmin(authHeader, admin -> verificationService.get(id));
+    }
+
+    @PutMapping("/verifications/{id}/approve")
+    public ResponseEntity<?> approveVerification(@RequestHeader("Authorization") String authHeader, @PathVariable String id) {
+        return asAdmin(authHeader, admin -> verificationService.approve(admin, id));
+    }
+
+    @PutMapping("/verifications/{id}/reject")
+    public ResponseEntity<?> rejectVerification(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable String id,
+            @RequestBody Map<String, String> body) {
+        return asAdmin(authHeader, admin -> verificationService.reject(admin, id, body.get("reason")));
+    }
 
     // ─── Dasher applications ────────────────────────────────────
 
@@ -110,7 +144,33 @@ public class AdminController {
         return asAdmin(authHeader, admin -> adminService.resolve(admin, id));
     }
 
+    // ─── Support messages ───────────────────────────────────────
+
+    /** status = OPEN (default) | RESOLVED | ALL */
+    @GetMapping("/support")
+    public ResponseEntity<?> support(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(defaultValue = "OPEN") String status) {
+        return asAdmin(authHeader, admin -> supportService.list(
+                "ALL".equalsIgnoreCase(status) ? null : ReportStatus.valueOf(status.toUpperCase())));
+    }
+
+    @GetMapping("/support/{id}")
+    public ResponseEntity<?> supportTicket(@RequestHeader("Authorization") String authHeader, @PathVariable String id) {
+        return asAdmin(authHeader, admin -> supportService.get(id));
+    }
+
+    @PutMapping("/support/{id}/resolve")
+    public ResponseEntity<?> resolveSupport(@RequestHeader("Authorization") String authHeader, @PathVariable String id) {
+        return asAdmin(authHeader, admin -> supportService.resolve(admin, id));
+    }
+
     // ─── Suspensions ────────────────────────────────────────────
+
+    @GetMapping("/users/suspended")
+    public ResponseEntity<?> suspendedUsers(@RequestHeader("Authorization") String authHeader) {
+        return asAdmin(authHeader, admin -> adminService.suspendedUsers());
+    }
 
     @PutMapping("/users/{userId}/suspend")
     public ResponseEntity<?> suspend(

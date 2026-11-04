@@ -41,8 +41,19 @@ public class VerificationController {
         try {
             String token = authHeader.replace("Bearer ", "");
             String userId = jwtService.extractUserId(token);
-            verificationService.verify(userId, request.getSchoolEmail(), request.getOtp(), request.getStudentId());
-            return ResponseEntity.ok(Map.of("message", "Account verified successfully! COD is now unlocked."));
+            return ResponseEntity.ok(verificationService.verify(
+                    userId, request.getSchoolEmail(), request.getOtp(), request.getStudentId()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/status")
+    public ResponseEntity<?> status(@RequestHeader("Authorization") String authHeader) {
+        try {
+            String userId = jwtService.extractUserId(authHeader.replace("Bearer ", ""));
+            return ResponseEntity.ok(verificationService.status(userId));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));

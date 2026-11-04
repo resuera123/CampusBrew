@@ -14,6 +14,7 @@ import java.util.Date;
 @Builder
 public class DasherApplicationDTO {
     private String id;
+    private String ref;
     private String userId;
     private String fullName;
     private String email;
@@ -36,12 +37,19 @@ public class DasherApplicationDTO {
 
     private ApplicationStatus status;
     private String rejectionReason;
+    // The applicant was rejected before and sent this one again.
+    private boolean reapplied;
     private Date reviewedAt;
     private Date createdAt;
 
     public static DasherApplicationDTO from(DasherApplication a, User u, boolean withPhotos) {
+        return from(a, u, withPhotos, false);
+    }
+
+    public static DasherApplicationDTO from(DasherApplication a, User u, boolean withPhotos, boolean reapplied) {
         return DasherApplicationDTO.builder()
                 .id(a.getId())
+                .ref(a.getRef())
                 .userId(a.getUserId())
                 .fullName(u == null ? null : u.getFullName())
                 .email(u == null ? null : u.getEmail())
@@ -61,6 +69,7 @@ public class DasherApplicationDTO {
                 .corPhoto(withPhotos ? a.getCorPhoto() : null)
                 .status(a.getStatus())
                 .rejectionReason(a.getRejectionReason())
+                .reapplied(reapplied)
                 .reviewedAt(a.getReviewedAt())
                 .createdAt(a.getCreatedAt())
                 .build();

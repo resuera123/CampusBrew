@@ -13,6 +13,7 @@ import java.util.Date;
 @Builder
 public class ShopApplicationDTO {
     private String id;
+    private String ref;
     private String userId;
     private String shopId;
     private String accountName;
@@ -29,12 +30,19 @@ public class ShopApplicationDTO {
 
     private ApplicationStatus status;
     private String rejectionReason;
+    // The applicant was rejected before and sent this one again.
+    private boolean reapplied;
     private Date reviewedAt;
     private Date createdAt;
 
     public static ShopApplicationDTO from(ShopApplication a, User u, boolean withPhotos) {
+        return from(a, u, withPhotos, false);
+    }
+
+    public static ShopApplicationDTO from(ShopApplication a, User u, boolean withPhotos, boolean reapplied) {
         return ShopApplicationDTO.builder()
                 .id(a.getId())
+                .ref(a.getRef())
                 .userId(a.getUserId())
                 .shopId(a.getShopId())
                 .accountName(u == null ? null : u.getFullName())
@@ -48,6 +56,7 @@ public class ShopApplicationDTO {
                 .idPhoto(withPhotos ? a.getIdPhoto() : null)
                 .status(a.getStatus())
                 .rejectionReason(a.getRejectionReason())
+                .reapplied(reapplied)
                 .reviewedAt(a.getReviewedAt())
                 .createdAt(a.getCreatedAt())
                 .build();

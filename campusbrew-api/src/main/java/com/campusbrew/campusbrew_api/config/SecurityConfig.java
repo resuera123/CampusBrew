@@ -34,6 +34,8 @@ public class SecurityConfig {
                 // Verification and user endpoints accept JWT manually in controller,
                 // so we permit them here and validate the token in the controller itself.
                 .requestMatchers("/api/verification/**").permitAll()
+                // Contact Support works without logging in (suspended users appeal through it).
+                .requestMatchers("/api/support/**").permitAll()
                 .requestMatchers("/api/users/**").permitAll()
                 .requestMatchers("/api/shops/**").permitAll()
                 .requestMatchers("/api/orders/**").permitAll()

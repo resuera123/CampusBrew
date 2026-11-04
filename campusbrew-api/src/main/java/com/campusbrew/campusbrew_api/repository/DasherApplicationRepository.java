@@ -6,6 +6,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 
 @Repository
@@ -24,4 +25,6 @@ public interface DasherApplicationRepository extends MongoRepository<DasherAppli
     List<DasherApplication> findAllNewestFirst();
 
     boolean existsByUserIdAndStatus(String userId, ApplicationStatus status);
+
+    long countByUserIdAndCreatedAtBefore(String userId, Date createdAt);
 }

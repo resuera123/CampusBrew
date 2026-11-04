@@ -76,6 +76,13 @@ public class ShopApplicationService {
         return status(userId);
     }
 
+    /** The applicant's own last application, photos included, so a reapplication starts from it. */
+    public ShopApplicationDTO latestOwn(String userId) {
+        ShopApplication last = applicationRepository.findByUserIdNewestFirst(userId).stream().findFirst().orElse(null);
+        if (last == null) return null;
+        return ShopApplicationDTO.from(applicationRepository.findById(last.getId()).orElse(last), null, true);
+    }
+
     // ─── Admin ──────────────────────────────────────────────────
 
     /** Pending applications oldest first (a queue); null status = everything, newest first. */
@@ -84,13 +91,13 @@ public class ShopApplicationService {
                 ? applicationRepository.findAllNewestFirst()
                 : applicationRepository.findByStatusOldestFirst(status);
         return apps.stream()
-                .map(a -> ShopApplicationDTO.from(a, userRepository.findById(a.getUserId()).orElse(null), false))
+                .map(a -> dto(a, false))
                 .toList();
     }
 
     public ShopApplicationDTO get(String id) {
         ShopApplication a = requireApplication(id);
-        return ShopApplicationDTO.from(a, userRepository.findById(a.getUserId()).orElse(null), true);
+        return dto(a, true);
     }
 
     /** Approves the shop and gives it the stall name and location the admin checked. */
@@ -109,7 +116,7 @@ public class ShopApplicationService {
         applicationRepository.save(a);
         notify(a.getUserId(), "Your shop is approved!",
                 "Customers can now find " + a.getStallName() + ". Open your shop from Edit Shop Profile.");
-        return ShopApplicationDTO.from(a, userRepository.findById(a.getUserId()).orElse(null), false);
+        return dto(a, false);
     }
 
     public ShopApplicationDTO reject(String adminId, String id, String reason) {
@@ -124,10 +131,16 @@ public class ShopApplicationService {
         applicationRepository.save(a);
         notify(a.getUserId(), "Shop application not approved",
                 "Reason: " + a.getRejectionReason() + " You can apply again from your dashboard.");
-        return ShopApplicationDTO.from(a, userRepository.findById(a.getUserId()).orElse(null), false);
+        return dto(a, false);
     }
 
     // ─── Helpers ────────────────────────────────────────────────
+
+    private ShopApplicationDTO dto(ShopApplication a, boolean withPhotos) {
+        boolean reapplied = a.getCreatedAt() != null
+                && applicationRepository.countByUserIdAndCreatedAtBefore(a.getUserId(), a.getCreatedAt()) > 0;
+        return ShopApplicationDTO.from(a, userRepository.findById(a.getUserId()).orElse(null), withPhotos, reapplied);
+    }
 
     static void validate(ShopApplicationRequest r) {
         if (r == null) throw new IllegalArgumentException("Fill in the application");

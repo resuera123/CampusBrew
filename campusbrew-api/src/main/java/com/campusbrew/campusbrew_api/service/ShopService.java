@@ -25,6 +25,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ShopService {
 
+    /** Shop photos are sent with every shop list, so the app keeps them to ~600 px (well under this). */
+    static final int MAX_SHOP_IMAGE_CHARS = 400_000;
+
     private final ShopRepository shopRepository;
     private final MenuItemRepository menuItemRepository;
     private final UserRepository userRepository;
@@ -173,7 +176,17 @@ public class ShopService {
         if (dto.getDescription() != null) shop.setDescription(dto.getDescription());
         if (dto.getOperatingHours() != null) shop.setOperatingHours(dto.getOperatingHours());
         if (dto.getLocation() != null) shop.setLocation(dto.getLocation());
-        if (dto.getShopImage() != null) shop.setShopImage(dto.getShopImage());
+        if (dto.getShopImage() != null) {
+            // An uploaded photo (a small JPEG data URI from the app), a link, or "" to remove it.
+            String image = dto.getShopImage().trim();
+            if (image.length() > MAX_SHOP_IMAGE_CHARS) {
+                throw new RuntimeException("The shop photo is too large. Try a different photo.");
+            }
+            if (!image.isEmpty() && !image.startsWith("data:image/") && !image.startsWith("http")) {
+                throw new RuntimeException("Upload a photo for your shop");
+            }
+            shop.setShopImage(image.isEmpty() ? null : image);
+        }
         if (dto.getEstimatedPrepTime() != null) shop.setEstimatedPrepTime(dto.getEstimatedPrepTime());
         if (Boolean.TRUE.equals(dto.getIsOpen()) && !shop.isApprovedShop()) {
             throw new RuntimeException("Your shop needs admin approval before it can open");
