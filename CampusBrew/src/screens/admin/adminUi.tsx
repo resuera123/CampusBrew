@@ -174,7 +174,7 @@ export function ReasonDialog({
       <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.sheet}>
           <View style={styles.sheetIcon}>
-            <Ionicons name={icon} size={26} color="#D93025" />
+            <Ionicons name={icon} size={26} color={COLORS.destructive} />
           </View>
           <Text style={styles.sheetTitle}>{title}</Text>
           {!!message && <Text style={styles.sheetMessage}>{message}</Text>}
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: '#FCE8E8',
+    backgroundColor: COLORS.destructiveSoft,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
@@ -292,6 +292,6 @@ const styles = StyleSheet.create({
   sheetBtn: { flex: 1, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   sheetCancel: { borderWidth: 1, borderColor: COLORS.border },
   sheetCancelText: { color: COLORS.text, fontWeight: '600' },
-  sheetDanger: { backgroundColor: '#D93025' },
+  sheetDanger: { backgroundColor: COLORS.destructive },
   sheetDangerText: { color: COLORS.white, fontWeight: '700' },
 });

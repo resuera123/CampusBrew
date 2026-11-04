@@ -180,6 +180,6 @@ const styles = StyleSheet.create({
   approveBtn: { backgroundColor: '#1E8E3E' },
   approveText: { color: COLORS.white, fontSize: 15, fontWeight: '700' },
   approveInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  rejectBtn: { backgroundColor: COLORS.white, borderWidth: 1, borderColor: '#D93025' },
-  rejectText: { color: '#D93025', fontSize: 15, fontWeight: '700' },
+  rejectBtn: { backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.destructive },
+  rejectText: { color: COLORS.destructive, fontSize: 15, fontWeight: '700' },
 });

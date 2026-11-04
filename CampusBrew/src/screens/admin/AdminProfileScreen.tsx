@@ -20,7 +20,7 @@ export default function AdminProfileScreen() {
         <Text style={styles.role}>CampusBrew Admin</Text>
 
         <TouchableOpacity style={styles.logoutBtn} onPress={() => setLogoutOpen(true)}>
-          <Ionicons name="log-out-outline" size={18} color="#D93025" />
+          <Ionicons name="log-out-outline" size={18} color={COLORS.destructive} />
           <Text style={styles.logoutText}>Log out</Text>
         </TouchableOpacity>
       </View>
@@ -57,5 +57,5 @@ const styles = StyleSheet.create({
   name: { fontSize: 20, fontWeight: '700', color: COLORS.text },
   role: { fontSize: SIZES.captionSize, color: COLORS.textSecondary, marginTop: 4 },
   logoutBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 32, padding: 10 },
-  logoutText: { color: '#D93025', fontWeight: '600' },
+  logoutText: { color: COLORS.destructive, fontWeight: '600' },
 });

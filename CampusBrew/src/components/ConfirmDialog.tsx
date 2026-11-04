@@ -52,7 +52,7 @@ export default function ConfirmDialog({
         <View style={styles.card}>
           {icon && (
             <View style={[styles.iconWrap, destructive && styles.iconWrapDestructive]}>
-              <Ionicons name={icon} size={28} color={destructive ? '#D93025' : COLORS.primary} />
+              <Ionicons name={icon} size={28} color={destructive ? COLORS.destructive : COLORS.primary} />
             </View>
           )}
           <Text style={styles.title}>{title}</Text>
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
     marginBottom: 12,
   },
-  iconWrapDestructive: { backgroundColor: '#FCE8E8' },
+  iconWrapDestructive: { backgroundColor: COLORS.destructiveSoft },
   title: {
     fontSize: SIZES.bodySize,
     fontWeight: '700',
@@ -179,6 +179,6 @@ const styles = StyleSheet.create({
   cancelBtn: { backgroundColor: COLORS.backgroundSecondary },
   cancelText: { color: COLORS.text, fontWeight: '600', fontSize: SIZES.captionSize },
   confirmBtn: { backgroundColor: COLORS.primary },
-  destructiveBtn: { backgroundColor: '#D93025' },
+  destructiveBtn: { backgroundColor: COLORS.destructive },
   confirmText: { color: COLORS.white, fontWeight: '700', fontSize: SIZES.captionSize },
 });

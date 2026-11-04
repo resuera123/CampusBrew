@@ -6,6 +6,10 @@ export const COLORS = {
   primary: '#94353E',        // CIT-U Maroon
   primaryHover: '#7A2C33',   // Darker maroon for pressed states
   primaryLight: '#B85C65',   // Lighter maroon for secondary badges
+  // Destructive actions in dialogs (log out, delete, reject, suspend): a deeper
+  // maroon, so they read as serious without leaving the brand palette.
+  destructive: '#7A2C33',
+  destructiveSoft: '#F4E4E5',
   espresso: '#3B1F20',       // Warm coffee brown for hero surfaces
   cream: '#FFF8EF',          // Café-inspired highlight surface
   creamDark: '#F6EBDD',

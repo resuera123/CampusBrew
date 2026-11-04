@@ -170,7 +170,7 @@ export default function AdminReportDetailScreen({ route, navigation }: any) {
                       disabled={busy != null}
                     >
                       {busy === p.userId ? (
-                        <ActivityIndicator size="small" color={p.suspended ? COLORS.primary : '#D93025'} />
+                        <ActivityIndicator size="small" color={p.suspended ? COLORS.primary : COLORS.destructive} />
                       ) : (
                         <Text style={p.suspended ? styles.liftText : styles.suspendText}>
                           {p.suspended ? 'Lift' : 'Suspend'}
@@ -239,8 +239,8 @@ const styles = StyleSheet.create({
   personName: { fontSize: SIZES.captionSize, fontWeight: '600', color: COLORS.text },
   reporterTag: { fontSize: 11, color: COLORS.primary, fontWeight: '600' },
   smallBtn: { paddingHorizontal: 14, height: 32, borderRadius: 16, justifyContent: 'center', borderWidth: 1 },
-  suspendBtn: { borderColor: '#D93025' },
-  suspendText: { color: '#D93025', fontWeight: '700', fontSize: SIZES.smallSize },
+  suspendBtn: { borderColor: COLORS.destructive },
+  suspendText: { color: COLORS.destructive, fontWeight: '700', fontSize: SIZES.smallSize },
   liftBtn: { borderColor: COLORS.primary },
   liftText: { color: COLORS.primary, fontWeight: '700', fontSize: SIZES.smallSize },
   resolveBtn: {

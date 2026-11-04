@@ -240,8 +240,8 @@ const styles = StyleSheet.create({
   approveBtn: { backgroundColor: '#1E8E3E' },
   approveText: { color: COLORS.white, fontSize: 15, fontWeight: '700' },
   approveInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  rejectBtn: { backgroundColor: COLORS.white, borderWidth: 1, borderColor: '#D93025' },
-  rejectText: { color: '#D93025', fontSize: 15, fontWeight: '700' },
+  rejectBtn: { backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.destructive },
+  rejectText: { color: COLORS.destructive, fontSize: 15, fontWeight: '700' },
   viewer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center' },
   viewerImage: { width: '100%', height: '80%' },
   viewerHint: { color: '#FFFFFF', marginTop: 12, fontSize: SIZES.smallSize },
@@ -263,5 +263,5 @@ const styles = StyleSheet.create({
   sheetActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
   cancelBtn: { backgroundColor: COLORS.backgroundSecondary },
   cancelText: { color: COLORS.text, fontWeight: '600', fontSize: SIZES.captionSize },
-  dangerBtn: { backgroundColor: '#D93025' },
+  dangerBtn: { backgroundColor: COLORS.destructive },
 });
