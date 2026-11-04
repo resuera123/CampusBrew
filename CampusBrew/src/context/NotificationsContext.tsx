@@ -74,8 +74,8 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as
         { orderId?: string; type?: string; channel?: string } | undefined;
-      // A dasher application decision opens the customer's profile.
-      if (data?.type === 'application') {
+      // A dasher application or verification decision opens the customer's profile.
+      if (data?.type === 'application' || data?.type === 'verification') {
         navigate('CustomerTabs', { screen: 'Profile' });
         return;
       }

@@ -8,12 +8,17 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Switch,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { ShopService } from '../../services/ShopService';
+import { pickPhoto } from '../../utils/photos';
+
+// Shop photos travel with every shop list, so they're kept small.
+const SHOP_PHOTO_SIDE = 600;
 
 export default function EditShopProfileScreen({ route, navigation }: any) {
   const { token } = useAuth();
@@ -31,6 +36,20 @@ export default function EditShopProfileScreen({ route, navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [processingPhoto, setProcessingPhoto] = useState(false);
+
+  const choosePhoto = async (source: 'camera' | 'library') => {
+    setError(null);
+    try {
+      setProcessingPhoto(true);
+      const uri = await pickPhoto(source, 'back', SHOP_PHOTO_SIDE);
+      if (uri) setShopImage(uri);
+    } catch (e: any) {
+      setError(e.message || 'Could not add the photo');
+    } finally {
+      setProcessingPhoto(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -79,7 +98,8 @@ export default function EditShopProfileScreen({ route, navigation }: any) {
           shopName: shopName.trim(),
           description: description.trim() || undefined,
           location: location.trim() || undefined,
-          shopImage: shopImage.trim() || undefined,
+          // An empty string clears the photo.
+          shopImage: shopImage,
           estimatedPrepTime: estimatedPrepTime.trim() || undefined,
           operatingHours:
             openTime || closeTime ? { openTime: openTime.trim(), closeTime: closeTime.trim() } : undefined,
@@ -123,7 +143,37 @@ export default function EditShopProfileScreen({ route, navigation }: any) {
         <Field label="Shop Name *" value={shopName} onChangeText={setShopName} />
         <Field label="Description" value={description} onChangeText={setDescription} multiline />
         <Field label="Location" value={location} onChangeText={setLocation} />
-        <Field label="Shop Image URL" value={shopImage} onChangeText={setShopImage} placeholder="https://..." />
+        <Text style={styles.photoLabel}>Shop Photo</Text>
+        <View style={styles.photoRow}>
+          <View style={styles.photoBox}>
+            {processingPhoto ? (
+              <ActivityIndicator color={COLORS.primary} />
+            ) : shopImage ? (
+              <Image source={{ uri: shopImage }} style={styles.photo} />
+            ) : (
+              <Ionicons name="storefront-outline" size={30} color={COLORS.textSecondary} />
+            )}
+          </View>
+          <View style={{ flex: 1, gap: 8 }}>
+            <Text style={styles.photoHint}>Customers see this on your shop card. A clear photo of your stall or drinks works best.</Text>
+            <View style={styles.photoButtons}>
+              <TouchableOpacity style={styles.photoBtn} onPress={() => choosePhoto('camera')} disabled={processingPhoto}>
+                <Ionicons name="camera-outline" size={16} color={COLORS.primary} />
+                <Text style={styles.photoBtnText}>Take photo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.photoBtn} onPress={() => choosePhoto('library')} disabled={processingPhoto}>
+                <Ionicons name="images-outline" size={16} color={COLORS.primary} />
+                <Text style={styles.photoBtnText}>Upload</Text>
+              </TouchableOpacity>
+              {!!shopImage && (
+                <TouchableOpacity style={[styles.photoBtn, styles.photoBtnRemove]} onPress={() => setShopImage('')} disabled={processingPhoto}>
+                  <Ionicons name="trash-outline" size={16} color="#D93025" />
+                  <Text style={[styles.photoBtnText, { color: '#D93025' }]}>Remove</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
         <Field
           label="Estimated Prep Time"
           value={estimatedPrepTime}
@@ -159,7 +209,7 @@ export default function EditShopProfileScreen({ route, navigation }: any) {
         </View>
       </ScrollView>
 
-      <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
+      <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving || processingPhoto}>
         {saving
           ? <ActivityIndicator color={COLORS.white} />
           : <Text style={styles.saveBtnText}>Save Changes</Text>}
@@ -189,6 +239,15 @@ function Field({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  photoLabel: { fontSize: SIZES.captionSize, fontWeight: '600', color: COLORS.text, marginBottom: 6 },
+  photoRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  photoBox: { width: 88, height: 88, borderRadius: 10, backgroundColor: COLORS.backgroundSecondary, justifyContent: 'center', alignItems: 'center', overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border },
+  photo: { width: '100%', height: '100%' },
+  photoHint: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, lineHeight: 17 },
+  photoButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  photoBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, borderWidth: 1, borderColor: COLORS.primary },
+  photoBtnRemove: { borderColor: '#D93025' },
+  photoBtnText: { fontSize: SIZES.smallSize, color: COLORS.primary, fontWeight: '600' },
   topBar: {
     height: 56,
     backgroundColor: COLORS.background,

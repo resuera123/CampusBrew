@@ -17,7 +17,7 @@ import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { AdminService, AdminApplication } from '../../services/AdminService';
-import { InfoRow, StatusChip, formatDate } from './adminUi';
+import { InfoRow, StatusChip, RefTag, ReappliedBadge, formatDate, refOf } from './adminUi';
 
 /** One dasher application: details, photos (tap to enlarge), approve or reject with a reason. */
 export default function AdminApplicationDetailScreen({ route, navigation }: any) {
@@ -99,6 +99,7 @@ export default function AdminApplicationDetailScreen({ route, navigation }: any)
           <ScrollView contentContainerStyle={styles.content}>
             <View style={styles.headRow}>
               <View style={{ flex: 1 }}>
+                <RefTag value={refOf(app)} />
                 <Text style={styles.name}>{app.fullName}</Text>
                 <Text style={styles.meta}>Applied {formatDate(app.createdAt)}</Text>
               </View>
@@ -171,7 +172,12 @@ export default function AdminApplicationDetailScreen({ route, navigation }: any)
                 <Text style={styles.rejectText}>Reject</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.btn, styles.approveBtn]} onPress={approve} disabled={busy}>
-                {busy ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.approveText}>Approve</Text>}
+                {busy ? <ActivityIndicator color={COLORS.white} /> : (
+                  <View style={styles.approveInner}>
+                    <Text style={styles.approveText}>Approve</Text>
+                    {app.reapplied && <ReappliedBadge />}
+                  </View>
+                )}
               </TouchableOpacity>
             </View>
           )}
@@ -253,6 +259,7 @@ const styles = StyleSheet.create({
   btn: { flex: 1, height: SIZES.buttonHeight, borderRadius: SIZES.buttonBorderRadius, justifyContent: 'center', alignItems: 'center' },
   approveBtn: { backgroundColor: '#1E8E3E' },
   approveText: { color: COLORS.white, fontSize: 15, fontWeight: '700' },
+  approveInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rejectBtn: { backgroundColor: COLORS.white, borderWidth: 1, borderColor: '#D93025' },
   rejectText: { color: '#D93025', fontSize: 15, fontWeight: '700' },
   viewer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center' },

@@ -16,10 +16,17 @@ import { useAuth } from '../../context/AuthContext';
 import { SalesReportService, SalesReport, ReportRange } from '../../services/SalesReportService';
 
 /**
- * v2.0 FR-4.6 — daily / weekly sales report: totals vs the period before, sales
- * by hour or day, GCash vs COD, top items, cancellations and the delivered orders.
+ * v2.0 FR-4.6 — daily / weekly / monthly / annual sales report: totals vs the
+ * period before, sales by hour, day or month, GCash vs COD, top items, cancellations and the delivered orders.
  * Money is the drinks subtotal (delivery fees and tips go to the dasher).
  */
+const RANGES: { value: ReportRange; label: string; current: string; before: string; chart: string }[] = [
+  { value: 'day', label: 'Daily', current: 'Today', before: 'the day before', chart: 'Sales by hour' },
+  { value: 'week', label: 'Weekly', current: 'This week', before: 'the week before', chart: 'Sales by day' },
+  { value: 'month', label: 'Monthly', current: 'This month', before: 'the month before', chart: 'Sales by day' },
+  { value: 'year', label: 'Annual', current: 'This year', before: 'the year before', chart: 'Sales by month' },
+];
+
 export default function SalesReportScreen({ navigation }: any) {
   const { token } = useAuth();
   const [range, setRange] = useState<ReportRange>('day');
@@ -56,7 +63,7 @@ export default function SalesReportScreen({ navigation }: any) {
     setOffset((o) => Math.max(0, o + by));
   };
 
-  const prevName = range === 'day' ? 'the day before' : 'the week before';
+  const info = RANGES.find((r) => r.value === range)!;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -70,15 +77,13 @@ export default function SalesReportScreen({ navigation }: any) {
 
       <View style={styles.controls}>
         <View style={styles.toggle}>
-          {(['day', 'week'] as ReportRange[]).map((r) => (
+          {RANGES.map((r) => (
             <TouchableOpacity
-              key={r}
-              style={[styles.toggleBtn, range === r && styles.toggleBtnOn]}
-              onPress={() => changeRange(r)}
+              key={r.value}
+              style={[styles.toggleBtn, range === r.value && styles.toggleBtnOn]}
+              onPress={() => changeRange(r.value)}
             >
-              <Text style={[styles.toggleText, range === r && styles.toggleTextOn]}>
-                {r === 'day' ? 'Daily' : 'Weekly'}
-              </Text>
+              <Text style={[styles.toggleText, range === r.value && styles.toggleTextOn]}>{r.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -86,7 +91,7 @@ export default function SalesReportScreen({ navigation }: any) {
           <TouchableOpacity onPress={() => step(1)} hitSlop={8} style={styles.stepBtn}>
             <Ionicons name="chevron-back" size={20} color={COLORS.text} />
           </TouchableOpacity>
-          <Text style={styles.period}>{report?.label ?? (range === 'day' ? 'Today' : 'This week')}</Text>
+          <Text style={styles.period}>{report?.label ?? info.current}</Text>
           <TouchableOpacity onPress={() => step(-1)} hitSlop={8} style={styles.stepBtn} disabled={offset === 0}>
             <Ionicons name="chevron-forward" size={20} color={offset === 0 ? COLORS.border : COLORS.text} />
           </TouchableOpacity>
@@ -124,10 +129,10 @@ export default function SalesReportScreen({ navigation }: any) {
                   </Text>
                 </View>
               </View>
-              <Text style={styles.compareNote}>Arrows compare with {prevName}.</Text>
+              <Text style={styles.compareNote}>Arrows compare with {info.before}.</Text>
 
-              <Card title={range === 'day' ? 'Sales by hour' : 'Sales by day'}>
-                <BarChart buckets={report.buckets} />
+              <Card title={info.chart}>
+                <BarChart buckets={report.buckets} dayOfMonth={range === 'month'} />
                 <Text style={styles.peak}>
                   {report.peakLabel ? `Busiest: ${report.peakLabel}` : 'No sales in this period yet.'}
                 </Text>
@@ -167,7 +172,10 @@ export default function SalesReportScreen({ navigation }: any) {
                 )}
               </Card>
 
-              <Card title={`Delivered orders (${report.orderList.length})`}>
+              <Card title={`Delivered orders (${report.orders})`}>
+                {report.orderList.length < report.orders && (
+                  <Text style={styles.muted}>Showing the latest {report.orderList.length}.</Text>
+                )}
                 {report.orderList.length === 0 ? (
                   <Text style={styles.muted}>No delivered orders in this period.</Text>
                 ) : (
@@ -220,11 +228,13 @@ function Tile({ label, value, now, before }: { label: string; value: string; now
 }
 
 /** Single-series bars: one color, rounded tops, faint grid, tap a bar to read it. */
-function BarChart({ buckets }: { buckets: SalesReport['buckets'] }) {
+function BarChart({ buckets, dayOfMonth }: { buckets: SalesReport['buckets']; dayOfMonth?: boolean }) {
   const [selected, setSelected] = useState<number | null>(null);
   const max = Math.max(0, ...buckets.map((b) => b.sales));
   const top = niceMax(max);
-  const many = buckets.length > 8;
+  const many = buckets.length > 12;
+  // Label every bar up to a year's 12 months, every 3rd hour, every 5th day of a month.
+  const labelEvery = buckets.length <= 12 ? 1 : buckets.length <= 24 ? 3 : 5;
   const shown = selected != null ? buckets[selected] : null;
 
   useEffect(() => { setSelected(null); }, [buckets]);
@@ -232,7 +242,7 @@ function BarChart({ buckets }: { buckets: SalesReport['buckets'] }) {
   return (
     <View>
       <Text style={styles.readout}>
-        {shown ? `${shown.label}: ${peso(shown.sales)} · ${shown.orders} order${shown.orders === 1 ? '' : 's'}` : 'Tap a bar for details'}
+        {shown ? `${dayOfMonth ? `Day ${shown.label}` : shown.label}: ${peso(shown.sales)} · ${shown.orders} order${shown.orders === 1 ? '' : 's'}` : 'Tap a bar for details'}
       </Text>
       <View style={styles.chart}>
         <View style={styles.yAxis}>
@@ -259,7 +269,7 @@ function BarChart({ buckets }: { buckets: SalesReport['buckets'] }) {
                     <View
                       style={[
                         styles.bar,
-                        { height: `${Math.max(h, 2)}%`, maxWidth: many ? 12 : 28 },
+                        { height: `${Math.max(h, 2)}%`, maxWidth: buckets.length > 20 ? 8 : many ? 12 : 28 },
                         dim && { opacity: 0.35 },
                       ]}
                     />
@@ -273,7 +283,7 @@ function BarChart({ buckets }: { buckets: SalesReport['buckets'] }) {
       <View style={styles.xAxis}>
         {buckets.map((b, i) => (
           <Text key={b.label + i} style={[styles.axisText, styles.xLabel]}>
-            {!many || i % 3 === 0 ? b.label : ''}
+            {i % labelEvery === 0 ? b.label : ''}
           </Text>
         ))}
       </View>
@@ -357,9 +367,10 @@ function niceMax(v: number) {
 
 function formatTime(iso: string, range: ReportRange) {
   const d = new Date(iso);
-  return range === 'day'
-    ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-    : d.toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+  if (range === 'day') return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (range === 'week') return d.toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+  if (range === 'month') return d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
 const styles = StyleSheet.create({
@@ -386,7 +397,7 @@ const styles = StyleSheet.create({
   toggle: { flexDirection: 'row', backgroundColor: COLORS.backgroundSecondary, borderRadius: 18, padding: 3 },
   toggleBtn: { flex: 1, paddingVertical: 7, borderRadius: 15, alignItems: 'center' },
   toggleBtnOn: { backgroundColor: COLORS.primary },
-  toggleText: { fontSize: SIZES.captionSize, fontWeight: '600', color: COLORS.text },
+  toggleText: { fontSize: SIZES.smallSize, fontWeight: '600', color: COLORS.text },
   toggleTextOn: { color: COLORS.white },
   stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   stepBtn: { padding: 4 },

@@ -27,6 +27,12 @@ export interface DasherApplicationInput {
   corPhoto: string;
 }
 
+/** The applicant's own last application (photos included), used to prefill a reapplication. */
+export interface PreviousDasherApplication extends DasherApplicationInput {
+  status: ApplicationStatus;
+  rejectionReason?: string | null;
+}
+
 function authHeaders(token: string) {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 }
@@ -51,6 +57,13 @@ export const DasherApplicationService = {
       body: JSON.stringify(input),
     });
     return parse(res, 'Could not submit your application');
+  },
+
+  /** Null when they've never applied. */
+  async latest(token: string): Promise<PreviousDasherApplication | null> {
+    const res = await fetch(`${API_BASE_URL}/api/users/me/dasher-application/latest`, { headers: authHeaders(token) });
+    const last = await parse<Partial<PreviousDasherApplication>>(res, 'Could not load your last application');
+    return last && last.status ? (last as PreviousDasherApplication) : null;
   },
 
   /** Returns a fresh session for the other side. */

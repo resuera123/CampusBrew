@@ -1,7 +1,7 @@
-// v2.0 FR-4.6 — the shop's daily / weekly sales report.
+// v2.0 FR-4.6 — the shop's daily / weekly / monthly / annual sales report.
 import { API_BASE_URL } from '../constants/api';
 
-export type ReportRange = 'day' | 'week';
+export type ReportRange = 'day' | 'week' | 'month' | 'year';
 
 export interface SalesReport {
   range: ReportRange;

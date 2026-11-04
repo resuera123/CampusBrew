@@ -5,13 +5,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
-import { AdminService, AdminApplication, AdminShopApplication } from '../../services/AdminService';
+import {
+  AdminService, AdminApplication, AdminShopApplication, AdminVerification,
+} from '../../services/AdminService';
 import type { ApplicationStatus } from '../../services/DasherApplicationService';
-import { FilterTabs, StatusChip, formatDate } from './adminUi';
+import {
+  FilterTabs, StatusChip, SearchBar, RefTag, ReappliedBadge, formatDate, matches, refOf,
+} from './adminUi';
 
-type Kind = 'DASHER' | 'SHOP';
+type Kind = 'USER' | 'DASHER' | 'SHOP';
 
 const KINDS: { label: string; value: Kind }[] = [
+  { label: 'Users', value: 'USER' },
   { label: 'Dashers', value: 'DASHER' },
   { label: 'Shops', value: 'SHOP' },
 ];
@@ -22,13 +27,18 @@ const FILTERS: { label: string; value: ApplicationStatus }[] = [
   { label: 'Rejected', value: 'REJECTED' },
 ];
 
-/** Admin home: dasher and shop applications, pending ones oldest first. */
+const NOUN: Record<Kind, string> = { USER: 'verification', DASHER: 'dasher', SHOP: 'shop' };
+const ICON: Record<Kind, any> = { USER: 'id-card-outline', DASHER: 'bicycle-outline', SHOP: 'storefront-outline' };
+
+/** Admin home: user verifications, dasher and shop applications, pending ones oldest first. */
 export default function AdminApplicationsScreen({ navigation }: any) {
   const { token } = useAuth();
-  const [kind, setKind] = useState<Kind>('DASHER');
+  const [kind, setKind] = useState<Kind>('USER');
   const [filter, setFilter] = useState<ApplicationStatus>('PENDING');
+  const [users, setUsers] = useState<AdminVerification[]>([]);
   const [dashers, setDashers] = useState<AdminApplication[]>([]);
   const [shops, setShops] = useState<AdminShopApplication[]>([]);
+  const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +46,9 @@ export default function AdminApplicationsScreen({ navigation }: any) {
   const load = useCallback(async () => {
     if (!token) return;
     try {
-      if (kind === 'DASHER') {
+      if (kind === 'USER') {
+        setUsers(await AdminService.verifications(filter, token));
+      } else if (kind === 'DASHER') {
         setDashers(await AdminService.applications(filter, token));
       } else {
         setShops(await AdminService.shopApplications(filter, token));
@@ -52,8 +64,29 @@ export default function AdminApplicationsScreen({ navigation }: any) {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const count = kind === 'DASHER' ? dashers.length : shops.length;
-  const noun = kind === 'DASHER' ? 'dasher' : 'shop';
+  const shownUsers = users.filter((a) => matches(query, refOf(a), a.fullName, a.email, a.studentId, a.schoolEmail));
+  const shownDashers = dashers.filter((a) => matches(query, refOf(a), a.fullName, a.email, a.studentId, a.course));
+  const shownShops = shops.filter((a) => matches(query, refOf(a), a.stallName, a.operatorName, a.accountName, a.email));
+  const total = kind === 'USER' ? users.length : kind === 'DASHER' ? dashers.length : shops.length;
+  const count = kind === 'USER' ? shownUsers.length : kind === 'DASHER' ? shownDashers.length : shownShops.length;
+  const noun = NOUN[kind];
+
+  const Row = ({ id, refNo, reapplied, status, title, lines, onPress }: {
+    id: string; refNo?: string | null; reapplied?: boolean; status: string; title: string; lines: string[]; onPress: () => void;
+  }) => (
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
+      <View style={{ flex: 1 }}>
+        <RefTag value={refOf({ id, ref: refNo })} />
+        <Text style={styles.name}>{title}</Text>
+        {lines.map((l) => <Text key={l} style={styles.meta}>{l}</Text>)}
+      </View>
+      <View style={styles.chips}>
+        {reapplied && <ReappliedBadge />}
+        <StatusChip status={status} />
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={COLORS.textSecondary} />
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -72,12 +105,14 @@ export default function AdminApplicationsScreen({ navigation }: any) {
         </View>
       </View>
       <FilterTabs options={FILTERS} value={filter} onChange={(v) => { setLoading(true); setFilter(v); }} />
+      <SearchBar value={query} onChange={setQuery} placeholder={`Search ${noun}s by ID or name`} />
 
       {loading ? (
         <View style={styles.center}><ActivityIndicator color={COLORS.primary} /></View>
       ) : (
         <ScrollView
           contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={COLORS.primary} />
           }
@@ -85,51 +120,54 @@ export default function AdminApplicationsScreen({ navigation }: any) {
           {error && <Text style={styles.error}>{error}</Text>}
           {!error && count === 0 && (
             <View style={styles.empty}>
-              <Ionicons name={kind === 'DASHER' ? 'bicycle-outline' : 'storefront-outline'} size={36} color={COLORS.textSecondary} />
+              <Ionicons name={ICON[kind]} size={36} color={COLORS.textSecondary} />
               <Text style={styles.emptyText}>
-                {filter === 'PENDING'
-                  ? `No ${noun} applications waiting for review.`
-                  : `No ${filter.toLowerCase()} ${noun} applications.`}
+                {total > 0
+                  ? `No ${noun}s match “${query}”.`
+                  : filter === 'PENDING'
+                    ? `No ${noun} ${kind === 'USER' ? 'requests' : 'applications'} waiting for review.`
+                    : `No ${filter.toLowerCase()} ${noun} ${kind === 'USER' ? 'requests' : 'applications'}.`}
               </Text>
             </View>
           )}
 
-          {kind === 'DASHER' && dashers.map((a) => (
-            <TouchableOpacity
+          {kind === 'USER' && shownUsers.map((a) => (
+            <Row
               key={a.id}
-              style={styles.card}
-              onPress={() => navigation.navigate('AdminApplicationDetail', { id: a.id })}
-              activeOpacity={0.8}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{a.fullName ?? 'Applicant'}</Text>
-                <Text style={styles.meta}>
-                  {a.course} · Year {a.yearLevel} · {a.studentId ?? 'no student ID'}
-                </Text>
-                <Text style={styles.meta}>Applied {formatDate(a.createdAt)}</Text>
-              </View>
-              <StatusChip status={a.status} />
-              <Ionicons name="chevron-forward" size={18} color={COLORS.textSecondary} />
-            </TouchableOpacity>
+              id={a.id}
+              refNo={a.ref}
+              reapplied={a.reapplied}
+              status={a.status}
+              title={a.fullName ?? 'Customer'}
+              lines={[`${a.studentId} · ${a.schoolEmail}`, `Sent ${formatDate(a.createdAt)}`]}
+              onPress={() => navigation.navigate('AdminVerificationDetail', { id: a.id })}
+            />
           ))}
 
-          {kind === 'SHOP' && shops.map((a) => (
-            <TouchableOpacity
+          {kind === 'DASHER' && shownDashers.map((a) => (
+            <Row
               key={a.id}
-              style={styles.card}
+              id={a.id}
+              refNo={a.ref}
+              reapplied={a.reapplied}
+              status={a.status}
+              title={a.fullName ?? 'Applicant'}
+              lines={[`${a.course} · Year ${a.yearLevel} · ${a.studentId ?? 'no student ID'}`, `Applied ${formatDate(a.createdAt)}`]}
+              onPress={() => navigation.navigate('AdminApplicationDetail', { id: a.id })}
+            />
+          ))}
+
+          {kind === 'SHOP' && shownShops.map((a) => (
+            <Row
+              key={a.id}
+              id={a.id}
+              refNo={a.ref}
+              reapplied={a.reapplied}
+              status={a.status}
+              title={a.stallName}
+              lines={[a.location, `${a.operatorName} · Applied ${formatDate(a.createdAt)}`]}
               onPress={() => navigation.navigate('AdminShopApplicationDetail', { id: a.id })}
-              activeOpacity={0.8}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{a.stallName}</Text>
-                <Text style={styles.meta}>{a.location}</Text>
-                <Text style={styles.meta}>
-                  {a.operatorName} · Applied {formatDate(a.createdAt)}
-                </Text>
-              </View>
-              <StatusChip status={a.status} />
-              <Ionicons name="chevron-forward" size={18} color={COLORS.textSecondary} />
-            </TouchableOpacity>
+            />
           ))}
         </ScrollView>
       )}
@@ -150,7 +188,7 @@ const styles = StyleSheet.create({
   content: { padding: SIZES.screenPadding, paddingBottom: 32 },
   error: { color: '#D93025', marginBottom: 12 },
   empty: { alignItems: 'center', marginTop: 48, gap: 8 },
-  emptyText: { color: COLORS.textSecondary, fontSize: SIZES.captionSize },
+  emptyText: { color: COLORS.textSecondary, fontSize: SIZES.captionSize, textAlign: 'center' },
   card: {
     backgroundColor: COLORS.white,
     borderRadius: SIZES.cardRadius,
@@ -165,6 +203,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
+  chips: { alignItems: 'flex-end', gap: 4 },
   name: { fontSize: 15, fontWeight: '700', color: COLORS.text },
   meta: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, marginTop: 2 },
 });

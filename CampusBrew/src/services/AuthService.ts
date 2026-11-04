@@ -23,6 +23,16 @@ export interface AuthResponse {
   dasherApproved?: boolean;
 }
 
+/** Where the customer's CIT-U verification stands; the last request is kept so a rejected one can be resent. */
+export interface VerificationStatusInfo {
+  verificationStatus: 'UNVERIFIED' | 'PENDING' | 'VERIFIED';
+  applicationStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
+  rejectionReason: string | null;
+  schoolEmail: string | null;
+  studentId: string | null;
+  appliedAt: string | null;
+}
+
 // Safe JSON parser — handles empty or non-JSON responses
 async function safeJson(res: Response): Promise<any> {
   const text = await res.text();
@@ -119,7 +129,8 @@ export const AuthService = {
     return json;
   },
 
-  async verifyAccount(schoolEmail: string, otp: string, studentId: string, token: string): Promise<{ message: string }> {
+  /** Sends the request to an admin; the account is PENDING until they approve. */
+  async verifyAccount(schoolEmail: string, otp: string, studentId: string, token: string): Promise<VerificationStatusInfo> {
     const res = await fetch(`${API_BASE_URL}/api/verification/verify`, {
       method: 'POST',
       headers: {
@@ -130,6 +141,15 @@ export const AuthService = {
     });
     const json = await safeJson(res);
     if (!res.ok) throw new Error(json.error || 'Verification failed');
+    return json;
+  },
+
+  async verificationStatus(token: string): Promise<VerificationStatusInfo> {
+    const res = await fetch(`${API_BASE_URL}/api/verification/status`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    const json = await safeJson(res);
+    if (!res.ok) throw new Error(json.error || 'Could not load your verification');
     return json;
   },
 };

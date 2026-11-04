@@ -6,14 +6,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
-import { AuthService } from '../../services/AuthService';
+import { AuthService, VerificationStatusInfo } from '../../services/AuthService';
 import { showAlert } from '../../components/AppAlert';
 
-export default function AccountVerificationScreen({ navigation }: any) {
+export default function AccountVerificationScreen({ navigation, route }: any) {
   const { token, updateUser } = useAuth();
-  const [citEmail, setCitEmail] = useState('');
+  // A rejected request comes back prefilled; only the part that was wrong needs changing.
+  const previous: VerificationStatusInfo | undefined = route?.params?.previous ?? undefined;
+  const rejected = previous?.applicationStatus === 'REJECTED';
+  const [citEmail, setCitEmail] = useState(rejected ? previous?.schoolEmail ?? '' : '');
   const [emailOtp, setEmailOtp] = useState('');
-  const [studentId, setStudentId] = useState('');
+  const [studentId, setStudentId] = useState(rejected ? previous?.studentId ?? '' : '');
   const [sendingOtp, setSendingOtp] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -40,10 +43,13 @@ export default function AccountVerificationScreen({ navigation }: any) {
     }
     setLoading(true);
     try {
-      await AuthService.verifyAccount(citEmail, emailOtp, studentId, token!);
-      // Update local user state immediately — no logout needed
-      await updateUser({ verificationStatus: 'VERIFIED' });
-      navigation.navigate('VerifiedSuccess');
+      const result = await AuthService.verifyAccount(citEmail, emailOtp, studentId, token!);
+      await updateUser({ verificationStatus: result.verificationStatus });
+      showAlert(
+        'Sent for review',
+        "Your details checked out. An admin will confirm your student ID soon, and we'll notify you once you're verified.",
+        [{ text: 'OK', onPress: () => navigation.goBack() }],
+      );
     } catch (error: any) {
       showAlert('Verification Failed', error.message);
     } finally {
@@ -64,8 +70,16 @@ export default function AccountVerificationScreen({ navigation }: any) {
 
         <ScrollView contentContainerStyle={styles.content}>
           <Text style={styles.description}>
-            Unlock Cash on Delivery by verifying your CIT-U student status
+            Unlock Cash on Delivery by verifying your CIT-U student status. An admin reviews each request.
           </Text>
+
+          {rejected && (
+            <View style={styles.rejectedCard}>
+              <Text style={styles.rejectedTitle}>Your last request wasn't approved</Text>
+              {!!previous?.rejectionReason && <Text style={styles.rejectedText}>Reason: {previous.rejectionReason}</Text>}
+              <Text style={styles.rejectedText}>We kept your details. Fix what was wrong, get a new code, and send it again.</Text>
+            </View>
+          )}
 
           <Text style={styles.label}>CIT-U Email</Text>
           <View style={styles.inputRow}>
@@ -108,7 +122,10 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   topBarTitle: { fontSize: 18, fontWeight: '600', color: '#000000' },
   content: { paddingHorizontal: 16, paddingTop: 32, paddingBottom: 40 },
-  description: { fontSize: 16, color: '#3A3A3A', marginBottom: 32 },
+  description: { fontSize: 16, color: '#3A3A3A', marginBottom: 24 },
+  rejectedCard: { backgroundColor: '#FCE8E8', borderRadius: 12, padding: 12, marginBottom: 8 },
+  rejectedTitle: { fontSize: 14, fontWeight: '600', color: '#D93025' },
+  rejectedText: { fontSize: 13, color: '#3A3A3A', marginTop: 4 },
   label: { fontSize: 14, fontWeight: '500', color: '#000000', marginBottom: 8, marginTop: 16 },
   caption: { fontSize: 12, fontWeight: '500', color: '#3A3A3A', marginTop: 4 },
   inputRow: { flexDirection: 'row', gap: 8 },

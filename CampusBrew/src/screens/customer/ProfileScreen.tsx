@@ -8,11 +8,15 @@ import ConfirmDialog, { useConfirm } from '../../components/ConfirmDialog';
 import MyRatingCard from '../../components/MyRatingCard';
 import { DeliveryService, DeliveryPersonnelProfile } from '../../services/DeliveryService';
 import { DasherApplicationService, DasherStatus } from '../../services/DasherApplicationService';
+import { AuthService, VerificationStatusInfo } from '../../services/AuthService';
 import { COLORS, SIZES } from '../../constants/theme';
 
 export default function ProfileScreen({ navigation }: any) {
-  const { user, token, logout, setSession } = useAuth();
-  const isVerified = user?.verificationStatus === 'VERIFIED';
+  const { user, token, logout, setSession, updateUser } = useAuth();
+  const [verification, setVerification] = useState<VerificationStatusInfo | null>(null);
+  const verificationStatus = verification?.verificationStatus ?? user?.verificationStatus;
+  const isVerified = verificationStatus === 'VERIFIED';
+  const isPending = verificationStatus === 'PENDING';
   const isDP = user?.role === 'DELIVERY_PERSONNEL';
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [dpProfile, setDpProfile] = useState<DeliveryPersonnelProfile | null>(null);
@@ -25,11 +29,19 @@ export default function ProfileScreen({ navigation }: any) {
   useFocusEffect(
     useCallback(() => {
       if (!token) return;
+      AuthService.verificationStatus(token).then((v) => {
+        setVerification(v);
+        // An admin may have reviewed it since login; keep the saved session in step (COD checks it).
+        if (v.verificationStatus !== user?.verificationStatus) {
+          updateUser({ verificationStatus: v.verificationStatus });
+        }
+      }).catch(() => {});
       if (isDP) {
         DeliveryService.getMyProfile(token).then(setDpProfile).catch(() => {});
       } else {
         DasherApplicationService.status(token).then(setDasher).catch(() => {});
       }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isDP, token]),
   );
 
@@ -83,17 +95,32 @@ export default function ProfileScreen({ navigation }: any) {
         <View style={styles.verificationSection}>
           <View style={styles.verificationRow}>
             <Text style={styles.verificationLabel}>Verification Status</Text>
-            <View style={[styles.badge, isVerified ? styles.badgeGold : styles.badgeGray]}>
+            <View style={[styles.badge, isVerified ? styles.badgeGold : isPending ? styles.badgePending : styles.badgeGray]}>
               <Text style={[styles.badgeText, isVerified ? styles.badgeTextGold : styles.badgeTextGray]}>
-                {isVerified ? 'Verified' : 'Unverified'}
+                {isVerified ? 'Verified' : isPending ? 'Under review' : 'Unverified'}
               </Text>
             </View>
           </View>
-          <TouchableOpacity onPress={() => navigation.navigate('AccountVerification')}>
-            <Text style={styles.verifyLink}>
-              {isVerified ? 'Re-verify account →' : 'Verify account to unlock COD →'}
+          {isPending && (
+            <Text style={styles.verifyNote}>
+              An admin is checking your student ID. We'll notify you once it's done.
             </Text>
-          </TouchableOpacity>
+          )}
+          {!isVerified && !isPending && verification?.applicationStatus === 'REJECTED' && (
+            <View style={styles.rejectedCard}>
+              <Text style={styles.rejectedTitle}>Your verification wasn't approved</Text>
+              {!!verification.rejectionReason && (
+                <Text style={styles.rejectedText}>Reason: {verification.rejectionReason}</Text>
+              )}
+            </View>
+          )}
+          {!isVerified && !isPending && (
+            <TouchableOpacity onPress={() => navigation.navigate('AccountVerification', { previous: verification })}>
+              <Text style={styles.verifyLink}>
+                {verification?.applicationStatus === 'REJECTED' ? 'Verify again →' : 'Verify account to unlock COD →'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {isDP ? (
@@ -122,6 +149,7 @@ export default function ProfileScreen({ navigation }: any) {
         )}
 
         <TouchableOpacity style={[styles.outlinedButton, { marginTop: 16 }]} onPress={() => navigation.navigate('EditProfile')} activeOpacity={0.7}>
+          <Ionicons name="create-outline" size={20} color="#94353E" style={{ marginRight: 8 }} />
           <Text style={styles.outlinedButtonText}>Edit Profile</Text>
         </TouchableOpacity>
 
@@ -246,9 +274,11 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
   badgeGold: { backgroundColor: '#F4C600' },
   badgeGray: { backgroundColor: '#E8E8E8' },
+  badgePending: { backgroundColor: '#FFF1C2' },
   badgeText: { fontSize: 12, fontWeight: '600' },
   badgeTextGold: { color: '#FFFFFF' },
   badgeTextGray: { color: '#3A3A3A' },
+  verifyNote: { fontSize: 13, color: '#3A3A3A' },
   verifyLink: { fontSize: 14, fontWeight: '600', color: COLORS.primary },
   primaryButton: { backgroundColor: COLORS.primary, borderRadius: SIZES.buttonBorderRadius, height: 48, justifyContent: 'center', alignItems: 'center', flexDirection: 'row' },
   primaryButtonText: { fontSize: 16, fontWeight: '600', color: COLORS.white },

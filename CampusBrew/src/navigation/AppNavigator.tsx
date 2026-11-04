@@ -7,6 +7,7 @@ import LoginScreen from '../screens/auth/LoginScreen';
 import SignUpScreen from '../screens/auth/SignUpScreen';
 import OTPVerificationScreen from '../screens/auth/OTPVerificationScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+import ContactSupportScreen from '../screens/auth/ContactSupportScreen';
 import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 
 // Account verification screens
@@ -55,6 +56,9 @@ import AdminApplicationDetailScreen from '../screens/admin/AdminApplicationDetai
 import AdminShopApplicationDetailScreen from '../screens/admin/AdminShopApplicationDetailScreen';
 import AdminReportsScreen from '../screens/admin/AdminReportsScreen';
 import AdminReportDetailScreen from '../screens/admin/AdminReportDetailScreen';
+import AdminVerificationDetailScreen from '../screens/admin/AdminVerificationDetailScreen';
+import AdminSupportDetailScreen from '../screens/admin/AdminSupportDetailScreen';
+import AdminSuspendedScreen from '../screens/admin/AdminSuspendedScreen';
 import AdminProfileScreen from '../screens/admin/AdminProfileScreen';
 
 // Shared screens
@@ -77,6 +81,7 @@ export function AuthStack() {
       <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+      <Stack.Screen name="ContactSupport" component={ContactSupportScreen} />
     </Stack.Navigator>
   );
 }
@@ -200,6 +205,7 @@ function AdminHomeTabs() {
     >
       <Tab.Screen name="AdminApplications" component={AdminApplicationsScreen} />
       <Tab.Screen name="AdminReports" component={AdminReportsScreen} />
+      <Tab.Screen name="AdminSuspended" component={AdminSuspendedScreen} />
       <Tab.Screen name="AdminProfile" component={AdminProfileScreen} />
     </Tab.Navigator>
   );
@@ -212,6 +218,8 @@ export function AdminStack() {
       <Stack.Screen name="AdminApplicationDetail" component={AdminApplicationDetailScreen} />
       <Stack.Screen name="AdminShopApplicationDetail" component={AdminShopApplicationDetailScreen} />
       <Stack.Screen name="AdminReportDetail" component={AdminReportDetailScreen} />
+      <Stack.Screen name="AdminVerificationDetail" component={AdminVerificationDetailScreen} />
+      <Stack.Screen name="AdminSupportDetail" component={AdminSupportDetailScreen} />
     </Stack.Navigator>
   );
 }

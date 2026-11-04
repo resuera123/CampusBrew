@@ -10,9 +10,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../constants/theme';
 import { useNotifications, Notification } from '../../context/NotificationsContext';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 export default function NotificationScreen({ navigation }: any) {
   const { notifications, markAllRead, clear } = useNotifications();
+  const { confirm, dialog } = useConfirm();
+
+  const confirmClear = async () => {
+    const ok = await confirm({
+      title: 'Clear all notifications?',
+      message: `This removes all ${notifications.length} notification${notifications.length === 1 ? '' : 's'} from the list. It can't be undone.`,
+      confirmLabel: 'Clear all',
+      destructive: true,
+      icon: 'trash-outline',
+    });
+    if (ok) clear();
+  };
 
   // Mark all read when the screen opens.
   useEffect(() => {
@@ -34,7 +47,7 @@ export default function NotificationScreen({ navigation }: any) {
         </TouchableOpacity>
         <Text style={styles.topBarTitle}>Notifications</Text>
         {notifications.length > 0 ? (
-          <TouchableOpacity style={styles.topBarIcon} onPress={clear}>
+          <TouchableOpacity style={styles.topBarIcon} onPress={confirmClear}>
             <Ionicons name="trash-outline" size={20} color={COLORS.textSecondary} />
           </TouchableOpacity>
         ) : (
@@ -57,6 +70,7 @@ export default function NotificationScreen({ navigation }: any) {
           ))}
         </ScrollView>
       )}
+      {dialog}
     </SafeAreaView>
   );
 }

@@ -6,7 +6,7 @@ import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { AdminService, AdminReport } from '../../services/AdminService';
-import { InfoRow, StatusChip, formatDate } from './adminUi';
+import { InfoRow, StatusChip, RefTag, ReasonDialog, formatDate, refOf } from './adminUi';
 import { reportTitle } from './AdminReportsScreen';
 
 type Person = NonNullable<AdminReport['people']>[number];
@@ -19,6 +19,7 @@ export default function AdminReportDetailScreen({ route, navigation }: any) {
   const [report, setReport] = useState<AdminReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [suspendTarget, setSuspendTarget] = useState<Person | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -33,29 +34,37 @@ export default function AdminReportDetailScreen({ route, navigation }: any) {
 
   const toggleSuspension = async (p: Person) => {
     if (!token || !report) return;
-    const suspending = !p.suspended;
+    // Suspending asks for a reason in its own dialog; lifting is a plain confirm.
+    if (!p.suspended) {
+      setSuspendTarget(p);
+      return;
+    }
     const ok = await confirm({
-      title: suspending ? `Suspend ${p.name}?` : `Lift ${p.name}'s suspension?`,
-      message: suspending
-        ? "They'll be signed out and won't be able to log in until you lift it."
-        : 'They will be able to log in again.',
-      confirmLabel: suspending ? 'Suspend' : 'Lift suspension',
-      destructive: suspending,
-      icon: suspending ? 'ban-outline' : 'lock-open-outline',
+      title: `Lift ${p.name}'s suspension?`,
+      message: 'They will be able to log in again.',
+      confirmLabel: 'Lift suspension',
+      icon: 'lock-open-outline',
     });
     if (!ok) return;
     setBusy(p.userId);
     try {
-      if (suspending) {
-        await AdminService.suspend(p.userId, `From a ${report.type === 'CHAT' ? 'chat' : 'payment'} report`, token);
-      } else {
-        await AdminService.unsuspend(p.userId, token);
-      }
+      await AdminService.unsuspend(p.userId, token);
       await load();
     } catch (e: any) {
       notify('Could not update', e.message ?? 'Please try again.', { icon: 'alert-circle-outline' });
     } finally {
       setBusy(null);
+    }
+  };
+
+  const suspend = async (reason: string) => {
+    if (!token || !suspendTarget) return;
+    try {
+      await AdminService.suspend(suspendTarget.userId, reason, token);
+      setSuspendTarget(null);
+      await load();
+    } catch (e: any) {
+      notify('Could not suspend', e.message ?? 'Please try again.', { icon: 'alert-circle-outline' });
     }
   };
 
@@ -97,6 +106,7 @@ export default function AdminReportDetailScreen({ route, navigation }: any) {
           <ScrollView contentContainerStyle={styles.content}>
             <View style={styles.headRow}>
               <View style={{ flex: 1 }}>
+                <RefTag value={refOf(report)} />
                 <Text style={styles.name}>{reportTitle(report)}</Text>
                 <Text style={styles.meta}>
                   Reported by {report.reporterName ?? 'a user'} · {formatDate(report.createdAt)}
@@ -184,6 +194,17 @@ export default function AdminReportDetailScreen({ route, navigation }: any) {
           )}
         </>
       )}
+      <ReasonDialog
+        visible={suspendTarget != null}
+        title={`Suspend ${suspendTarget?.name ?? ''}?`}
+        message="They'll be signed out right away and can't log in until you lift it."
+        label="Reason for suspending (optional)"
+        placeholder="e.g. Abusive messages in an order chat"
+        confirmLabel="Suspend"
+        initialValue={report ? `From ${refOf(report)} (${report.type === 'CHAT' ? 'chat' : 'payment'} report)` : ''}
+        onCancel={() => setSuspendTarget(null)}
+        onConfirm={suspend}
+      />
       {dialog}
     </SafeAreaView>
   );

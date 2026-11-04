@@ -2,11 +2,15 @@ import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
 /**
- * Takes or picks a photo and returns it as a ~1024 px JPEG data URI (what the
- * application endpoints accept), or null if the user cancelled. Throws with a
- * readable message when permission is refused.
+ * Takes or picks a photo and returns it as a JPEG data URI (~1024 px by default,
+ * what the application endpoints accept), or null if the user cancelled. Throws
+ * with a readable message when permission is refused.
  */
-export async function pickPhoto(source: 'camera' | 'library', camera: 'front' | 'back' = 'back'): Promise<string | null> {
+export async function pickPhoto(
+  source: 'camera' | 'library',
+  camera: 'front' | 'back' = 'back',
+  maxSide = 1024,
+): Promise<string | null> {
   const permission = source === 'camera'
     ? await ImagePicker.requestCameraPermissionsAsync()
     : await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -24,7 +28,7 @@ export async function pickPhoto(source: 'camera' | 'library', camera: 'front' | 
   if (result.canceled || !result.assets?.[0]) return null;
 
   const asset = result.assets[0];
-  const resize = asset.width >= asset.height ? { width: 1024 } : { height: 1024 };
+  const resize = asset.width >= asset.height ? { width: maxSide } : { height: maxSide };
   const small = await manipulateAsync(asset.uri, [{ resize }], {
     compress: 0.6,
     format: SaveFormat.JPEG,

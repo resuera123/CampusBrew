@@ -24,6 +24,7 @@ const TAB_CONFIG: Record<string, { icon: string; iconFocused: string; label: str
   // Admin tabs
   AdminApplications: { icon: 'document-text-outline', iconFocused: 'document-text', label: 'Applications' },
   AdminReports: { icon: 'flag-outline', iconFocused: 'flag', label: 'Reports' },
+  AdminSuspended: { icon: 'ban-outline', iconFocused: 'ban', label: 'Suspended' },
   AdminProfile: { icon: 'person-outline', iconFocused: 'person', label: 'Profile' },
 };
 

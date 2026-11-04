@@ -1,9 +1,56 @@
-// Admin console: dasher applications, user reports and suspensions.
+// Admin console: verification requests, dasher and shop applications, reports,
+// support messages and suspensions.
 import { API_BASE_URL } from '../constants/api';
 import type { ApplicationStatus } from './DasherApplicationService';
 
+export interface AdminVerification {
+  id: string;
+  ref?: string | null;
+  userId: string;
+  fullName?: string | null;
+  email?: string | null;
+  phoneNumber?: string | null;
+  schoolEmail: string;
+  studentId: string;
+  status: ApplicationStatus;
+  rejectionReason?: string | null;
+  /** They were rejected before and sent it again. */
+  reapplied?: boolean;
+  reviewedAt?: string | null;
+  createdAt: string;
+}
+
+export interface AdminSupportTicket {
+  id: string;
+  ref?: string | null;
+  email: string;
+  name?: string | null;
+  topic: 'APPEAL' | 'QUESTION' | 'OTHER';
+  message: string;
+  status: ReportStatus;
+  createdAt: string;
+  resolvedAt?: string | null;
+  userId?: string | null;
+  accountName?: string | null;
+  accountRole?: string | null;
+  suspended: boolean;
+  suspendedReason?: string | null;
+}
+
+export interface SuspendedUser {
+  userId: string;
+  fullName: string;
+  email: string;
+  role: string;
+  dasherApproved: boolean;
+  reason?: string | null;
+  suspendedAt?: string | null;
+}
+
 export interface AdminApplication {
   id: string;
+  ref?: string | null;
+  reapplied?: boolean;
   userId: string;
   fullName?: string | null;
   email?: string | null;
@@ -30,6 +77,8 @@ export interface AdminApplication {
 
 export interface AdminShopApplication {
   id: string;
+  ref?: string | null;
+  reapplied?: boolean;
   userId: string;
   shopId: string;
   accountName?: string | null;
@@ -52,6 +101,7 @@ export type ReportStatus = 'OPEN' | 'RESOLVED';
 
 export interface AdminReport {
   id: string;
+  ref?: string | null;
   type: 'CHAT' | 'PAYMENT';
   status: ReportStatus;
   createdAt: string;
@@ -89,6 +139,50 @@ async function parse<T>(res: Response, fallback: string): Promise<T> {
 const base = `${API_BASE_URL}/api/admin`;
 
 export const AdminService = {
+  async verifications(status: ApplicationStatus | 'ALL', token: string): Promise<AdminVerification[]> {
+    const res = await fetch(`${base}/verifications?status=${status}`, { headers: authHeaders(token) });
+    return parse(res, 'Failed to load verification requests');
+  },
+
+  async verification(id: string, token: string): Promise<AdminVerification> {
+    const res = await fetch(`${base}/verifications/${id}`, { headers: authHeaders(token) });
+    return parse(res, 'Failed to load the request');
+  },
+
+  async approveVerification(id: string, token: string): Promise<AdminVerification> {
+    const res = await fetch(`${base}/verifications/${id}/approve`, { method: 'PUT', headers: authHeaders(token) });
+    return parse(res, 'Could not approve');
+  },
+
+  async rejectVerification(id: string, reason: string, token: string): Promise<AdminVerification> {
+    const res = await fetch(`${base}/verifications/${id}/reject`, {
+      method: 'PUT',
+      headers: authHeaders(token),
+      body: JSON.stringify({ reason }),
+    });
+    return parse(res, 'Could not reject');
+  },
+
+  async supportTickets(status: ReportStatus | 'ALL', token: string): Promise<AdminSupportTicket[]> {
+    const res = await fetch(`${base}/support?status=${status}`, { headers: authHeaders(token) });
+    return parse(res, 'Failed to load support messages');
+  },
+
+  async supportTicket(id: string, token: string): Promise<AdminSupportTicket> {
+    const res = await fetch(`${base}/support/${id}`, { headers: authHeaders(token) });
+    return parse(res, 'Failed to load the message');
+  },
+
+  async resolveSupport(id: string, token: string): Promise<AdminSupportTicket> {
+    const res = await fetch(`${base}/support/${id}/resolve`, { method: 'PUT', headers: authHeaders(token) });
+    return parse(res, 'Could not resolve');
+  },
+
+  async suspendedUsers(token: string): Promise<SuspendedUser[]> {
+    const res = await fetch(`${base}/users/suspended`, { headers: authHeaders(token) });
+    return parse(res, 'Failed to load suspended accounts');
+  },
+
   async applications(status: ApplicationStatus | 'ALL', token: string): Promise<AdminApplication[]> {
     const res = await fetch(`${base}/applications?status=${status}`, { headers: authHeaders(token) });
     return parse(res, 'Failed to load applications');

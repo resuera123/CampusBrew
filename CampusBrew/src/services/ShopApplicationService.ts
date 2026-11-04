@@ -20,6 +20,12 @@ export interface ShopApplicationInput {
   idPhoto: string;
 }
 
+/** The operator's own last application (photos included), used to prefill a reapplication. */
+export interface PreviousShopApplication extends ShopApplicationInput {
+  status: ApplicationStatus;
+  rejectionReason?: string | null;
+}
+
 function authHeaders(token: string) {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 }
@@ -35,6 +41,13 @@ export const ShopApplicationService = {
   async status(token: string): Promise<ShopApprovalStatus> {
     const res = await fetch(`${API_BASE_URL}/api/users/me/shop-application`, { headers: authHeaders(token) });
     return parse(res, 'Failed to load the shop approval status');
+  },
+
+  /** Null when they've never applied. */
+  async latest(token: string): Promise<PreviousShopApplication | null> {
+    const res = await fetch(`${API_BASE_URL}/api/users/me/shop-application/latest`, { headers: authHeaders(token) });
+    const last = await parse<Partial<PreviousShopApplication>>(res, 'Could not load your last application');
+    return last && last.status ? (last as PreviousShopApplication) : null;
   },
 
   async apply(input: ShopApplicationInput, token: string): Promise<ShopApprovalStatus> {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -29,7 +29,7 @@ type PhotoKey = 'idPhoto' | 'selfiePhoto' | 'corPhoto';
 const PHOTOS: { key: PhotoKey; label: string; hint: string; camera: 'front' | 'back' }[] = [
   { key: 'idPhoto', label: 'CIT-U ID', hint: 'Front of your school ID, all text readable', camera: 'back' },
   { key: 'selfiePhoto', label: 'Selfie holding your ID', hint: 'Your face and the ID both visible', camera: 'front' },
-  { key: 'corPhoto', label: 'Certificate of Registration', hint: "This term's COR", camera: 'back' },
+  { key: 'corPhoto', label: 'Certificate of Registration', hint: "Current Semester's Study Load", camera: 'back' },
 ];
 
 const RULES = [
@@ -59,6 +59,30 @@ export default function DasherApplicationScreen({ navigation }: any) {
   const [processing, setProcessing] = useState<PhotoKey | null>(null);
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [rejection, setRejection] = useState<string | null>(null);
+  const [prefilling, setPrefilling] = useState(true);
+
+  // Reapplying after a rejection: start from what they sent last time, so only
+  // the part the admin flagged needs changing.
+  useEffect(() => {
+    if (!token) return;
+    DasherApplicationService.latest(token)
+      .then((last) => {
+        if (!last || last.status !== 'REJECTED') return;
+        setRejection(last.rejectionReason || 'No reason given');
+        setPhoneNumber(last.phoneNumber ?? '');
+        setCourse(last.course ?? '');
+        setYearLevel(last.yearLevel || null);
+        setReason(last.reason ?? '');
+        setEmergencyName(last.emergencyName ?? '');
+        setEmergencyRelationship(last.emergencyRelationship ?? '');
+        setEmergencyPhone(last.emergencyPhone ?? '');
+        setPhotos({ idPhoto: last.idPhoto ?? null, selfiePhoto: last.selfiePhoto ?? null, corPhoto: last.corPhoto ?? null });
+        setAgreed(!!last.agreedToRules);
+      })
+      .catch(() => {})
+      .finally(() => setPrefilling(false));
+  }, [token]);
 
   const addPhoto = async (key: PhotoKey, source: 'camera' | 'library', camera: 'front' | 'back') => {
     try {
@@ -143,6 +167,17 @@ export default function DasherApplicationScreen({ navigation }: any) {
             Deliver drinks around campus between classes. An admin checks every application, so make sure your
             photos are clear.
           </Text>
+
+          {prefilling && <ActivityIndicator color={COLORS.primary} style={{ marginBottom: 12 }} />}
+          {rejection && (
+            <View style={styles.rejectedCard}>
+              <Text style={styles.rejectedTitle}>Your last application wasn't approved</Text>
+              <Text style={styles.rejectedText}>Reason: {rejection}</Text>
+              <Text style={styles.rejectedText}>
+                We filled in what you sent last time. Change what the reason mentions, then submit again.
+              </Text>
+            </View>
+          )}
 
           <Section title="About you">
             <Field label="Mobile number" value={phoneNumber} onChange={setPhoneNumber} placeholder="09XXXXXXXXX" phone />
@@ -311,6 +346,9 @@ const styles = StyleSheet.create({
   topBarTitle: { flex: 1, fontSize: 16, fontWeight: '600', color: COLORS.text, textAlign: 'center' },
   content: { padding: SIZES.screenPadding, paddingBottom: 24 },
   intro: { fontSize: SIZES.captionSize, color: COLORS.textSecondary, marginBottom: 12, lineHeight: 20 },
+  rejectedCard: { backgroundColor: '#FCE8E8', borderRadius: 12, padding: 12, marginBottom: 12 },
+  rejectedTitle: { fontSize: 14, fontWeight: '600', color: '#D93025' },
+  rejectedText: { fontSize: 13, color: COLORS.text, marginTop: 4, lineHeight: 18 },
   card: { backgroundColor: COLORS.white, borderRadius: 12, padding: 14, marginBottom: 12 },
   cardTitle: { fontSize: 15, fontWeight: '700', color: COLORS.text, marginBottom: 4 },
   label: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, marginTop: 10, marginBottom: 4 },

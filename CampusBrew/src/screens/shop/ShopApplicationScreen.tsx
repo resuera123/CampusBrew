@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -51,6 +51,26 @@ export default function ShopApplicationScreen({ navigation }: any) {
   const [processing, setProcessing] = useState<PhotoKey | null>(null);
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [rejection, setRejection] = useState<string | null>(null);
+  const [prefilling, setPrefilling] = useState(true);
+
+  // Reapplying after a rejection: start from what they sent last time.
+  useEffect(() => {
+    if (!token) return;
+    ShopApplicationService.latest(token)
+      .then((last) => {
+        if (!last || last.status !== 'REJECTED') return;
+        setRejection(last.rejectionReason || 'No reason given');
+        setStallName(last.stallName ?? '');
+        setLocation(last.location ?? '');
+        setOperatorName(last.operatorName ?? '');
+        setPhoneNumber(last.phoneNumber ?? '');
+        setPhotos({ stallPhoto: last.stallPhoto ?? null, idPhoto: last.idPhoto ?? null });
+        setAgreed(!!last.agreedToRules);
+      })
+      .catch(() => {})
+      .finally(() => setPrefilling(false));
+  }, [token]);
 
   const addPhoto = async (key: PhotoKey, source: 'camera' | 'library') => {
     try {
@@ -125,6 +145,17 @@ export default function ShopApplicationScreen({ navigation }: any) {
             An admin checks every new shop before customers can see it. Once approved, your shop takes the name
             and location below, and you can open it for orders.
           </Text>
+
+          {prefilling && <ActivityIndicator color={COLORS.primary} style={{ marginBottom: 12 }} />}
+          {rejection && (
+            <View style={styles.rejectedCard}>
+              <Text style={styles.rejectedTitle}>Your last application wasn't approved</Text>
+              <Text style={styles.rejectedText}>Reason: {rejection}</Text>
+              <Text style={styles.rejectedText}>
+                We filled in what you sent last time. Change what the reason mentions, then submit again.
+              </Text>
+            </View>
+          )}
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Your shop</Text>
@@ -252,6 +283,9 @@ const styles = StyleSheet.create({
   topBarTitle: { flex: 1, fontSize: 16, fontWeight: '600', color: COLORS.text, textAlign: 'center' },
   content: { padding: SIZES.screenPadding, paddingBottom: 24 },
   intro: { fontSize: SIZES.captionSize, color: COLORS.textSecondary, marginBottom: 12, lineHeight: 20 },
+  rejectedCard: { backgroundColor: '#FCE8E8', borderRadius: 12, padding: 12, marginBottom: 12 },
+  rejectedTitle: { fontSize: 14, fontWeight: '600', color: '#D93025' },
+  rejectedText: { fontSize: 13, color: COLORS.text, marginTop: 4, lineHeight: 18 },
   card: { backgroundColor: COLORS.white, borderRadius: 12, padding: 14, marginBottom: 12 },
   cardTitle: { fontSize: 15, fontWeight: '700', color: COLORS.text, marginBottom: 4 },
   label: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, marginTop: 10, marginBottom: 4 },
