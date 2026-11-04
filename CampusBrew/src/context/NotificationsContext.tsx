@@ -29,6 +29,31 @@ const NotificationsContext = createContext<NotificationsContextType>({
 });
 
 /** Maps a server status string to a user-friendly title/body for the notification feed. */
+/**
+ * The shop operator's view of an order update, or null for steps the shop did
+ * itself (accepting, marking ready), which don't need a notification.
+ */
+function describeShopUpdate(status: string, orderId?: string, deliveryPersonnel?: { fullName?: string }) {
+  const short = orderId ? `Order #${orderId.slice(-6).toUpperCase()}` : 'An order';
+  switch (status) {
+    case 'PLACED':
+      return { title: 'New order received', body: `${short} is waiting. Open Orders to accept it.` };
+    case 'ASSIGNED':
+      return {
+        title: 'Dasher assigned',
+        body: deliveryPersonnel?.fullName
+          ? `${deliveryPersonnel.fullName} is coming to pick up ${short.toLowerCase()}.`
+          : `A dasher is coming to pick up ${short.toLowerCase()}.`,
+      };
+    case 'DELIVERED':
+      return { title: 'Order delivered', body: `${short} reached the customer.` };
+    case 'CANCELLED':
+      return { title: 'Order cancelled', body: `${short} was cancelled.` };
+    default:
+      return null;
+  }
+}
+
 function describeStatusUpdate(status: string, orderId?: string, deliveryPersonnel?: { fullName?: string }) {
   const short = orderId ? `Order #${orderId.slice(-6).toUpperCase()}` : 'Your order';
   switch (status) {
@@ -123,10 +148,16 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
       ].slice(0, 100)); // cap to last 100 to keep memory bounded
     };
 
+    const isShop = user?.role === 'SHOP_OPERATOR';
+
     const onStatusUpdate = (payload: any) => {
       const { status, orderId, deliveryPersonnel, timestamp } = payload ?? {};
       if (!status) return;
-      const { title, body } = describeStatusUpdate(status, orderId, deliveryPersonnel);
+      const described = isShop
+        ? describeShopUpdate(status, orderId, deliveryPersonnel)
+        : describeStatusUpdate(status, orderId, deliveryPersonnel);
+      if (!described) return;
+      const { title, body } = described;
       push({
         title,
         body,
@@ -168,18 +199,27 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
       });
     };
 
+    // The shop hears about deliveries through their own event, not order:statusUpdate.
+    const onShopDelivered = (payload: any) => {
+      if (!isShop) return;
+      const described = describeShopUpdate('DELIVERED', payload?.orderId);
+      if (described) push({ ...described, orderId: payload?.orderId, timestamp: new Date().toISOString() });
+    };
+
     socket.on('order:statusUpdate', onStatusUpdate);
+    socket.on('order:delivered', onShopDelivered);
     socket.on('delivery:request', onDeliveryRequest);
     socket.on('order:noDriver', onNoDriver);
     socket.on('tip:received', onTipReceived);
 
     return () => {
       socket.off('order:statusUpdate', onStatusUpdate);
+      socket.off('order:delivered', onShopDelivered);
       socket.off('delivery:request', onDeliveryRequest);
       socket.off('order:noDriver', onNoDriver);
       socket.off('tip:received', onTipReceived);
     };
-  }, [socket]);
+  }, [socket, user?.role]);
 
   const markAllRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));

@@ -14,6 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
+import { useNotifications } from '../../context/NotificationsContext';
 import { ShopService, Shop } from '../../services/ShopService';
 import { ShopOrderService } from '../../services/ShopOrderService';
 import SalesByItemChart from '../../components/SalesByItemChart';
@@ -21,6 +22,7 @@ import ShopApprovalBanner from '../../components/ShopApprovalBanner';
 
 export default function ShopDashboardScreen({ navigation }: any) {
   const { token } = useAuth();
+  const { unreadCount } = useNotifications();
   const { socket } = useSocket();
   const [shop, setShop] = useState<Shop | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
@@ -108,6 +110,18 @@ export default function ShopDashboardScreen({ navigation }: any) {
         }
       >
         <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.bell}
+            onPress={() => navigation.navigate('Notifications')}
+            accessibilityLabel="Notifications"
+          >
+            <Ionicons name="notifications-outline" size={22} color={COLORS.text} />
+            {unreadCount > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
           <Text style={styles.greeting}>Welcome back</Text>
           <Text style={styles.shopName}>{shop?.shopName ?? 'Your Shop'}</Text>
           <View style={[styles.statusPill, shop?.isOpen ? styles.statusOpen : styles.statusClosed]}>
@@ -254,8 +268,34 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.backgroundSecondary },
   content: { padding: SIZES.screenPadding, paddingBottom: 32 },
   header: { marginBottom: 20 },
+  bell: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 3,
+    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bellBadgeText: { color: COLORS.white, fontSize: 10, fontWeight: '700' },
   greeting: { fontSize: SIZES.captionSize, color: COLORS.textSecondary },
-  shopName: { fontSize: SIZES.titleSize, fontWeight: '700', color: COLORS.text, marginTop: 2 },
+  // Room on the right for the notification bell.
+  shopName: { fontSize: SIZES.titleSize, fontWeight: '700', color: COLORS.text, marginTop: 2, paddingRight: 48 },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',

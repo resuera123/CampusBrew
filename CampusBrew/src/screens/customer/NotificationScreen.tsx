@@ -11,10 +11,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../constants/theme';
 import { useNotifications, Notification } from '../../context/NotificationsContext';
 import { useConfirm } from '../../components/ConfirmDialog';
+import { useAuth } from '../../context/AuthContext';
 
 export default function NotificationScreen({ navigation }: any) {
   const { notifications, markAllRead, clear } = useNotifications();
   const { confirm, dialog } = useConfirm();
+  const { user } = useAuth();
 
   const confirmClear = async () => {
     const ok = await confirm({
@@ -36,7 +38,11 @@ export default function NotificationScreen({ navigation }: any) {
 
   const openOrder = (orderId?: string) => {
     if (!orderId) return;
-    try { navigation.navigate('OrderTracking', { orderId }); } catch { /* not on this stack */ }
+    try {
+      // A shop works its orders from the queue; everyone else tracks the order.
+      if (user?.role === 'SHOP_OPERATOR') navigation.navigate('OrderQueue');
+      else navigation.navigate('OrderTracking', { orderId });
+    } catch { /* not on this stack */ }
   };
 
   return (
@@ -60,7 +66,7 @@ export default function NotificationScreen({ navigation }: any) {
           <Ionicons name="notifications-off-outline" size={48} color={COLORS.textSecondary} />
           <Text style={styles.emptyTitle}>No notifications yet</Text>
           <Text style={styles.emptySub}>
-            Order updates will show up here.
+            {user?.role === 'SHOP_OPERATOR' ? 'New orders and order updates will show up here.' : 'Order updates will show up here.'}
           </Text>
         </View>
       ) : (

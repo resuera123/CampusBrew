@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS, SIZES } from '../../constants/theme';
 import { showAlert } from '../../components/AppAlert';
@@ -19,6 +20,7 @@ const DANGER = '#D93025';
 
 export default function LoginScreen({ navigation }: any) {
   const { login } = useAuth();
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -62,47 +64,51 @@ export default function LoginScreen({ navigation }: any) {
 
         {/* Form */}
         <View style={styles.form}>
-          {/* Email Input */}
-          <View style={[styles.inputContainer, missing.email && styles.inputError]}>
-            <Ionicons name="mail-outline" size={20} color={missing.email ? DANGER : COLORS.textSecondary} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              placeholderTextColor={COLORS.textSecondary}
-              value={email}
-              onChangeText={(t) => {
-                setEmail(t.replace(/\s/g, ''));
-                if (missing.email) setMissing((m) => ({ ...m, email: false }));
-              }}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
+          {/* Email Input — the note sits in the gap below, so the form doesn't shift */}
+          <View>
+            <View style={[styles.inputContainer, missing.email && styles.inputError]}>
+              <Ionicons name="mail-outline" size={20} color={missing.email ? DANGER : COLORS.textSecondary} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                placeholderTextColor={COLORS.textSecondary}
+                value={email}
+                onChangeText={(t) => {
+                  setEmail(t.replace(/\s/g, ''));
+                  if (missing.email) setMissing((m) => ({ ...m, email: false }));
+                }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+            {missing.email && <Text style={styles.errorText}>Enter your email</Text>}
           </View>
-          {missing.email && <Text style={styles.errorText}>Enter your email</Text>}
 
           {/* Password Input */}
-          <View style={[styles.inputContainer, missing.password && styles.inputError]}>
-            <Ionicons name="lock-closed-outline" size={20} color={missing.password ? DANGER : COLORS.textSecondary} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor={COLORS.textSecondary}
-              value={password}
-              onChangeText={(t) => {
-                setPassword(t);
-                if (missing.password) setMissing((m) => ({ ...m, password: false }));
-              }}
-              secureTextEntry={!showPassword}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Ionicons
-                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                size={20}
-                color={COLORS.textSecondary}
+          <View>
+            <View style={[styles.inputContainer, missing.password && styles.inputError]}>
+              <Ionicons name="lock-closed-outline" size={20} color={missing.password ? DANGER : COLORS.textSecondary} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                placeholderTextColor={COLORS.textSecondary}
+                value={password}
+                onChangeText={(t) => {
+                  setPassword(t);
+                  if (missing.password) setMissing((m) => ({ ...m, password: false }));
+                }}
+                secureTextEntry={!showPassword}
               />
-            </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={COLORS.textSecondary}
+                />
+              </TouchableOpacity>
+            </View>
+            {missing.password && <Text style={styles.errorText}>Enter your password</Text>}
           </View>
-          {missing.password && <Text style={styles.errorText}>Enter your password</Text>}
 
           {/* Log In Button — pill shape per wireframe */}
           <View style={{ paddingTop: 16 }}>
@@ -135,16 +141,19 @@ export default function LoginScreen({ navigation }: any) {
             </TouchableOpacity>
           </View>
 
-          {/* Contact Support — open without an account, e.g. to appeal a suspension */}
-          <TouchableOpacity
-            style={styles.supportButton}
-            onPress={() => navigation.navigate('ContactSupport', { email })}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="help-buoy-outline" size={16} color={COLORS.textSecondary} />
-            <Text style={styles.supportText}>Need help? Contact Support</Text>
-          </TouchableOpacity>
         </View>
+      </View>
+
+      {/* Footer: Contact Support, open without an account (e.g. to appeal a suspension) */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+        <TouchableOpacity
+          style={styles.supportButton}
+          onPress={() => navigation.navigate('ContactSupport', { email })}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="help-buoy-outline" size={16} color={COLORS.textSecondary} />
+          <Text style={styles.supportText}>Need help? Contact Support</Text>
+        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -199,10 +208,13 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     backgroundColor: '#FFF6F5',
   },
+  // Drawn over the gap under the field (form gap is 16), so showing it moves nothing.
   errorText: {
-    marginTop: -10,
-    marginLeft: 4,
+    position: 'absolute',
+    top: SIZES.inputHeight + 1,
+    left: 4,
     fontSize: 12,
+    lineHeight: 14,
     color: DANGER,
   },
   inputIcon: {
@@ -243,6 +255,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: COLORS.textSecondary,
     fontSize: SIZES.captionSize,
+  },
+  footer: {
+    alignItems: 'center',
+    gap: 4,
+    paddingTop: 12,
+    paddingHorizontal: SIZES.screenPadding,
   },
   supportButton: {
     flexDirection: 'row',

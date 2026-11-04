@@ -183,6 +183,7 @@ export function ShopStack() {
       <Stack.Screen name="SalesByItem" component={SalesByItemScreen} />
       <Stack.Screen name="ItemTrend" component={ItemTrendScreen} />
       <Stack.Screen name="SalesReport" component={SalesReportScreen} />
+      <Stack.Screen name="Notifications" component={NotificationScreen} />
       <Stack.Screen name="ShopApplication" component={ShopApplicationScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen name="RateOrder" component={RateOrderScreen} />
