@@ -98,6 +98,9 @@ class RefundFlowTest {
                     assertThat(e.getAmount()).isEqualTo(120);
                     assertThat(e.getCreatedAt()).isEqualTo(refundedAt);
                 });
+        // The original payment still reads PAID; the refund is its own line.
+        assertThat(res.getEntries()).filteredOn(e -> "PAYMENT".equals(e.getSource()))
+                .singleElement().satisfies(e -> assertThat(e.getStatus()).isEqualTo("PAID"));
         // A cancelled COD order was never paid, so it isn't listed as a payment.
         assertThat(res.getEntries()).noneMatch(e -> "o3".equals(e.getOrderId()));
         assertThat(res.getSummary().get("totalPaid")).isZero();

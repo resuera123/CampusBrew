@@ -63,9 +63,13 @@ public class PaymentCenterService {
                     && !typeFilter.equalsIgnoreCase(p.getType().name())) {
                 continue;
             }
+            // The payment itself did go through; its refund is listed as its own "+₱" line,
+            // so a refunded payment still reads PAID here.
+            boolean refunded = p.getStatus() == PaymentRecordStatus.REFUNDED;
             entries.add(PaymentCenterEntryDTO.builder()
                     .id(p.getId()).source("PAYMENT").kind(p.getType().name())
-                    .orderId(p.getOrderId()).method("GCASH").status(p.getStatus().name())
+                    .orderId(p.getOrderId()).method("GCASH")
+                    .status(refunded ? PaymentRecordStatus.PAID.name() : p.getStatus().name())
                     .amount(p.getAmount()).referenceNo(p.getReferenceNo())
                     .reported(p.isReported())
                     .description(p.getType() == PaymentType.TIP ? "Tip" : "Order payment")
