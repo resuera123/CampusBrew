@@ -74,7 +74,11 @@ public class AdminService {
                     .createdAt(m.getCreatedAt())
                     .build()).toList());
         } else {
-            paymentRepository.findById(r.getPaymentId()).ifPresent(p -> dto.payment(paymentInfo(p)));
+            if (r.getPaymentId() != null) {
+                paymentRepository.findById(r.getPaymentId()).ifPresent(p -> dto.payment(paymentInfo(p)));
+            } else if (r.getOrderId() != null) {
+                orderRepository.findById(r.getOrderId()).ifPresent(o -> dto.payment(orderPaymentInfo(o)));
+            }
             // The order's shop operator and dasher, if it got that far.
             if (r.getOrderId() != null) {
                 orderRepository.findById(r.getOrderId()).ifPresent(o -> involved.addAll(orderParties(o)));
@@ -184,6 +188,17 @@ public class AdminService {
                 .status(name.apply(p.getStatus()))
                 .referenceNo(p.getReferenceNo())
                 .createdAt(p.getCreatedAt())
+                .build();
+    }
+
+    /** Payment details taken from the order itself (COD orders have no payment record). */
+    private static ReportDTO.PaymentInfo orderPaymentInfo(Order o) {
+        return ReportDTO.PaymentInfo.builder()
+                .amount(o.getTotalAmount())
+                .type("ORDER")
+                .method(o.getPaymentMethod() == null ? null : o.getPaymentMethod().name())
+                .status(o.getPaymentStatus() == null ? null : o.getPaymentStatus().name())
+                .createdAt(o.getCreatedAt())
                 .build();
     }
 

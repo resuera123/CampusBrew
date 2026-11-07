@@ -114,6 +114,8 @@ public class PaymentCenterService {
                     .orderId(t.getOrderId())
                     .method(t.getPaymentMethod() == null ? null : t.getPaymentMethod().name())
                     .status(t.getStatus().name()).amount(t.getDpEarnings())
+                    .reported(t.getOrderId() != null && reportRepository
+                            .existsByTypeAndOrderIdAndReporterId(ReportType.PAYMENT, t.getOrderId(), userId))
                     .description("Delivery earnings" + (orderTips > 0 ? " (incl. ₱" + (int) orderTips + " tip)" : ""))
                     .createdAt(t.getCreatedAt()).build());
         }
@@ -175,6 +177,53 @@ public class PaymentCenterService {
                     .createdAt(new Date())
                     .build());
         }
+    }
+
+    // ---- Report a problem with an order's payment (dasher, shop operator) ----
+
+    static final int MAX_NOTE = 300;
+
+    /**
+     * Files a payment report about one order for its dasher or its shop operator
+     * (customers report their own payments with {@link #report}). Links the order's
+     * GCash payment when there is one; COD orders have none. One report per person
+     * per order.
+     */
+    public void reportOrder(String userId, String orderId, String note) {
+        String cleanNote = note == null ? "" : note.trim();
+        if (cleanNote.isEmpty()) throw new RuntimeException("Tell us what went wrong");
+        if (cleanNote.length() > MAX_NOTE) throw new RuntimeException("Keep it under " + MAX_NOTE + " characters");
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+        if (!isOrderParty(userId, order)) {
+            throw new RuntimeException("You can only report orders you delivered or sold");
+        }
+        if (reportRepository.existsByTypeAndOrderIdAndReporterId(ReportType.PAYMENT, orderId, userId)) {
+            throw new RuntimeException("You already reported a problem with this order");
+        }
+        String paymentId = paymentRepository.findByOrderIdAndType(orderId, PaymentType.ORDER).stream()
+                .findFirst().map(Payment::getId).orElse(null);
+        reportRepository.save(Report.builder()
+                .type(ReportType.PAYMENT)
+                .reporterId(userId)
+                .orderId(orderId)
+                .paymentId(paymentId)
+                .note(cleanNote)
+                .status(ReportStatus.OPEN)
+                .createdAt(new Date())
+                .build());
+    }
+
+    public boolean orderReported(String userId, String orderId) {
+        return reportRepository.existsByTypeAndOrderIdAndReporterId(ReportType.PAYMENT, orderId, userId);
+    }
+
+    private boolean isOrderParty(String userId, Order order) {
+        if (userId.equals(order.getDeliveryPersonnelId())) return true;
+        return shopRepository.findById(order.getShopId())
+                .map(s -> userId.equals(s.getOperatorId()))
+                .orElse(false);
     }
 
     // ---- helpers ----

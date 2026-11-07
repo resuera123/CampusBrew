@@ -20,4 +20,6 @@ public interface ReportRepository extends MongoRepository<Report, String> {
             ReportType type, String orderId, ChatChannel channel, ReportStatus status);
 
     boolean existsByTypeAndPaymentIdAndStatus(ReportType type, String paymentId, ReportStatus status);
+
+    boolean existsByTypeAndOrderIdAndReporterId(ReportType type, String orderId, String reporterId);
 }

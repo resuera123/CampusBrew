@@ -33,6 +33,31 @@ public class PaymentCenterController {
         }
     }
 
+    /** Dasher or shop operator: report a problem with one order's payment. Body {"note"}. */
+    @PostMapping("/orders/{orderId}/report")
+    public ResponseEntity<?> reportOrder(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable String orderId,
+            @RequestBody(required = false) Map<String, String> body) {
+        try {
+            paymentCenterService.reportOrder(userIdFrom(authHeader), orderId, body == null ? null : body.get("note"));
+            return ResponseEntity.ok(Map.of("reported", true));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/orders/{orderId}/report")
+    public ResponseEntity<?> orderReported(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable String orderId) {
+        try {
+            return ResponseEntity.ok(Map.of("reported", paymentCenterService.orderReported(userIdFrom(authHeader), orderId)));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PostMapping("/{id}/report")
     public ResponseEntity<?> report(
             @RequestHeader("Authorization") String authHeader,
