@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { useSocket } from './SocketContext';
 import * as Notifications from 'expo-notifications';
-import { registerPushToken } from '../services/push';
+import { registerPushToken, showNewOrderAlert, prepareNewOrderAlerts } from '../services/push';
 import { navigate } from '../navigation/navigationRef';
 
 export interface Notification {
@@ -95,6 +95,7 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
   useEffect(() => {
     if (!user || !token) return;
     registerPushToken(token);
+    if (user.role === 'SHOP_OPERATOR') prepareNewOrderAlerts();
 
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as
@@ -158,6 +159,8 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
         : describeStatusUpdate(status, orderId, deliveryPersonnel);
       if (!described) return;
       const { title, body } = described;
+      // A new order also pops up on the phone with sound, so the shop notices it.
+      if (isShop && status === 'PLACED') showNewOrderAlert(title, body, orderId);
       push({
         title,
         body,

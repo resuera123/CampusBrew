@@ -15,14 +15,68 @@ import { API_BASE_URL } from '../constants/api';
  */
 
 // Foreground presentation: show an alert banner even while the app is open.
+// A shop's new order is shown by the app itself (showNewOrderAlert, from the
+// socket) with sound; the server's push for the same order is skipped while the
+// app is open so it doesn't appear twice.
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
+  handleNotification: async (notification) => {
+    const data = notification.request.content.data as { type?: string; local?: boolean } | undefined;
+    const newOrder = data?.type === 'shop-order';
+    const duplicate = newOrder && !data?.local;
+    return {
+      shouldShowBanner: !duplicate,
+      shouldShowList: !duplicate,
+      shouldPlaySound: newOrder && !duplicate,
+      shouldSetBadge: false,
+    };
+  },
 });
+
+const ORDERS_CHANNEL = 'new-orders';
+let ordersChannelReady: Promise<boolean> | null = null;
+
+/** Asks for notification permission once and sets up a loud channel for new orders. */
+function prepareOrdersChannel(): Promise<boolean> {
+  if (!ordersChannelReady) {
+    ordersChannelReady = (async () => {
+      const { status: existing } = await Notifications.getPermissionsAsync();
+      const status = existing === 'granted' ? existing : (await Notifications.requestPermissionsAsync()).status;
+      if (status !== 'granted') return false;
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync(ORDERS_CHANNEL, {
+          name: 'New orders',
+          importance: Notifications.AndroidImportance.HIGH, // heads-up banner + sound
+          sound: 'default',
+          vibrationPattern: [0, 250, 150, 250],
+        });
+      }
+      return true;
+    })().catch(() => false);
+  }
+  return ordersChannelReady;
+}
+
+/**
+ * Shows "New order received" on this phone, with sound, when the shop's socket
+ * reports a new order. Works in Expo Go (which can't receive the server's push)
+ * while the app is open or still running in the background.
+ */
+export async function showNewOrderAlert(title: string, body: string, orderId?: string): Promise<void> {
+  try {
+    if (!(await prepareOrdersChannel())) return;
+    await Notifications.scheduleNotificationAsync({
+      content: { title, body, sound: 'default', data: { orderId, type: 'shop-order', local: true } },
+      trigger: Platform.OS === 'android' ? { channelId: ORDERS_CHANNEL } : null,
+    });
+  } catch (err) {
+    console.log('[push] new-order alert skipped:', (err as Error)?.message ?? err);
+  }
+}
+
+/** Gets permission up front, so the first new order can alert straight away. */
+export function prepareNewOrderAlerts(): void {
+  prepareOrdersChannel();
+}
 
 async function getExpoPushToken(): Promise<string | null> {
   if (!Device.isDevice) return null; // push tokens aren't issued to simulators
