@@ -30,8 +30,8 @@ public class OfferRebroadcastScheduler {
         Date cutoff = new Date(System.currentTimeMillis()
                 - configService.getOfferRebroadcastSeconds() * 1000L);
         List<Order> due = orderRepository
-                .findByOrderStatusAndDeliveryPersonnelIdIsNullAndRebroadcastAtIsNullAndReadyAtLessThan(
-                        OrderStatus.READY_FOR_PICKUP, cutoff);
+                .findByOrderStatusInAndDeliveryPersonnelIdIsNullAndRebroadcastAtIsNullAndRiderSearchAtLessThan(
+                        List.of(OrderStatus.PREPARING, OrderStatus.READY_FOR_PICKUP), cutoff);
         if (due.isEmpty()) return;
         log.info("Re-broadcasting {} unclaimed offer(s) past the {}s window",
                 due.size(), configService.getOfferRebroadcastSeconds());

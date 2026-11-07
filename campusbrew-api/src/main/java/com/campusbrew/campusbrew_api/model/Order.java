@@ -62,6 +62,10 @@ public class Order {
     /** When the shop marked the order Ready for Pickup. Drives the 10-min auto-cancel. */
     private Date readyAt;
 
+    // When the shop accepted and the rider search began; the 10-minute
+    // no-rider auto-cancel counts from here.
+    private Date riderSearchAt;
+
     /**
      * v2.0 FR-3.2 — when the unclaimed offer was re-broadcast to all active dashers
      * (ignoring pickup range). Null until the 60s window lapses; set once so the

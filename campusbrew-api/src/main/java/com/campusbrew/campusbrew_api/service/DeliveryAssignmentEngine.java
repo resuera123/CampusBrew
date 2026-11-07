@@ -60,12 +60,12 @@ public class DeliveryAssignmentEngine {
     private final PushNotificationService pushNotificationService;
 
     /**
-     * Kick off assignment for an order that just reached READY_FOR_PICKUP. The
+     * Kick off assignment for an order the shop just accepted (PREPARING). The
      * initial offer is range-filtered (v2.0 FR-3.2). If no eligible dasher is in
      * range, the 60s re-broadcast and the marketplace pull are the fallbacks.
      */
     public void assignOrder(Order order) {
-        if (order.getOrderStatus() != OrderStatus.READY_FOR_PICKUP) {
+        if (!awaitingRider(order)) {
             log.warn("assignOrder called for order {} in status {} — skipping",
                     order.getId(), order.getOrderStatus());
             return;
@@ -88,9 +88,7 @@ public class DeliveryAssignmentEngine {
      * fires exactly once. No-op if the order has since been claimed or moved on.
      */
     public void rebroadcastToAll(Order order) {
-        if (order.getOrderStatus() != OrderStatus.READY_FOR_PICKUP
-                || order.getDeliveryPersonnelId() != null
-                || order.getRebroadcastAt() != null) {
+        if (!awaitingRider(order) || order.getRebroadcastAt() != null) {
             return;
         }
         Shop shop = shopRepository.findById(order.getShopId()).orElse(null);
@@ -116,6 +114,27 @@ public class DeliveryAssignmentEngine {
         socketService.emitToUser(order.getCustomerId(), "order:noDriver", payload);
         String operatorId = getShopOperatorUserId(order.getShopId());
         if (operatorId != null) socketService.emitToUser(operatorId, "order:noDriver", payload);
+    }
+
+    /** Accepted by the shop and not yet claimed by a dasher. */
+    static boolean awaitingRider(Order order) {
+        return order.getDeliveryPersonnelId() == null
+                && (order.getOrderStatus() == OrderStatus.PREPARING
+                    || order.getOrderStatus() == OrderStatus.READY_FOR_PICKUP);
+    }
+
+    /** Frees a dasher whose order was cancelled before pickup, so they can take new offers. */
+    public void releaseDasher(String dpUserId, String orderId) {
+        deliveryPersonnelRepository.findByUserId(dpUserId).ifPresent(dp -> {
+            if (orderId.equals(dp.getCurrentOrderId())) {
+                dp.setCurrentOrderId(null);
+                dp.setUpdatedAt(Date.from(Instant.now()));
+                deliveryPersonnelRepository.save(dp);
+            }
+        });
+        pushNotificationService.send(dpUserId, "Order cancelled",
+                "The shop cancelled the order you accepted. You're free to take another.",
+                Map.of("orderId", orderId, "status", OrderStatus.CANCELLED.name()));
     }
 
     /** Emit a per-dasher offer to each recipient and record a PENDING audit row. */
@@ -189,8 +208,10 @@ public class DeliveryAssignmentEngine {
 
         Date now = Date.from(Instant.now());
 
+        // Claimable while the shop prepares it (and, for orders from before the rider
+        // search moved to accept, once it's ready).
         Query claim = Query.query(Criteria.where("_id").is(orderId)
-                .and("orderStatus").is(OrderStatus.READY_FOR_PICKUP)
+                .and("orderStatus").in(OrderStatus.PREPARING, OrderStatus.READY_FOR_PICKUP)
                 .and("deliveryPersonnelId").is(null));
         Update update = new Update()
                 .set("orderStatus", OrderStatus.ASSIGNED)
@@ -254,7 +275,7 @@ public class DeliveryAssignmentEngine {
         pushNotificationService.send(order.getCustomerId(), "Rider assigned",
                 (dpName == null ? "A rider" : dpName)
                         + (dpRating == null ? "" : String.format(" (★ %.1f)", dpRating))
-                        + " is picking up your order.",
+                        + " will pick up your order once the shop has it ready.",
                 Map.of("orderId", orderId, "status", "ASSIGNED"));
 
         // Tell every other DP that had a pending offer for this order to dismiss their modal.

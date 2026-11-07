@@ -43,6 +43,7 @@ public class OrderDTO {
     private String paymentId;
     private List<StatusHistoryEntry> statusHistory;
     private Date readyAt;
+    private Date riderSearchAt;
     private Date createdAt;
     private Date updatedAt;
 
@@ -81,6 +82,7 @@ public class OrderDTO {
                 .paymentUrl(paymentUrl)
                 .statusHistory(order.getStatusHistory())
                 .readyAt(order.getReadyAt())
+                .riderSearchAt(order.getRiderSearchAt())
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
                 .build();

@@ -26,7 +26,7 @@ import java.util.Map;
 
 /**
  * Module 3 §3.3 — order lifecycle after delivery assignment.
- * ASSIGNED → OUT_FOR_DELIVERY → DELIVERED. Writes a {@link Transaction} on
+ * READY_FOR_PICKUP (dasher assigned) → OUT_FOR_DELIVERY → DELIVERED. Writes a {@link Transaction} on
  * confirmation; Module 4 extends commission/incentive math by adding to that
  * record's pipeline (not by re-implementing this service).
  */
@@ -48,9 +48,12 @@ public class DeliveryFulfillmentService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
         requireAssignedTo(order, dpUserId);
-        if (order.getOrderStatus() != OrderStatus.ASSIGNED) {
+        if (order.getOrderStatus() == OrderStatus.ASSIGNED) {
+            throw new RuntimeException("The shop hasn't marked this order ready yet");
+        }
+        if (order.getOrderStatus() != OrderStatus.READY_FOR_PICKUP) {
             throw new RuntimeException("Order is in status " + order.getOrderStatus()
-                    + ", expected ASSIGNED");
+                    + ", expected READY_FOR_PICKUP");
         }
 
         applyTransition(order, OrderStatus.OUT_FOR_DELIVERY);

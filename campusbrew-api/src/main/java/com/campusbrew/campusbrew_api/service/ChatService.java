@@ -227,7 +227,7 @@ public class ChatService implements InboundSocketHandler {
             return "No dasher has been assigned yet";
         }
         switch (status) {
-            case ASSIGNED, OUT_FOR_DELIVERY:
+            case ASSIGNED, READY_FOR_PICKUP, OUT_FOR_DELIVERY:
                 return null;
             case DELIVERED:
                 // Read-only as soon as delivery is confirmed — no grace window.

@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Marketplace safety net. If no DP claims a READY_FOR_PICKUP order within
+ * Marketplace safety net. If no DP claims an accepted order within
  * {@code delivery.orderExpiry.minutes}, this scheduler cancels it (soft cancel —
  * status flips to CANCELLED, GCash flips to REFUND_PENDING). Runs every minute.
  */
@@ -63,9 +63,15 @@ public class OrderExpiryScheduler {
     @Scheduled(fixedRate = 60_000L)
     public void cancelStaleReadyOrders() {
         Date cutoff = new Date(System.currentTimeMillis() - expiryMinutes * 60_000L);
-        List<Order> stale = orderRepository
-                .findByOrderStatusAndDeliveryPersonnelIdIsNullAndReadyAtLessThan(
-                        OrderStatus.READY_FOR_PICKUP, cutoff);
+        // Counted from when the shop accepted (rider search started); orders from
+        // before that change still expire from readyAt.
+        List<Order> stale = new ArrayList<>(orderRepository
+                .findByOrderStatusInAndDeliveryPersonnelIdIsNullAndRiderSearchAtLessThan(
+                        List.of(OrderStatus.PREPARING, OrderStatus.READY_FOR_PICKUP), cutoff));
+        orderRepository.findByOrderStatusAndDeliveryPersonnelIdIsNullAndReadyAtLessThan(
+                        OrderStatus.READY_FOR_PICKUP, cutoff).stream()
+                .filter(o -> o.getRiderSearchAt() == null)
+                .forEach(stale::add);
         if (stale.isEmpty()) return;
 
         log.info("Auto-cancelling {} unclaimed order(s) past the {}-min expiry", stale.size(), expiryMinutes);

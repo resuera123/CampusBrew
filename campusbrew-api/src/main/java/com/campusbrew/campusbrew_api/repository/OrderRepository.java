@@ -25,7 +25,18 @@ public interface OrderRepository extends MongoRepository<Order, String> {
     // FR-4.6 sales report: a shop's orders created since a date (filtered by delivery time after).
     List<Order> findByShopIdAndCreatedAtGreaterThanEqual(String shopId, java.util.Date from);
 
-    /** Marketplace pool: READY_FOR_PICKUP orders that no DP has claimed yet. */
+    /** Marketplace pool: accepted orders (PREPARING) that no dasher has claimed yet, oldest search first. */
+    List<Order> findByOrderStatusInAndDeliveryPersonnelIdIsNullOrderByRiderSearchAtAsc(Collection<OrderStatus> statuses);
+
+    /** Expiry input: orders still without a dasher whose rider search started before the cutoff. */
+    List<Order> findByOrderStatusInAndDeliveryPersonnelIdIsNullAndRiderSearchAtLessThan(
+            Collection<OrderStatus> statuses, java.util.Date cutoff);
+
+    /** Re-broadcast input: unclaimed orders whose first offer window has passed. */
+    List<Order> findByOrderStatusInAndDeliveryPersonnelIdIsNullAndRebroadcastAtIsNullAndRiderSearchAtLessThan(
+            Collection<OrderStatus> statuses, java.util.Date cutoff);
+
+    /** Marketplace pool (before rider search moved to accept): READY_FOR_PICKUP orders no DP claimed. */
     List<Order> findByOrderStatusAndDeliveryPersonnelIdIsNullOrderByReadyAtAsc(OrderStatus status);
 
     /** Scheduler input: any unclaimed READY_FOR_PICKUP older than the cutoff. */

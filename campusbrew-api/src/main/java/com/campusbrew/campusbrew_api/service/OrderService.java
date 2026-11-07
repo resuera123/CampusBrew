@@ -307,8 +307,8 @@ public class OrderService {
     }
 
     /**
-     * Public marketplace list for delivery personnel: every order in READY_FOR_PICKUP
-     * with no assigned DP, sorted by readyAt ASC (oldest first, closest to the 10-min
+     * Public marketplace list for delivery personnel: every accepted order (PREPARING)
+     * with no assigned DP, sorted by riderSearchAt ASC (oldest first, closest to the 10-min
      * expiry deadline so they're picked up before being cancelled).
      */
     /** Dasher's own history: every DELIVERED order they delivered, newest first. */
@@ -333,7 +333,8 @@ public class OrderService {
             throw new RuntimeException("Only delivery personnel can browse available orders");
         }
         List<Order> orders = orderRepository
-                .findByOrderStatusAndDeliveryPersonnelIdIsNullOrderByReadyAtAsc(OrderStatus.READY_FOR_PICKUP);
+                .findByOrderStatusInAndDeliveryPersonnelIdIsNullOrderByRiderSearchAtAsc(
+                        List.of(OrderStatus.PREPARING, OrderStatus.READY_FOR_PICKUP));
         Map<String, String> shopNames = resolveShopNames(orders);
         return orders.stream()
                 .map(o -> OrderDTO.fromOrder(o, shopNames.get(o.getShopId()), null))
@@ -365,39 +366,65 @@ public class OrderService {
                 .collect(java.util.stream.Collectors.toList());
     }
 
+    /**
+     * The shop accepts: the order goes to PREPARING and the rider search starts right
+     * away (offer to nearby dashers, then everyone after 60s, plus the marketplace).
+     * If no dasher claims it within 10 minutes the order is cancelled and refunded,
+     * so the shop isn't left with drinks nobody can deliver.
+     */
     public OrderDTO acceptOrder(String operatorUserId, String orderId) {
-        return transitionShopOrder(operatorUserId, orderId, OrderStatus.PLACED, OrderStatus.PREPARING);
-    }
-
-    public OrderDTO markReady(String operatorUserId, String orderId) {
-        OrderDTO updated = transitionShopOrder(operatorUserId, orderId, OrderStatus.PREPARING, OrderStatus.READY_FOR_PICKUP);
-        // Stamp readyAt so the 10-min auto-cancel scheduler and the shop UI countdown
-        // both have a single source of truth.
+        OrderDTO updated = transitionShopOrder(operatorUserId, orderId, OrderStatus.PLACED, OrderStatus.PREPARING);
         orderRepository.findById(orderId).ifPresent(o -> {
-            o.setReadyAt(Date.from(Instant.now()));
+            o.setRiderSearchAt(Date.from(Instant.now()));
             orderRepository.save(o);
-            // Hybrid model: kick off a 30s proximity offer to the nearest active DP.
-            // If they don't claim it within the offer window, the order falls into the
-            // public marketplace list (GET /api/delivery/orders/available) and any DP
-            // can claim. If still unclaimed after 10 min total, the scheduler cancels it.
             deliveryAssignmentEngine.assignOrder(o);
         });
         return updated;
     }
 
     /**
-     * Shop-initiated cancel. Allowed while the order is still pre-handoff:
-     * PLACED (refuse), PREPARING (pull back mid-prep), or READY_FOR_PICKUP (recall
-     * before a dasher claims). Once a dasher has the order (ASSIGNED+) the shop
-     * can't cancel — that's a delivery-side concern.
+     * The shop marks the drinks ready. Only once a dasher has claimed the order
+     * (ASSIGNED); the dasher is told it's ready to pick up.
+     */
+    public OrderDTO markReady(String operatorUserId, String orderId) {
+        Order current = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+        if (current.getOrderStatus() == OrderStatus.PREPARING && current.getDeliveryPersonnelId() == null) {
+            throw new RuntimeException("Wait for a rider to accept the order before marking it ready");
+        }
+        OrderDTO updated = transitionShopOrder(operatorUserId, orderId, OrderStatus.ASSIGNED, OrderStatus.READY_FOR_PICKUP);
+        orderRepository.findById(orderId).ifPresent(o -> {
+            o.setReadyAt(Date.from(Instant.now()));
+            orderRepository.save(o);
+            if (o.getDeliveryPersonnelId() != null) {
+                pushNotificationService.send(o.getDeliveryPersonnelId(), "Order ready for pickup",
+                        "Order #" + shortId(o.getId()) + " is ready at the shop.",
+                        Map.of("orderId", o.getId(), "status", OrderStatus.READY_FOR_PICKUP.name()));
+            }
+        });
+        return updated;
+    }
+
+    private static String shortId(String id) {
+        return id == null ? "" : id.substring(Math.max(0, id.length() - 6)).toUpperCase();
+    }
+
+    /**
+     * Shop-initiated cancel. Allowed until the dasher picks the order up: PLACED
+     * (refuse), PREPARING, ASSIGNED or READY_FOR_PICKUP. A dasher already on the
+     * order is released (and told, through the status update).
      */
     public OrderDTO rejectOrder(String operatorUserId, String orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
         Shop shop = requireOwnedShop(operatorUserId, order.getShopId());
         OrderStatus s = order.getOrderStatus();
-        if (s != OrderStatus.PLACED && s != OrderStatus.PREPARING && s != OrderStatus.READY_FOR_PICKUP) {
+        if (s != OrderStatus.PLACED && s != OrderStatus.PREPARING
+                && s != OrderStatus.ASSIGNED && s != OrderStatus.READY_FOR_PICKUP) {
             throw new RuntimeException("Cannot cancel an order in status " + s);
+        }
+        if (order.getDeliveryPersonnelId() != null) {
+            deliveryAssignmentEngine.releaseDasher(order.getDeliveryPersonnelId(), order.getId());
         }
         if (order.getPaymentStatus() == PaymentStatus.PAID_GCASH) {
             order.setPaymentStatus(refundNow(order.getId()) ? PaymentStatus.REFUNDED : PaymentStatus.REFUND_PENDING);
@@ -409,14 +436,16 @@ public class OrderService {
     /**
      * v2.0 FR-3.3 — the shop confirms it received payment from the dasher at pickup.
      * Stamps shopPaymentConfirmedAt and notifies the dasher and customer. Allowed
-     * once a dasher is assigned (ASSIGNED, or OUT_FOR_DELIVERY if confirmed late).
+     * once a dasher is assigned (ASSIGNED / READY_FOR_PICKUP, or OUT_FOR_DELIVERY if confirmed late).
      */
     public OrderDTO confirmPaymentReceived(String operatorUserId, String orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
         Shop shop = requireOwnedShop(operatorUserId, order.getShopId());
-        if (order.getOrderStatus() != OrderStatus.ASSIGNED
-                && order.getOrderStatus() != OrderStatus.OUT_FOR_DELIVERY) {
+        if (order.getDeliveryPersonnelId() == null
+                || (order.getOrderStatus() != OrderStatus.ASSIGNED
+                    && order.getOrderStatus() != OrderStatus.READY_FOR_PICKUP
+                    && order.getOrderStatus() != OrderStatus.OUT_FOR_DELIVERY)) {
             throw new RuntimeException("Payment can only be confirmed after a dasher is assigned");
         }
         Date now = Date.from(Instant.now());
@@ -531,8 +560,8 @@ public class OrderService {
     /** Customer-facing push copy per order status, or null when no push is warranted. */
     private String[] customerStatusMessage(OrderStatus status) {
         return switch (status) {
-            case PREPARING -> new String[]{"Order accepted", "The shop is preparing your order."};
-            case READY_FOR_PICKUP -> new String[]{"Ready for pickup", "Your order is ready and waiting for a rider."};
+            case PREPARING -> new String[]{"Order accepted", "The shop is preparing your order while we find you a rider."};
+            case READY_FOR_PICKUP -> new String[]{"Ready for pickup", "Your order is ready and your rider is picking it up."};
             case CANCELLED -> new String[]{"Order cancelled", "Your order was cancelled."};
             default -> null; // PLACED is the customer's own action; others push elsewhere
         };
