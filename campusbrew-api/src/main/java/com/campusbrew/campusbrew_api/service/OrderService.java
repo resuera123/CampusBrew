@@ -6,6 +6,7 @@ import com.campusbrew.campusbrew_api.repository.OrderRepository;
 import com.campusbrew.campusbrew_api.repository.ShopRepository;
 import com.campusbrew.campusbrew_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +17,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderService {
@@ -398,7 +400,7 @@ public class OrderService {
             throw new RuntimeException("Cannot cancel an order in status " + s);
         }
         if (order.getPaymentStatus() == PaymentStatus.PAID_GCASH) {
-            order.setPaymentStatus(PaymentStatus.REFUND_PENDING);
+            order.setPaymentStatus(refundNow(order.getId()) ? PaymentStatus.REFUNDED : PaymentStatus.REFUND_PENDING);
         }
         Order saved = applyStatusTransition(order, OrderStatus.CANCELLED);
         return OrderDTO.fromOrder(saved, shop.getShopName(), null);
@@ -498,6 +500,19 @@ public class OrderService {
         if (msg != null) {
             pushNotificationService.send(order.getCustomerId(), msg[0], msg[1],
                     Map.of("orderId", order.getId(), "status", next.name()));
+        }
+    }
+
+    /**
+     * Sends a cancelled GCash order's money back. False if Xendit refused; the order
+     * then stays REFUND_PENDING and OrderExpiryScheduler retries it.
+     */
+    private boolean refundNow(String orderId) {
+        try {
+            return paymentService.refund(orderId);
+        } catch (RuntimeException e) {
+            log.warn("Refund for order {} failed, will retry: {}", orderId, e.getMessage());
+            return false;
         }
     }
 

@@ -33,9 +33,31 @@ public class OrderExpiryScheduler {
     private final OrderRepository orderRepository;
     private final ShopRepository shopRepository;
     private final SocketService socketService;
+    private final PaymentService paymentService;
 
     @Value("${delivery.orderExpiry.minutes:10}")
     private long expiryMinutes;
+
+    /** Every 10 minutes, retries refunds Xendit refused earlier (orders still REFUND_PENDING). */
+    @Scheduled(fixedRate = 600_000L, initialDelay = 120_000L)
+    public void retryPendingRefunds() {
+        for (Order order : orderRepository.findByPaymentStatus(PaymentStatus.REFUND_PENDING)) {
+            if (!refund(order.getId())) continue;
+            order.setPaymentStatus(PaymentStatus.REFUNDED);
+            order.setUpdatedAt(Date.from(Instant.now()));
+            orderRepository.save(order);
+            log.info("Refunded order {} on retry", order.getId());
+        }
+    }
+
+    private boolean refund(String orderId) {
+        try {
+            return paymentService.refund(orderId);
+        } catch (RuntimeException e) {
+            log.warn("Refund for order {} failed, will retry: {}", orderId, e.getMessage());
+            return false;
+        }
+    }
 
     /** Runs every 60s. fixedRate is fine — overlapping runs would no-op anyway. */
     @Scheduled(fixedRate = 60_000L)
@@ -51,7 +73,7 @@ public class OrderExpiryScheduler {
 
         for (Order order : stale) {
             if (order.getPaymentStatus() == PaymentStatus.PAID_GCASH) {
-                order.setPaymentStatus(PaymentStatus.REFUND_PENDING);
+                order.setPaymentStatus(refund(order.getId()) ? PaymentStatus.REFUNDED : PaymentStatus.REFUND_PENDING);
             }
             order.setOrderStatus(OrderStatus.CANCELLED);
             order.setUpdatedAt(now);

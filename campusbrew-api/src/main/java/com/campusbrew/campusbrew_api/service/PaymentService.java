@@ -206,19 +206,28 @@ public class PaymentService {
 
     // ---- Refund (FR-4.1, used by shop reject / customer cancel) ----
 
-    /** Refund the GCash payment for an order, if one was PAID. No-op for COD/unpaid. */
-    public void refund(String orderId) {
+    /**
+     * Refund the GCash payment for an order, if one was PAID. Returns true when the
+     * money was sent back (or already had been), false when there was nothing to
+     * refund (COD / unpaid). Throws PaymentException if Xendit refuses, so the
+     * caller can leave the order REFUND_PENDING and retry later.
+     */
+    public boolean refund(String orderId) {
+        boolean alreadyRefunded = paymentRepository.findByOrderIdAndType(orderId, PaymentType.ORDER).stream()
+                .anyMatch(p -> p.getStatus() == PaymentRecordStatus.REFUNDED);
         // Only the order's checkout payment is refunded; a post-delivery tip can't
         // coexist with a refund (tips need DELIVERED, refunds happen before pickup).
         Payment payment = paymentRepository.findByOrderIdAndType(orderId, PaymentType.ORDER).stream()
                 .filter(p -> p.getStatus() == PaymentRecordStatus.PAID && p.getGatewayChargeId() != null)
                 .findFirst().orElse(null);
         if (payment == null) {
-            return;
+            return alreadyRefunded;
         }
         xenditClient.refund(payment.getGatewayChargeId(), payment.getAmount());
         payment.setStatus(PaymentRecordStatus.REFUNDED);
+        payment.setRefundedAt(new Date());
         paymentRepository.save(payment);
+        return true;
     }
 
     // ---- helpers ----

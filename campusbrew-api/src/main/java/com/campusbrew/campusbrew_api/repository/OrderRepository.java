@@ -2,6 +2,7 @@ package com.campusbrew.campusbrew_api.repository;
 
 import com.campusbrew.campusbrew_api.model.Order;
 import com.campusbrew.campusbrew_api.model.OrderStatus;
+import com.campusbrew.campusbrew_api.model.PaymentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -12,6 +13,8 @@ import java.util.List;
 
 @Repository
 public interface OrderRepository extends MongoRepository<Order, String> {
+
+    List<Order> findByPaymentStatus(PaymentStatus paymentStatus);
 
     Page<Order> findByCustomerIdOrderByCreatedAtDesc(String customerId, Pageable pageable);
 

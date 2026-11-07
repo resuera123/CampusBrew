@@ -73,10 +73,25 @@ public class PaymentCenterService {
             if (p.getStatus() == PaymentRecordStatus.PAID) totalPaid += p.getAmount();
         }
 
+        // Refunds of cancelled GCash orders, as their own lines (money back to the customer).
+        boolean showRefunds = typeFilter == null || typeFilter.isBlank() || typeFilter.equalsIgnoreCase("REFUND");
+        if (showRefunds) {
+            for (Payment p : paymentRepository.findByUserIdOrderByCreatedAtDesc(userId, BIG)) {
+                if (p.getStatus() != PaymentRecordStatus.REFUNDED) continue;
+                entries.add(PaymentCenterEntryDTO.builder()
+                        .id(p.getId() + "-refund").source("REFUND").kind("REFUND")
+                        .orderId(p.getOrderId()).method("GCASH").status("REFUNDED")
+                        .amount(p.getAmount()).referenceNo(p.getReferenceNo())
+                        .description("Refund · order cancelled")
+                        .createdAt(p.getRefundedAt() != null ? p.getRefundedAt() : p.getCreatedAt()).build());
+            }
+        }
+
         // COD orders have no payments doc; surface them from the orders collection.
         if (typeFilter == null || typeFilter.isBlank() || typeFilter.equalsIgnoreCase("ORDER")) {
             for (Order o : orderRepository.findByCustomerIdOrderByCreatedAtDesc(userId, BIG)) {
                 if (o.getPaymentMethod() != PaymentMethod.COD) continue;
+                if (o.getOrderStatus() == OrderStatus.CANCELLED) continue; // nothing was paid
                 entries.add(PaymentCenterEntryDTO.builder()
                         .id(o.getId()).source("COD_ORDER").kind("ORDER")
                         .orderId(o.getId()).method("COD")
@@ -84,6 +99,18 @@ public class PaymentCenterService {
                         .amount(o.getTotalAmount()).description("Cash on delivery")
                         .createdAt(o.getCreatedAt()).build());
                 if (o.getPaymentStatus() == PaymentStatus.PAID_COD) totalPaid += o.getTotalAmount();
+            }
+        }
+
+        // A refund Xendit hasn't accepted yet (retried automatically).
+        if (showRefunds) {
+            for (Order o : orderRepository.findByCustomerIdOrderByCreatedAtDesc(userId, BIG)) {
+                if (o.getPaymentStatus() != PaymentStatus.REFUND_PENDING) continue;
+                entries.add(PaymentCenterEntryDTO.builder()
+                        .id(o.getId() + "-refund").source("REFUND").kind("REFUND")
+                        .orderId(o.getId()).method("GCASH").status("REFUND_PENDING")
+                        .amount(o.getTotalAmount()).description("Refund pending · order cancelled")
+                        .createdAt(o.getUpdatedAt() != null ? o.getUpdatedAt() : o.getCreatedAt()).build());
             }
         }
 

@@ -57,5 +57,8 @@ public class Payment {
      */
     private Order orderDraft;
 
+    // When the refund was sent back to the customer's GCash (status REFUNDED).
+    private Date refundedAt;
+
     private Date createdAt;
 }

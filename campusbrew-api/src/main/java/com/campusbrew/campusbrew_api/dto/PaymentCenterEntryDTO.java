@@ -13,9 +13,9 @@ import java.util.Date;
 @Builder
 public class PaymentCenterEntryDTO {
     private String id;
-    /** PAYMENT (payments doc) | TRANSACTION (delivery txn) | COD_ORDER (unpaid/paid COD order). */
+    /** PAYMENT (payments doc) | TRANSACTION (delivery txn) | COD_ORDER (unpaid/paid COD order) | REFUND (money back for a cancelled GCash order). */
     private String source;
-    /** Display kind: ORDER | TIP | DELIVERY | COD_COLLECTION. */
+    /** Display kind: ORDER | TIP | DELIVERY | COD_COLLECTION | REFUND. */
     private String kind;
     private String orderId;
     private String method;     // GCASH | COD
