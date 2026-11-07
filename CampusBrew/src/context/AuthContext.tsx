@@ -3,6 +3,9 @@ import * as SecureStore from 'expo-secure-store';
 import { AuthService, AuthResponse } from '../services/AuthService';
 import { showAlert } from '../components/AppAlert';
 
+/** Shown wherever a request fails because the phone is offline. */
+export const NO_CONNECTION = 'No internet connection. Check your Wi-Fi or mobile data and try again.';
+
 interface AuthContextType {
   user: AuthResponse | null;
   token: string | null;
@@ -26,12 +29,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   // A suspended account gets 403 {suspended: true} from every API call; sign it
-  // out once instead of leaving each screen to show the error.
+  // out once instead of leaving each screen to show the error. Also turns the
+  // platform's "Network request failed" into a message people understand.
   const signingOut = useRef(false);
   useEffect(() => {
     const originalFetch = global.fetch;
     global.fetch = async (...args: Parameters<typeof fetch>) => {
-      const res = await originalFetch(...args);
+      let res: Response;
+      try {
+        res = await originalFetch(...args);
+      } catch (e: any) {
+        if (/network request failed|failed to fetch|network ?error/i.test(e?.message ?? '')) {
+          throw new Error(NO_CONNECTION);
+        }
+        throw e;
+      }
       if (res.status === 403 && !signingOut.current) {
         try {
           const body = await res.clone().json();
