@@ -35,6 +35,26 @@ export const PaymentCenterService = {
     return json;
   },
 
+  /** Dasher or shop operator: report a problem with one order's payment. */
+  async reportOrder(orderId: string, note: string, token: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/payments/orders/${orderId}/report`, {
+      method: 'POST',
+      headers: authHeaders(token),
+      body: JSON.stringify({ note }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error((text && JSON.parse(text).error) || 'Failed to report');
+    }
+  },
+
+  async orderReported(orderId: string, token: string): Promise<boolean> {
+    const res = await fetch(`${API_BASE_URL}/api/payments/orders/${orderId}/report`, { headers: authHeaders(token) });
+    if (!res.ok) return false;
+    const json = await res.json().catch(() => ({}));
+    return !!json.reported;
+  },
+
   async report(paymentId: string, note: string, token: string): Promise<void> {
     const res = await fetch(`${API_BASE_URL}/api/payments/${paymentId}/report`, {
       method: 'POST',

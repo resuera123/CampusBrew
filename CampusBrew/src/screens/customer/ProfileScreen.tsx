@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
-import ConfirmDialog, { useConfirm } from '../../components/ConfirmDialog';
+import { useConfirm } from '../../components/ConfirmDialog';
+import LogoutButton from '../../components/LogoutButton';
 import MyRatingCard from '../../components/MyRatingCard';
 import { DeliveryService, DeliveryPersonnelProfile } from '../../services/DeliveryService';
 import { DasherApplicationService, DasherStatus } from '../../services/DasherApplicationService';
@@ -12,13 +13,12 @@ import { AuthService, VerificationStatusInfo } from '../../services/AuthService'
 import { COLORS, SIZES } from '../../constants/theme';
 
 export default function ProfileScreen({ navigation }: any) {
-  const { user, token, logout, setSession, updateUser } = useAuth();
+  const { user, token, setSession, updateUser } = useAuth();
   const [verification, setVerification] = useState<VerificationStatusInfo | null>(null);
   const verificationStatus = verification?.verificationStatus ?? user?.verificationStatus;
   const isVerified = verificationStatus === 'VERIFIED';
   const isPending = verificationStatus === 'PENDING';
   const isDP = user?.role === 'DELIVERY_PERSONNEL';
-  const [logoutOpen, setLogoutOpen] = useState(false);
   const [dpProfile, setDpProfile] = useState<DeliveryPersonnelProfile | null>(null);
   const [dasher, setDasher] = useState<DasherStatus | null>(null);
   const [switching, setSwitching] = useState(false);
@@ -158,25 +158,9 @@ export default function ProfileScreen({ navigation }: any) {
           <Text style={styles.outlinedButtonText}>Payment Center</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.outlinedButton, { marginTop: 16, borderColor: '#E8E8E8' }]} onPress={() => setLogoutOpen(true)} activeOpacity={0.7}>
-          <Ionicons name="log-out-outline" size={20} color="#94353E" style={{ marginRight: 8 }} />
-          <Text style={styles.outlinedButtonText}>Log Out</Text>
-        </TouchableOpacity>
+        <LogoutButton />
       </ScrollView>
 
-      <ConfirmDialog
-        visible={logoutOpen}
-        title="Log out?"
-        message="You'll be signed out and returned to the login screen."
-        confirmLabel="Log out"
-        destructive
-        icon="log-out-outline"
-        onCancel={() => setLogoutOpen(false)}
-        onConfirm={() => {
-          setLogoutOpen(false);
-          logout();
-        }}
-      />
       {dialog}
     </SafeAreaView>
   );

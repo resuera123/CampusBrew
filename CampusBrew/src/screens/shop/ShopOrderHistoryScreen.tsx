@@ -90,9 +90,17 @@ export default function ShopOrderHistoryScreen({ navigation }: any) {
             const itemCount = order.items.reduce((sum, it) => sum + (it.quantity || 0), 0);
             const isDelivered = order.orderStatus === 'DELIVERED';
             return (
-              <View key={order.id} style={styles.card}>
+              <TouchableOpacity
+                key={order.id}
+                style={styles.card}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('ShopOrderDetail', { order })}
+              >
                 <View style={styles.cardHeader}>
-                  <Text style={styles.orderId}>#{order.id.slice(-6).toUpperCase()}</Text>
+                  <View style={styles.idRow}>
+                    <Text style={styles.orderId}>#{order.id.slice(-6).toUpperCase()}</Text>
+                    <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
+                  </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     <Text style={styles.amount}>₱{order.beverageSubtotal.toFixed(2)}</Text>
                     <Text style={styles.amountLabel}>shop revenue</Text>
@@ -124,7 +132,7 @@ export default function ShopOrderHistoryScreen({ navigation }: any) {
                     <Text style={styles.rateLinkText}>Rate dasher</Text>
                   </TouchableOpacity>
                 )}
-              </View>
+              </TouchableOpacity>
             );
           })
         )}
@@ -165,6 +173,7 @@ const styles = StyleSheet.create({
   emptySub: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, marginTop: 4, textAlign: 'center' },
   card: { backgroundColor: COLORS.white, borderRadius: 12, padding: 14, marginBottom: 12 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  idRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   orderId: { fontSize: SIZES.bodySize, fontWeight: '700', color: COLORS.text },
   amount: { fontSize: SIZES.bodySize, fontWeight: '700', color: COLORS.text },
   amountLabel: { fontSize: SIZES.tinySize, color: COLORS.textSecondary, marginTop: 1 },

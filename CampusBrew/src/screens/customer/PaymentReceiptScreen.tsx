@@ -1,41 +1,32 @@
 import React, { useState } from 'react';
-import {
-  View, Text, StyleSheet, StatusBar, TouchableOpacity, ScrollView, TextInput, ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet, StatusBar, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { PaymentCenterService, PaymentCenterEntry } from '../../services/PaymentCenterService';
-import { showAlert } from '../../components/AppAlert';
+import ReportProblemCard from '../../components/ReportProblemCard';
 
-// v2.0 FR-4.8 — receipt + "Report a Problem" (payments only).
+// v2.0 FR-4.8 — receipt + "Report a Problem". Customers report their own GCash
+// payments; dashers report a delivery's payment (by its order). The shop
+// operator reports from Order History instead.
 export default function PaymentReceiptScreen({ navigation, route }: any) {
   const entry: PaymentCenterEntry = route.params?.entry;
-  const { token } = useAuth();
-  const [reporting, setReporting] = useState(false);
-  const [note, setNote] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const { token, user } = useAuth();
   const [reported, setReported] = useState(entry?.reported ?? false);
 
-  const canReport = entry?.source === 'PAYMENT' && !reported;
+  const isDasherDelivery =
+    user?.role === 'DELIVERY_PERSONNEL' && entry?.source === 'TRANSACTION' && !!entry?.orderId;
+  const canReport = entry?.source === 'PAYMENT' || isDasherDelivery;
 
-  const submitReport = async () => {
-    if (!token || !note.trim()) {
-      showAlert('Add a note', 'Tell us what went wrong with this payment.');
-      return;
+  const submitReport = async (note: string) => {
+    if (!token) return;
+    if (isDasherDelivery) {
+      await PaymentCenterService.reportOrder(entry.orderId!, note, token);
+    } else {
+      await PaymentCenterService.report(entry.id, note, token);
     }
-    setSubmitting(true);
-    try {
-      await PaymentCenterService.report(entry.id, note.trim(), token);
-      setReported(true);
-      setReporting(false);
-      showAlert('Reported', 'Thanks — we\'ll look into this payment.');
-    } catch (e: any) {
-      showAlert('Could not report', e.message || 'Try again.');
-    } finally {
-      setSubmitting(false);
-    }
+    setReported(true);
   };
 
   const Row = ({ label, value }: { label: string; value?: string | null }) =>
@@ -67,40 +58,18 @@ export default function PaymentReceiptScreen({ navigation, route }: any) {
           <Row label="Type" value={entry?.description || entry?.kind} />
           <Row label="Method" value={entry?.method} />
           <Row label="Reference No." value={entry?.referenceNo} />
-          <Row label="Order" value={entry?.orderId} />
+          <Row label="Order" value={entry?.orderId ? `#${entry.orderId.slice(-6).toUpperCase()}` : undefined} />
           <Row label="Date" value={entry?.createdAt ? new Date(entry.createdAt).toLocaleString() : undefined} />
         </View>
 
-        {reported && (
-          <View style={styles.reportedBanner}>
-            <Ionicons name="flag" size={16} color="#C0392B" />
-            <Text style={styles.reportedText}>You reported a problem with this payment.</Text>
-          </View>
-        )}
-
-        {canReport && !reporting && (
-          <TouchableOpacity style={styles.reportBtn} onPress={() => setReporting(true)} activeOpacity={0.7}>
-            <Ionicons name="flag-outline" size={18} color="#C0392B" />
-            <Text style={styles.reportBtnText}>Report a Problem</Text>
-          </TouchableOpacity>
-        )}
-
-        {reporting && (
-          <View style={styles.card}>
-            <Text style={styles.reportLabel}>What went wrong?</Text>
-            <TextInput
-              style={styles.noteInput}
-              placeholder="e.g. I was charged but no order was placed"
-              placeholderTextColor={COLORS.textSecondary}
-              value={note}
-              onChangeText={setNote}
-              multiline
-              maxLength={300}
-            />
-            <TouchableOpacity style={styles.submitBtn} onPress={submitReport} disabled={submitting}>
-              {submitting ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.submitText}>Submit Report</Text>}
-            </TouchableOpacity>
-          </View>
+        {canReport && (
+          <ReportProblemCard
+            reported={reported}
+            onSubmit={submitReport}
+            placeholder={isDasherDelivery
+              ? 'e.g. My earnings for this delivery are wrong'
+              : 'e.g. I was charged but no order was placed'}
+          />
         )}
       </ScrollView>
     </SafeAreaView>
@@ -122,12 +91,4 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 },
   rowLabel: { fontSize: 14, color: COLORS.textSecondary },
   rowValue: { fontSize: 14, fontWeight: '600', color: COLORS.text, maxWidth: '60%', textAlign: 'right' },
-  reportedBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, backgroundColor: '#FDEDEC', borderRadius: 10, marginBottom: 16 },
-  reportedText: { color: '#C0392B', fontSize: 13, fontWeight: '600' },
-  reportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderWidth: 1, borderColor: '#C0392B', borderRadius: 12 },
-  reportBtnText: { color: '#C0392B', fontWeight: '700', fontSize: 15 },
-  reportLabel: { fontSize: 14, fontWeight: '600', color: COLORS.text, marginBottom: 8 },
-  noteInput: { minHeight: 70, fontSize: 14, color: COLORS.text, textAlignVertical: 'top', borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border, borderRadius: 10, padding: 10 },
-  submitBtn: { backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 12 },
-  submitText: { color: COLORS.white, fontWeight: '700', fontSize: 15 },
 });

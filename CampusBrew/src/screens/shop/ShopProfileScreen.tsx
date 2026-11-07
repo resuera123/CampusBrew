@@ -15,16 +15,15 @@ import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { ShopService, Shop } from '../../services/ShopService';
-import ConfirmDialog from '../../components/ConfirmDialog';
+import LogoutButton from '../../components/LogoutButton';
 import MyRatingCard from '../../components/MyRatingCard';
 
 export default function ShopProfileScreen({ navigation }: any) {
-  const { token, user, logout } = useAuth();
+  const { token, user } = useAuth();
   const [shop, setShop] = useState<Shop | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [logoutOpen, setLogoutOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -107,25 +106,9 @@ export default function ShopProfileScreen({ navigation }: any) {
           <Text style={styles.editBtnText}>Edit Profile</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.logoutBtn} onPress={() => setLogoutOpen(true)}>
-          <Ionicons name="log-out-outline" size={18} color="#D93025" />
-          <Text style={styles.logoutText}>Log out</Text>
-        </TouchableOpacity>
+        <LogoutButton />
       </ScrollView>
 
-      <ConfirmDialog
-        visible={logoutOpen}
-        title="Log out?"
-        message="You'll need to sign back in to manage your shop."
-        confirmLabel="Log out"
-        destructive
-        icon="log-out-outline"
-        onCancel={() => setLogoutOpen(false)}
-        onConfirm={() => {
-          setLogoutOpen(false);
-          logout();
-        }}
-      />
     </SafeAreaView>
   );
 }
@@ -190,12 +173,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   editBtnText: { color: COLORS.white, fontSize: SIZES.buttonFontSize, fontWeight: '600' },
-  logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 16,
-    padding: 10,
-  },
-  logoutText: { color: '#D93025', fontWeight: '500' },
 });

@@ -1,14 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
-import ConfirmDialog from '../../components/ConfirmDialog';
+import LogoutButton from '../../components/LogoutButton';
 
 export default function AdminProfileScreen() {
-  const { user, logout } = useAuth();
-  const [logoutOpen, setLogoutOpen] = useState(false);
+  const { user } = useAuth();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -19,25 +18,8 @@ export default function AdminProfileScreen() {
         <Text style={styles.name}>{user?.fullName ?? 'Admin'}</Text>
         <Text style={styles.role}>CampusBrew Admin</Text>
 
-        <TouchableOpacity style={styles.logoutBtn} onPress={() => setLogoutOpen(true)}>
-          <Ionicons name="log-out-outline" size={18} color={COLORS.destructive} />
-          <Text style={styles.logoutText}>Log out</Text>
-        </TouchableOpacity>
+        <LogoutButton style={{ marginTop: 32 }} />
       </View>
-
-      <ConfirmDialog
-        visible={logoutOpen}
-        title="Log out?"
-        message="You'll need to sign back in to review applications and reports."
-        confirmLabel="Log out"
-        destructive
-        icon="log-out-outline"
-        onCancel={() => setLogoutOpen(false)}
-        onConfirm={() => {
-          setLogoutOpen(false);
-          logout();
-        }}
-      />
     </SafeAreaView>
   );
 }
@@ -56,6 +38,4 @@ const styles = StyleSheet.create({
   },
   name: { fontSize: 20, fontWeight: '700', color: COLORS.text },
   role: { fontSize: SIZES.captionSize, color: COLORS.textSecondary, marginTop: 4 },
-  logoutBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 32, padding: 10 },
-  logoutText: { color: COLORS.destructive, fontWeight: '600' },
 });
