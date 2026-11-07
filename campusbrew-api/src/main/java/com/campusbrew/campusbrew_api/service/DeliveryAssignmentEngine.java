@@ -75,6 +75,7 @@ public class DeliveryAssignmentEngine {
         if (recipients.isEmpty()) {
             log.info("No in-range active DP for order {} — relying on 60s re-broadcast / marketplace",
                     order.getId());
+            notifyNoDriver(order);
             return;
         }
         broadcast(order, shop, recipients);
@@ -95,11 +96,26 @@ public class DeliveryAssignmentEngine {
         Shop shop = shopRepository.findById(order.getShopId()).orElse(null);
         List<DeliveryPersonnel> all = findEligibleDps(shop, false);
         broadcast(order, shop, all);
+        if (all.isEmpty()) notifyNoDriver(order);
 
         order.setRebroadcastAt(Date.from(Instant.now()));
         order.setUpdatedAt(order.getRebroadcastAt());
         orderRepository.save(order);
         log.info("Re-broadcast order {} to all {} active DP(s) (range ignored)", order.getId(), all.size());
+    }
+
+    /**
+     * Tells the customer (and the shop) that no dasher is available yet, so the
+     * tracking screen shows "Looking for a rider". The order is auto-cancelled,
+     * and a GCash payment refunded, if nobody claims it in time.
+     */
+    private void notifyNoDriver(Order order) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("orderId", order.getId());
+        payload.put("timestamp", Date.from(Instant.now()));
+        socketService.emitToUser(order.getCustomerId(), "order:noDriver", payload);
+        String operatorId = getShopOperatorUserId(order.getShopId());
+        if (operatorId != null) socketService.emitToUser(operatorId, "order:noDriver", payload);
     }
 
     /** Emit a per-dasher offer to each recipient and record a PENDING audit row. */
