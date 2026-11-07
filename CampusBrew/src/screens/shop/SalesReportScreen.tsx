@@ -281,15 +281,19 @@ function BarChart({ buckets, dayOfMonth }: { buckets: SalesReport['buckets']; da
         </View>
       </View>
       <View style={styles.xAxis}>
-        {buckets.map((b, i) => (
-          // The slot is as narrow as its bar (31 of them in a month), so the label
-          // is wider than the slot and centred over it instead of wrapping.
-          <View key={b.label + i} style={styles.xSlot}>
-            {i % labelEvery === 0 && (
-              <Text style={[styles.axisText, styles.xLabel]} numberOfLines={1}>{b.label}</Text>
-            )}
-          </View>
-        ))}
+        {buckets.map((b, i) =>
+          // A month has 31 bars, each narrower than "26", so the labels are placed
+          // by percentage (centred under their bar) rather than inside a bar-wide slot.
+          i % labelEvery === 0 ? (
+            <Text
+              key={b.label + i}
+              style={[styles.axisText, styles.xLabel, { left: `${((i + 0.5) / buckets.length) * 100}%` }]}
+              numberOfLines={1}
+            >
+              {b.label}
+            </Text>
+          ) : null,
+        )}
       </View>
     </View>
   );
@@ -429,9 +433,8 @@ const styles = StyleSheet.create({
   bars: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
   barSlot: { flex: 1, height: '100%', justifyContent: 'flex-end', alignItems: 'center' },
   bar: { width: '100%', backgroundColor: COLORS.primary, borderTopLeftRadius: 4, borderTopRightRadius: 4 },
-  xAxis: { flexDirection: 'row', marginLeft: 40, marginTop: 4, gap: 2 },
-  xSlot: { flex: 1, alignItems: 'center', overflow: 'visible' },
-  xLabel: { width: 32, textAlign: 'center' },
+  xAxis: { marginLeft: 40, marginTop: 4, height: 14 },
+  xLabel: { position: 'absolute', top: 0, width: 32, marginLeft: -16, textAlign: 'center' },
   axisText: { fontSize: 10, color: COLORS.textSecondary },
   peak: { fontSize: SIZES.captionSize, color: COLORS.text, fontWeight: '600', marginTop: 10 },
   payRow: { flexDirection: 'row', gap: 10, paddingVertical: 6 },
