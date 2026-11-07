@@ -17,6 +17,22 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class MenuService {
 
+    /** Item photos load with every menu, so the app keeps them to ~480 px (well under this). */
+    static final int MAX_ITEM_IMAGE_CHARS = 300_000;
+
+    /** An uploaded photo (a small JPEG data URI from the app) or a link; blank removes it. */
+    static String cleanImage(String image) {
+        if (image == null || image.isBlank()) return null;
+        String trimmed = image.trim();
+        if (trimmed.length() > MAX_ITEM_IMAGE_CHARS) {
+            throw new RuntimeException("The item photo is too large. Try a different photo.");
+        }
+        if (!trimmed.startsWith("data:image/") && !trimmed.startsWith("http")) {
+            throw new RuntimeException("Upload a photo for this item");
+        }
+        return trimmed;
+    }
+
     private final MenuItemRepository menuItemRepository;
     private final ShopRepository shopRepository;
     private final UserRepository userRepository;
@@ -30,7 +46,7 @@ public class MenuService {
                 .price(dto.getPrice())
                 .description(dto.getDescription())
                 .category(dto.getCategory())
-                .image(dto.getImage())
+                .image(cleanImage(dto.getImage()))
                 .isAvailable(dto.isAvailable())
                 .stockStatus(dto.getStockStatus())
                 .customizationOptions(dto.getCustomizationOptions())
@@ -48,7 +64,7 @@ public class MenuService {
         if (dto.getPrice() != null) item.setPrice(dto.getPrice());
         if (dto.getDescription() != null) item.setDescription(dto.getDescription());
         if (dto.getCategory() != null) item.setCategory(dto.getCategory());
-        if (dto.getImage() != null) item.setImage(dto.getImage());
+        if (dto.getImage() != null) item.setImage(cleanImage(dto.getImage()));
         if (dto.getIsAvailable() != null) item.setAvailable(dto.getIsAvailable());
         if (dto.getStockStatus() != null) item.setStockStatus(dto.getStockStatus());
         if (dto.getCustomizationOptions() != null) item.setCustomizationOptions(dto.getCustomizationOptions());
