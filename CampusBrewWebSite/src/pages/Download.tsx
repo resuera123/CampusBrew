@@ -4,8 +4,10 @@ import PageLayout from "../components/PageLayout";
 const app = {
   name: "CampusBrew",
   version: "1.0.0",
-  size: "00 MB",
-  androidFile: "/downloads/campusbrew.apk", // put the file in public/downloads/
+  size: "73 MB",
+  // EAS build 35c6ad48 (Android APK), hosted on Google Drive. The uc?export=download
+  // form downloads the file straight away instead of opening Drive's preview page.
+  androidFile: "https://drive.google.com/uc?export=download&id=1IKojGqQoiZ3R4VmLosn9S13YJOUa5NGd",
 };
 
 const steps = [
