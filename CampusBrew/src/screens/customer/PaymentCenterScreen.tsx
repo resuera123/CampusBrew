@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
-import { PaymentCenterService, PaymentCenter, PaymentCenterEntry } from '../../services/PaymentCenterService';
+import { PaymentCenterService, PaymentCenter, PaymentCenterEntry, paymentStatusLabel } from '../../services/PaymentCenterService';
 
 // v2.0 FR-4.8 — role-aware Payment Center.
 const SUMMARY_LABELS: Record<string, string> = {
@@ -66,7 +66,7 @@ export default function PaymentCenterScreen({ navigation }: any) {
         <Text style={[styles.entryAmount, item.source === 'REFUND' && styles.refundAmount]}>
           {item.source === 'REFUND' ? '+' : ''}₱{item.amount.toFixed(0)}
         </Text>
-        <Text style={[styles.entryStatus, { color: statusColor(item.status) }]}>{item.status}</Text>
+        <Text style={[styles.entryStatus, { color: statusColor(item.status) }]}>{paymentStatusLabel(item.status)}</Text>
       </View>
     </TouchableOpacity>
   );

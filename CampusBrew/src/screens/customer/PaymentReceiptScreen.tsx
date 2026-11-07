@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
-import { PaymentCenterService, PaymentCenterEntry } from '../../services/PaymentCenterService';
+import { PaymentCenterService, PaymentCenterEntry, paymentStatusLabel } from '../../services/PaymentCenterService';
 import ReportProblemCard from '../../components/ReportProblemCard';
 
 // v2.0 FR-4.8 — receipt + "Report a Problem". Customers report their own GCash
@@ -53,7 +53,7 @@ export default function PaymentReceiptScreen({ navigation, route }: any) {
           <Text style={[styles.amount, entry?.source === 'REFUND' && { color: '#2E7D32' }]}>
             {entry?.source === 'REFUND' ? '+' : ''}₱{entry?.amount?.toFixed(2)}
           </Text>
-          <Text style={styles.status}>{entry?.status}</Text>
+          <Text style={styles.status}>{entry?.status ? paymentStatusLabel(entry.status) : ''}</Text>
         </View>
 
         {entry?.source === 'REFUND' && (

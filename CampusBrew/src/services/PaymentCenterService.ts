@@ -1,6 +1,27 @@
 // v2.0 FR-4.8 — Payment Center client.
 import { API_BASE_URL } from '../constants/api';
 
+const STATUS_LABELS: Record<string, string> = {
+  PAID: 'Paid',
+  PAID_GCASH: 'Paid',
+  PAID_COD: 'Paid (cash)',
+  PENDING: 'Pending',
+  PENDING_COD: 'Cash on delivery',
+  REFUND_PENDING: 'Refund pending',
+  REFUNDED: 'Refunded',
+  FAILED: 'Failed',
+  EXPIRED: 'Expired',
+  FLAGGED: 'Under review',
+  COMPLETED: 'Completed',
+};
+
+/** "REFUND_PENDING" → "Refund pending"; unknown codes lose their underscores. */
+export function paymentStatusLabel(status: string): string {
+  if (STATUS_LABELS[status]) return STATUS_LABELS[status];
+  const words = status.replace(/_/g, ' ').toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 export interface PaymentCenterEntry {
   id: string;
   /** REFUND: money back for a cancelled GCash order (status REFUNDED or REFUND_PENDING). */
