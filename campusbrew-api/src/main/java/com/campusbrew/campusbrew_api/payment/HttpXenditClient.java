@@ -87,20 +87,56 @@ public class HttpXenditClient implements XenditClient {
         }
     }
 
+    /** Xendit's refund API version (POST /v3/refunds requires the header). */
+    static final String REFUNDS_API_VERSION = "2024-11-11";
+
+    /**
+     * These mean the charge was already refunded (e.g. an earlier attempt went
+     * through but its reply was lost), so the order can be marked refunded.
+     */
+    private static final java.util.Set<String> ALREADY_REFUNDED = java.util.Set.of(
+            "DUPLICATE_ERROR", "REFUND_IN_PROGRESS", "REFUND_AMOUNT_EXCEEDED", "MAXIMUM_REFUND_AMOUNT_REACHED");
+
+    /**
+     * Full refund of a GCash charge through the unified Refunds API, which takes the
+     * e-wallet charge id (ewc_…) as payment_id. The reference is fixed per charge so
+     * a retry can never refund twice.
+     */
     @Override
     public void refund(String chargeId, double amount) {
+        Map<String, Object> body = Map.of(
+                "reference_id", "refund-" + chargeId,
+                "payment_id", chargeId,
+                "amount", amount,
+                "reason", "CANCELLATION");
+        JsonNode res;
         try {
-            rest.post()
-                    .uri("/ewallets/charges/{id}/refunds", chargeId)
+            res = rest.post()
+                    .uri("/v3/refunds")
                     .header(HttpHeaders.AUTHORIZATION, authHeader())
+                    .header("api-version", REFUNDS_API_VERSION)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of("amount", amount, "reason", "ORDER_CANCELLED"))
+                    .body(body)
                     .retrieve()
-                    .toBodilessEntity();
+                    .body(JsonNode.class);
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            String reply = e.getResponseBodyAsString();
+            if (ALREADY_REFUNDED.stream().anyMatch(reply::contains)) {
+                log.info("Xendit says charge {} is already refunded: {}", chargeId, reply);
+                return;
+            }
+            log.error("Xendit refund failed for charge {}: {} {}", chargeId, e.getStatusCode(), reply);
+            throw new PaymentException("Refund could not be processed.", e);
         } catch (Exception e) {
             log.error("Xendit refund failed for charge {}: {}", chargeId, e.getMessage());
             throw new PaymentException("Refund could not be processed.", e);
         }
+        String status = res == null ? "" : res.path("status").asText("");
+        if ("FAILED".equalsIgnoreCase(status)) {
+            log.error("Xendit refund for charge {} FAILED: {}", chargeId, res.path("failure_code").asText(""));
+            throw new PaymentException("Refund could not be processed.");
+        }
+        log.info("Xendit refund for charge {} accepted ({})", chargeId, status);
     }
 
     private static String firstNonBlank(String... values) {
