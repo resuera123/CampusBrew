@@ -19,7 +19,7 @@ const SUMMARY_LABELS: Record<string, string> = {
 };
 
 function statusColor(status: string): string {
-  if (/PAID|COMPLETED/.test(status)) return '#2E7D32';
+  if (/PAID|COMPLETED|^REFUNDED$/.test(status)) return '#2E7D32';
   if (/PENDING/.test(status)) return '#B8860B';
   if (/FAILED|EXPIRED|FLAGGED/.test(status)) return '#C0392B';
   return COLORS.textSecondary;
@@ -62,7 +62,10 @@ export default function PaymentCenterScreen({ navigation }: any) {
         </Text>
       </View>
       <View style={{ alignItems: 'flex-end' }}>
-        <Text style={styles.entryAmount}>₱{item.amount.toFixed(0)}</Text>
+        {/* A refund is money coming back, so it reads +₱ in green. */}
+        <Text style={[styles.entryAmount, item.source === 'REFUND' && styles.refundAmount]}>
+          {item.source === 'REFUND' ? '+' : ''}₱{item.amount.toFixed(0)}
+        </Text>
         <Text style={[styles.entryStatus, { color: statusColor(item.status) }]}>{item.status}</Text>
       </View>
     </TouchableOpacity>
@@ -139,5 +142,6 @@ const styles = StyleSheet.create({
   entryTitle: { fontSize: 15, fontWeight: '600', color: COLORS.text },
   entryMeta: { fontSize: 12, color: COLORS.textSecondary, marginTop: 3 },
   entryAmount: { fontSize: 15, fontWeight: '700', color: COLORS.text },
+  refundAmount: { color: '#2E7D32' },
   entryStatus: { fontSize: 11, fontWeight: '700', marginTop: 3 },
 });

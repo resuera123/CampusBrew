@@ -3,8 +3,9 @@ import { API_BASE_URL } from '../constants/api';
 
 export interface PaymentCenterEntry {
   id: string;
-  source: 'PAYMENT' | 'TRANSACTION' | 'COD_ORDER';
-  kind: 'ORDER' | 'TIP' | 'DELIVERY' | 'SHOP_RECEIPT';
+  /** REFUND: money back for a cancelled GCash order (status REFUNDED or REFUND_PENDING). */
+  source: 'PAYMENT' | 'TRANSACTION' | 'COD_ORDER' | 'REFUND';
+  kind: 'ORDER' | 'TIP' | 'DELIVERY' | 'SHOP_RECEIPT' | 'REFUND';
   orderId?: string | null;
   method?: 'GCASH' | 'COD' | null;
   status: string;

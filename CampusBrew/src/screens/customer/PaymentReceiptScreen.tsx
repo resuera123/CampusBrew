@@ -50,9 +50,19 @@ export default function PaymentReceiptScreen({ navigation, route }: any) {
 
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <View style={styles.amountBlock}>
-          <Text style={styles.amount}>₱{entry?.amount?.toFixed(2)}</Text>
+          <Text style={[styles.amount, entry?.source === 'REFUND' && { color: '#2E7D32' }]}>
+            {entry?.source === 'REFUND' ? '+' : ''}₱{entry?.amount?.toFixed(2)}
+          </Text>
           <Text style={styles.status}>{entry?.status}</Text>
         </View>
+
+        {entry?.source === 'REFUND' && (
+          <Text style={styles.refundNote}>
+            {entry.status === 'REFUNDED'
+              ? 'This order was cancelled and the full amount was sent back to your GCash.'
+              : 'This order was cancelled. Your refund is being processed and will go back to your GCash.'}
+          </Text>
+        )}
 
         <View style={styles.card}>
           <Row label="Type" value={entry?.description || entry?.kind} />
@@ -88,6 +98,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white, borderRadius: 14, padding: 16, marginBottom: 16,
     borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border,
   },
+  refundNote: { fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 16, lineHeight: 19 },
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 },
   rowLabel: { fontSize: 14, color: COLORS.textSecondary },
   rowValue: { fontSize: 14, fontWeight: '600', color: COLORS.text, maxWidth: '60%', textAlign: 'right' },
