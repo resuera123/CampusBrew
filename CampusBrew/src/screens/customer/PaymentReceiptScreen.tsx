@@ -50,7 +50,7 @@ export default function PaymentReceiptScreen({ navigation, route }: any) {
 
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <View style={styles.amountBlock}>
-          <Text style={[styles.amount, entry?.source === 'REFUND' && { color: '#2E7D32' }]}>
+          <Text style={styles.amount}>
             {entry?.source === 'REFUND' ? '+' : ''}₱{entry?.amount?.toFixed(2)}
           </Text>
           <Text style={styles.status}>{entry?.status ? paymentStatusLabel(entry.status) : ''}</Text>

@@ -62,8 +62,8 @@ export default function PaymentCenterScreen({ navigation }: any) {
         </Text>
       </View>
       <View style={{ alignItems: 'flex-end' }}>
-        {/* A refund is money coming back, so it reads +₱ in green. */}
-        <Text style={[styles.entryAmount, item.source === 'REFUND' && styles.refundAmount]}>
+        {/* A refund is money coming back, so it reads +₱. */}
+        <Text style={styles.entryAmount}>
           {item.source === 'REFUND' ? '+' : ''}₱{item.amount.toFixed(0)}
         </Text>
         <Text style={[styles.entryStatus, { color: statusColor(item.status) }]}>{paymentStatusLabel(item.status)}</Text>
@@ -142,6 +142,5 @@ const styles = StyleSheet.create({
   entryTitle: { fontSize: 15, fontWeight: '600', color: COLORS.text },
   entryMeta: { fontSize: 12, color: COLORS.textSecondary, marginTop: 3 },
   entryAmount: { fontSize: 15, fontWeight: '700', color: COLORS.text },
-  refundAmount: { color: '#2E7D32' },
   entryStatus: { fontSize: 11, fontWeight: '700', marginTop: 3 },
 });

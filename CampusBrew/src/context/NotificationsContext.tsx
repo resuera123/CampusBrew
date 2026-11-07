@@ -152,9 +152,22 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
     const isShop = user?.role === 'SHOP_OPERATOR';
 
     const onStatusUpdate = (payload: any) => {
-      const { status, orderId, deliveryPersonnel, timestamp } = payload ?? {};
+      const { status, orderId, deliveryPersonnel, timestamp, reason, paymentStatus } = payload ?? {};
       if (!status) return;
-      const described = isShop
+      const short = orderId ? `Order #${String(orderId).slice(-6).toUpperCase()}` : 'Your order';
+      // Auto-cancelled because no dasher claimed it in time.
+      const expired = status === 'CANCELLED' && reason === 'expired';
+      const described = expired
+        ? {
+            title: 'No rider available',
+            body: isShop
+              ? `No dasher picked up ${short.toLowerCase()}, so it was cancelled.`
+              : `No dasher was free, so ${short.toLowerCase()} was cancelled.${
+                  paymentStatus === 'REFUNDED' || paymentStatus === 'REFUND_PENDING'
+                    ? ' Your GCash payment is being refunded.'
+                    : ''}`,
+          }
+        : isShop
         ? describeShopUpdate(status, orderId, deliveryPersonnel)
         : describeStatusUpdate(status, orderId, deliveryPersonnel);
       if (!described) return;
