@@ -23,9 +23,9 @@ const DRAG_RANGE = EXPANDED_HEIGHT - COLLAPSED_HEIGHT;
 
 const STATUS_BLURBS: Record<OrderStatus, { label: string; tone: 'info' | 'progress' | 'done' }> = {
   PLACED:           { label: 'Order placed',         tone: 'info' },
-  PREPARING:        { label: 'Shop is preparing it', tone: 'progress' },
-  READY_FOR_PICKUP: { label: 'Waiting for a rider',  tone: 'progress' },
-  ASSIGNED:         { label: 'Rider is picking up',  tone: 'progress' },
+  PREPARING:        { label: 'Preparing · finding a rider', tone: 'progress' },
+  ASSIGNED:         { label: 'Rider found · still preparing', tone: 'progress' },
+  READY_FOR_PICKUP: { label: 'Rider is picking up',  tone: 'progress' },
   OUT_FOR_DELIVERY: { label: 'On the way to you',    tone: 'progress' },
   DELIVERED:        { label: 'Delivered',            tone: 'done' },
   CANCELLED:        { label: 'Cancelled',            tone: 'done' },
@@ -34,8 +34,8 @@ const STATUS_BLURBS: Record<OrderStatus, { label: string; tone: 'info' | 'progre
 const TIMELINE_STEPS: { status: OrderStatus; label: string }[] = [
   { status: 'PLACED',           label: 'Order Placed' },
   { status: 'PREPARING',        label: 'Preparing' },
-  { status: 'READY_FOR_PICKUP', label: 'Ready for Pickup' },
   { status: 'ASSIGNED',         label: 'Rider Assigned' },
+  { status: 'READY_FOR_PICKUP', label: 'Ready for Pickup' },
   { status: 'OUT_FOR_DELIVERY', label: 'Out for Delivery' },
   { status: 'DELIVERED',        label: 'Delivered' },
 ];

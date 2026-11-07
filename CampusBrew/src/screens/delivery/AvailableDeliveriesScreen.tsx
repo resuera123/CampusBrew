@@ -61,8 +61,9 @@ export default function AvailableDeliveriesScreen({ onClaimed }: Props) {
   useFocusEffect(useCallback(() => {
     load();
     pollRef.current = setInterval(() => load(true), POLL_INTERVAL_MS);
-    // Re-render every second so the per-card countdown ticks down even between polls.
-    tickRef.current = setInterval(() => setTick((n) => n + 1), 1000);
+    // Re-render twice a second so the per-card countdown ticks down between polls.
+    // (Exactly once a second drifts and occasionally skips a number.)
+    tickRef.current = setInterval(() => setTick((n) => n + 1), 500);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
       if (tickRef.current) clearInterval(tickRef.current);
@@ -183,7 +184,8 @@ function OrderCard({
   onClaim: () => void;
 }) {
   const itemCount = order.items.reduce((sum, it) => sum + (it.quantity || 0), 0);
-  const expiresAt = order.readyAt ? new Date(order.readyAt).getTime() + EXPIRY_MS : null;
+  const searchStart = order.riderSearchAt ?? order.readyAt;
+  const expiresAt = searchStart ? new Date(searchStart).getTime() + EXPIRY_MS : null;
   const msLeft = expiresAt ? Math.max(0, expiresAt - Date.now()) : null;
   const expiring = msLeft != null && msLeft < 2 * 60 * 1000; // <2 min
 

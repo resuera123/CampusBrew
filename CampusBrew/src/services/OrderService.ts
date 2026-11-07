@@ -88,6 +88,8 @@ export interface Order {
   shopPaymentConfirmedAt?: string | null; // v2.0 FR-3.3
   statusHistory?: StatusHistoryEntry[];
   readyAt?: string;
+  // When the shop accepted and the rider search began (the 10-minute timer starts here).
+  riderSearchAt?: string;
   createdAt: string;
   updatedAt: string;
 }

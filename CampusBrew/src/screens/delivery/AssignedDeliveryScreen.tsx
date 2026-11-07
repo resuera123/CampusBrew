@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -51,6 +51,19 @@ export default function AssignedDeliveryScreen({ navigation }: any) {
   }, [token]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  // The shop marking it ready (or cancelling) arrives live, so Mark as Picked Up
+  // unlocks without pulling to refresh.
+  useEffect(() => {
+    if (!socket || !order?.id) return;
+    const onUpdate = (payload: any) => {
+      if (payload?.orderId === order.id) load();
+    };
+    socket.on('order:statusUpdate', onUpdate);
+    return () => {
+      socket.off('order:statusUpdate', onUpdate);
+    };
+  }, [socket, order?.id, load]);
 
   const handlePickup = async () => {
     if (!order || !token) return;
@@ -228,6 +241,13 @@ export default function AssignedDeliveryScreen({ navigation }: any) {
       </ScrollView>
 
       {order && order.orderStatus === 'ASSIGNED' && (
+        <View style={[styles.primaryBtn, styles.waitingBtn]}>
+          <Ionicons name="time-outline" size={18} color={COLORS.textSecondary} />
+          <Text style={styles.waitingText}>Waiting for the shop to finish preparing</Text>
+        </View>
+      )}
+
+      {order && order.orderStatus === 'READY_FOR_PICKUP' && (
         <TouchableOpacity style={styles.primaryBtn} onPress={handlePickup} disabled={submitting}>
           {submitting
             ? <ActivityIndicator color={COLORS.white} />
@@ -380,6 +400,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  waitingBtn: { backgroundColor: COLORS.backgroundSecondary, flexDirection: 'row', gap: 8 },
+  waitingText: { color: COLORS.textSecondary, fontWeight: '600', fontSize: 15 },
   primaryBtn: {
     position: 'absolute',
     left: SIZES.screenPadding,

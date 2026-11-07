@@ -40,10 +40,10 @@ function describeShopUpdate(status: string, orderId?: string, deliveryPersonnel?
       return { title: 'New order received', body: `${short} is waiting. Open Orders to accept it.` };
     case 'ASSIGNED':
       return {
-        title: 'Dasher assigned',
+        title: 'Rider found',
         body: deliveryPersonnel?.fullName
-          ? `${deliveryPersonnel.fullName} is coming to pick up ${short.toLowerCase()}.`
-          : `A dasher is coming to pick up ${short.toLowerCase()}.`,
+          ? `${deliveryPersonnel.fullName} accepted ${short.toLowerCase()}. Mark it ready when the drinks are done.`
+          : `A dasher accepted ${short.toLowerCase()}. Mark it ready when the drinks are done.`,
       };
     case 'DELIVERED':
       return { title: 'Order delivered', body: `${short} reached the customer.` };
@@ -60,15 +60,15 @@ function describeStatusUpdate(status: string, orderId?: string, deliveryPersonne
     case 'PLACED':
       return { title: 'Order placed', body: `${short} was sent to the shop.` };
     case 'PREPARING':
-      return { title: 'Order is being prepared', body: `${short} — the shop is making your drinks.` };
+      return { title: 'Order accepted', body: `${short} — the shop is making your drinks while we find you a rider.` };
     case 'READY_FOR_PICKUP':
-      return { title: 'Ready for pickup', body: `${short} is ready and waiting for a rider.` };
+      return { title: 'Ready for pickup', body: `${short} is ready and your rider is picking it up.` };
     case 'ASSIGNED':
       return {
         title: 'Rider assigned',
         body: deliveryPersonnel?.fullName
-          ? `${deliveryPersonnel.fullName} is picking up ${short.toLowerCase()}.`
-          : `A rider is on the way to the shop for ${short.toLowerCase()}.`,
+          ? `${deliveryPersonnel.fullName} will pick up ${short.toLowerCase()} once it's ready.`
+          : `A rider will pick up ${short.toLowerCase()} once it's ready.`,
       };
     case 'OUT_FOR_DELIVERY':
       return { title: 'Order picked up', body: `${short} is on the way to you.` };

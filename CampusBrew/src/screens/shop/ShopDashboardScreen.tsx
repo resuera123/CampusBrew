@@ -42,10 +42,11 @@ export default function ShopDashboardScreen({ navigation }: any) {
       setShop(myShop);
       const [placed, preparing, ready, sales] = await Promise.all([
         ShopOrderService.getQueue(myShop.id, ['PLACED'], token),
-        ShopOrderService.getQueue(myShop.id, ['PREPARING'], token),
-        // "Ready" from the shop's POV = waiting for or being picked up by a rider.
-        // Once the rider has the order in hand (OUT_FOR_DELIVERY) the shop is done with it.
-        ShopOrderService.getQueue(myShop.id, ['READY_FOR_PICKUP', 'ASSIGNED'], token),
+        // Preparing covers both "finding a rider" and "rider found, still making it".
+        ShopOrderService.getQueue(myShop.id, ['PREPARING', 'ASSIGNED'], token),
+        // Ready = waiting for the rider to pick it up. Once the rider has it
+        // (OUT_FOR_DELIVERY) the shop is done with it.
+        ShopOrderService.getQueue(myShop.id, ['READY_FOR_PICKUP'], token),
         ShopService.getMySalesTotal(token),
       ]);
       setPendingCount(placed.length);

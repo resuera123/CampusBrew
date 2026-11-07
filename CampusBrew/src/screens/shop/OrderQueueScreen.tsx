@@ -25,8 +25,8 @@ const POLL_INTERVAL_MS = 5000;
 const QUEUE_STATUSES: OrderStatus[] = [
   'PLACED',
   'PREPARING',
-  'READY_FOR_PICKUP',
   'ASSIGNED',
+  'READY_FOR_PICKUP',
   'OUT_FOR_DELIVERY',
 ];
 
@@ -280,7 +280,24 @@ function OrderCard({
           </>
         )}
 
+        {/* Accepted: the rider search runs while the shop prepares. Ready for Pickup
+            unlocks once a rider accepts; with no rider in 10 minutes it's cancelled. */}
         {order.orderStatus === 'PREPARING' && (
+          <>
+            <TouchableOpacity
+              style={[styles.btn, styles.btnSecondary]}
+              onPress={onReject}
+              disabled={busy}
+            >
+              <Text style={styles.btnSecondaryText}>Cancel</Text>
+            </TouchableOpacity>
+            <View style={[styles.btn, styles.btnDisabled]}>
+              <RiderCountdown since={order.riderSearchAt} style={styles.btnDisabledText} />
+            </View>
+          </>
+        )}
+
+        {order.orderStatus === 'ASSIGNED' && (
           <>
             <TouchableOpacity
               style={[styles.btn, styles.btnSecondary]}
@@ -301,22 +318,7 @@ function OrderCard({
           </>
         )}
 
-        {order.orderStatus === 'READY_FOR_PICKUP' && (
-          <>
-            <TouchableOpacity
-              style={[styles.btn, styles.btnSecondary]}
-              onPress={onReject}
-              disabled={busy}
-            >
-              <Text style={styles.btnSecondaryText}>Cancel</Text>
-            </TouchableOpacity>
-            <View style={[styles.btn, styles.btnDisabled]}>
-              <Text style={styles.btnDisabledText}>{readyCountdownLabel(order.readyAt)}</Text>
-            </View>
-          </>
-        )}
-
-        {order.orderStatus === 'ASSIGNED' && !order.shopPaymentConfirmedAt && (
+        {order.orderStatus === 'READY_FOR_PICKUP' && !order.shopPaymentConfirmedAt && (
           <TouchableOpacity
             style={[styles.btn, styles.btnPrimary, { flex: 1 }]}
             onPress={onPaymentReceived}
@@ -328,11 +330,11 @@ function OrderCard({
           </TouchableOpacity>
         )}
 
-        {((order.orderStatus === 'ASSIGNED' && !!order.shopPaymentConfirmedAt)
+        {((order.orderStatus === 'READY_FOR_PICKUP' && !!order.shopPaymentConfirmedAt)
           || order.orderStatus === 'OUT_FOR_DELIVERY') && (
           <View style={[styles.btn, styles.btnDisabled, { flex: 1 }]}>
             <Text style={styles.btnDisabledText}>
-              {order.orderStatus === 'ASSIGNED'
+              {order.orderStatus === 'READY_FOR_PICKUP'
                 ? 'Payment confirmed · rider picking up'
                 : 'Rider is delivering to customer'}
             </Text>
@@ -348,7 +350,7 @@ function StatusBadge({ status }: { status: OrderStatus }) {
     PLACED: { bg: '#FFF4D6', fg: '#7A5A00', label: 'New' },
     PREPARING: { bg: '#FCE4E6', fg: '#8A2C33', label: 'Preparing' },
     READY_FOR_PICKUP: { bg: '#E0F0FF', fg: '#0A66B5', label: 'Ready' },
-    ASSIGNED: { bg: '#E8E8E8', fg: '#3A3A3A', label: 'Assigned' },
+    ASSIGNED: { bg: '#E6F4EA', fg: '#1E8E3E', label: 'Rider found' },
     OUT_FOR_DELIVERY: { bg: '#E8E8E8', fg: '#3A3A3A', label: 'Out' },
     DELIVERED: { bg: '#E6F4EA', fg: '#1E8E3E', label: 'Delivered' },
     CANCELLED: { bg: '#F5F5F5', fg: '#666', label: 'Cancelled' },
@@ -363,14 +365,46 @@ function StatusBadge({ status }: { status: OrderStatus }) {
 
 const EXPIRY_MS = 10 * 60 * 1000;
 
-function readyCountdownLabel(readyAt?: string): string {
-  if (!readyAt) return 'Awaiting delivery rider';
-  const msLeft = new Date(readyAt).getTime() + EXPIRY_MS - Date.now();
+function riderCountdownLabel(since?: string): string {
+  if (!since) return 'Finding a rider…';
+  const msLeft = new Date(since).getTime() + EXPIRY_MS - Date.now();
   if (msLeft <= 0) return 'Expiring…';
   const totalSec = Math.floor(msLeft / 1000);
   const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
   const ss = String(totalSec % 60).padStart(2, '0');
-  return `Awaiting rider · ${mm}:${ss} left`;
+  return `Finding a rider · ${mm}:${ss} left`;
+}
+
+/**
+ * The "Finding a rider · 09:50 left" label (10 minutes from when the shop
+ * accepted), re-drawn on its own once a second.
+ * Each tick is timed to just after the next whole second, so the clock never
+ * skips a number the way a drifting 1-second interval can.
+ */
+function RiderCountdown({ since, style }: { since?: string; style?: any }) {
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!since) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const schedule = () => {
+      const msLeft = new Date(since).getTime() + EXPIRY_MS - Date.now();
+      if (msLeft <= 0) {
+        setTick((t) => t + 1);
+        return;
+      }
+      timer = setTimeout(() => {
+        setTick((t) => t + 1);
+        schedule();
+      }, (msLeft % 1000) + 20);
+    };
+    schedule();
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [since]);
+
+  return <Text style={style}>{riderCountdownLabel(since)}</Text>;
 }
 
 const styles = StyleSheet.create({

@@ -23,9 +23,9 @@ import { showAlert } from '../../components/AppAlert';
 
 const TIMELINE_STEPS: { status: OrderStatus; label: string; description: string }[] = [
   { status: 'PLACED', label: 'Order Placed', description: 'Your order has been sent to the shop.' },
-  { status: 'PREPARING', label: 'Preparing', description: 'The shop is preparing your order.' },
-  { status: 'READY_FOR_PICKUP', label: 'Ready for Pickup', description: 'Waiting for a rider.' },
-  { status: 'ASSIGNED', label: 'Rider Assigned', description: 'A rider is heading to the shop.' },
+  { status: 'PREPARING', label: 'Preparing', description: 'The shop is preparing it while we find you a rider.' },
+  { status: 'ASSIGNED', label: 'Rider Assigned', description: 'Your rider will pick it up once it is ready.' },
+  { status: 'READY_FOR_PICKUP', label: 'Ready for Pickup', description: 'Your rider is picking it up.' },
   { status: 'OUT_FOR_DELIVERY', label: 'Out for Delivery', description: 'On the way to you.' },
   { status: 'DELIVERED', label: 'Delivered', description: 'Enjoy!' },
 ];
