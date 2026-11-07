@@ -41,7 +41,6 @@ import DeliveryHistoryScreen from '../screens/delivery/DeliveryHistoryScreen';
 import ShopDashboardScreen from '../screens/shop/ShopDashboardScreen';
 import OrderQueueScreen from '../screens/shop/OrderQueueScreen';
 import MenuManagementScreen from '../screens/shop/MenuManagementScreen';
-import ItemAvailabilityScreen from '../screens/shop/ItemAvailabilityScreen';
 import ShopProfileScreen from '../screens/shop/ShopProfileScreen';
 import EditShopProfileScreen from '../screens/shop/EditShopProfileScreen';
 import ShopOrderHistoryScreen from '../screens/shop/ShopOrderHistoryScreen';
@@ -178,7 +177,6 @@ export function ShopStack() {
       <Stack.Screen name="ShopTabs" component={ShopHomeTabs} />
       <Stack.Screen name="OrderQueue" component={OrderQueueScreen} />
       <Stack.Screen name="MenuManagement" component={MenuManagementScreen} />
-      <Stack.Screen name="ItemAvailability" component={ItemAvailabilityScreen} />
       <Stack.Screen name="ShopOrderHistory" component={ShopOrderHistoryScreen} />
       <Stack.Screen name="SalesByItem" component={SalesByItemScreen} />
       <Stack.Screen name="ItemTrend" component={ItemTrendScreen} />

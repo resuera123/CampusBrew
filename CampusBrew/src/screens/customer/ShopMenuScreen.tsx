@@ -7,12 +7,12 @@ import {
   StyleSheet,
   StatusBar,
   ScrollView,
-  ActivityIndicator,
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../constants/theme';
+import { MenuSkeleton } from '../../components/Skeleton';
 import { ShopService, Shop, MenuItem } from '../../services/ShopService';
 import { useCart } from '../../context/CartContext';
 import RatingBadge from '../../components/RatingBadge';
@@ -104,9 +104,7 @@ export default function ShopMenuScreen({ navigation, route }: any) {
       </View>
 
       {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-        </View>
+        <MenuSkeleton />
       ) : error ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 }}>
           <Text style={{ color: COLORS.textSecondary }}>{error}</Text>

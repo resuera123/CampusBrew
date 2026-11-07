@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SIZES } from '../../constants/theme';
+import { OrderListSkeleton } from '../../components/Skeleton';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
@@ -117,23 +118,28 @@ export default function OrderQueueScreen({ route, navigation }: any) {
     if (ok) handleAction(order.id, 'reject');
   };
 
+  const topBar = (
+    <View style={styles.topBar}>
+      <TouchableOpacity style={styles.topBarIcon} onPress={() => navigation.goBack()}>
+        <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+      </TouchableOpacity>
+      <Text style={styles.topBarTitle}>Order Queue</Text>
+      <View style={styles.topBarIcon} />
+    </View>
+  );
+
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
+      <SafeAreaView style={styles.container} edges={['top']}>
+        {topBar}
+        <OrderListSkeleton count={3} />
+      </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.topBar}>
-        <TouchableOpacity style={styles.topBarIcon} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={22} color={COLORS.text} />
-        </TouchableOpacity>
-        <Text style={styles.topBarTitle}>Order Queue</Text>
-        <View style={styles.topBarIcon} />
-      </View>
+      {topBar}
 
       <ScrollView
         contentContainerStyle={styles.list}

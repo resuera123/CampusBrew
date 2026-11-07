@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../constants/theme';
+import { OrderListSkeleton } from '../../components/Skeleton';
 import { useAuth } from '../../context/AuthContext';
 import { OrderService, Order, OrderStatus } from '../../services/OrderService';
 import { showAlert } from '../../components/AppAlert';
@@ -96,9 +97,7 @@ export default function OrderHistoryScreen({ navigation }: any) {
       </View>
 
       {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-        </View>
+        <OrderListSkeleton />
       ) : (
         <ScrollView
           style={styles.content}

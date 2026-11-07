@@ -5,13 +5,13 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SIZES } from '../../constants/theme';
+import { ShopDashboardSkeleton } from '../../components/Skeleton';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { useNotifications } from '../../context/NotificationsContext';
@@ -88,9 +88,9 @@ export default function ShopDashboardScreen({ navigation }: any) {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <ShopDashboardSkeleton />
+      </SafeAreaView>
     );
   }
 
@@ -187,19 +187,13 @@ export default function ShopDashboardScreen({ navigation }: any) {
         <ActionRow
           icon="restaurant-outline"
           label="Menu Items"
-          subtitle="Add, edit, or remove items"
+          subtitle="Add, edit, remove, and turn items on or off"
           onPress={() => navigation.navigate('MenuManagement', { shopId: shop?.id })}
-        />
-        <ActionRow
-          icon="toggle-outline"
-          label="Item Availability"
-          subtitle="Toggle items in/out of stock"
-          onPress={() => navigation.navigate('ItemAvailability', { shopId: shop?.id })}
         />
         <ActionRow
           icon="stats-chart-outline"
           label="Sales Report"
-          subtitle="Daily and weekly sales, peak hours, payments"
+          subtitle="Daily to annual sales, peak times, payments"
           onPress={() => navigation.navigate('SalesReport')}
         />
         <ActionRow

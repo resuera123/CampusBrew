@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +29,7 @@ export default function MenuManagementScreen({ route, navigation }: any) {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<MenuItem | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -54,6 +56,21 @@ export default function MenuManagementScreen({ route, navigation }: any) {
       load();
     }, [load]),
   );
+
+  // Show or hide an item for customers right away; reverts if the server refuses.
+  const toggleAvailable = async (item: MenuItem, next: boolean) => {
+    if (!token) return;
+    setUpdatingId(item.id);
+    setItems((prev) => prev.map((it) => (it.id === item.id ? { ...it, isAvailable: next } : it)));
+    try {
+      await ShopService.setAvailability(item.id, next, token);
+    } catch (e: any) {
+      setItems((prev) => prev.map((it) => (it.id === item.id ? { ...it, isAvailable: !next } : it)));
+      showAlert('Update failed', e.message || 'Could not update availability');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   const handleDelete = async (item: MenuItem) => {
     const ok = await confirm({
@@ -90,6 +107,8 @@ export default function MenuManagementScreen({ route, navigation }: any) {
         <View style={styles.topBarIcon} />
       </View>
 
+      <Text style={styles.hint}>Use the switch to show or hide an item for customers right away.</Text>
+
       <ScrollView
         contentContainerStyle={styles.list}
         refreshControl={
@@ -119,9 +138,9 @@ export default function MenuManagementScreen({ route, navigation }: any) {
                 <Text style={styles.itemMeta}>
                   ₱{item.price.toFixed(2)} • {item.category}
                 </Text>
-                {!item.isAvailable && (
-                  <Text style={styles.unavailableTag}>Currently unavailable</Text>
-                )}
+                <Text style={[styles.availability, !item.isAvailable && styles.unavailableTag]}>
+                  {item.isAvailable ? 'Available' : 'Hidden from customers'}
+                </Text>
               </View>
               <TouchableOpacity
                 style={styles.iconBtn}
@@ -133,8 +152,21 @@ export default function MenuManagementScreen({ route, navigation }: any) {
                 <Ionicons name="create-outline" size={20} color={COLORS.primary} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.iconBtn} onPress={() => handleDelete(item)}>
-                <Ionicons name="trash-outline" size={20} color="#D93025" />
+                <Ionicons name="trash-outline" size={20} color={COLORS.destructive} />
               </TouchableOpacity>
+              <View style={styles.switchWrap}>
+                {updatingId === item.id ? (
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                ) : (
+                  <Switch
+                    value={!!item.isAvailable}
+                    onValueChange={(next) => toggleAvailable(item, next)}
+                    trackColor={{ true: COLORS.primary, false: COLORS.border }}
+                    thumbColor={COLORS.white}
+                    accessibilityLabel={`${item.name} available`}
+                  />
+                )}
+              </View>
             </View>
           ))
         )}
@@ -195,7 +227,15 @@ const styles = StyleSheet.create({
   },
   itemName: { fontSize: SIZES.bodySize, fontWeight: '600', color: COLORS.text },
   itemMeta: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, marginTop: 2 },
-  unavailableTag: { fontSize: SIZES.smallSize, color: '#D93025', marginTop: 4 },
+  hint: {
+    paddingHorizontal: SIZES.screenPadding,
+    paddingTop: 10,
+    fontSize: SIZES.smallSize,
+    color: COLORS.textSecondary,
+  },
+  availability: { fontSize: SIZES.smallSize, color: '#1E8E3E', marginTop: 4 },
+  unavailableTag: { color: COLORS.destructive },
+  switchWrap: { width: 52, alignItems: 'flex-end', marginLeft: 4 },
   iconBtn: {
     width: 36,
     height: 36,

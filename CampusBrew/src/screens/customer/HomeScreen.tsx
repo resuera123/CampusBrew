@@ -7,7 +7,6 @@ import {
   StyleSheet,
   StatusBar,
   ScrollView,
-  ActivityIndicator,
   Image,
   RefreshControl,
 } from 'react-native';
@@ -15,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SIZES } from '../../constants/theme';
+import { HomeSkeleton } from '../../components/Skeleton';
 import { ShopService, Shop, MenuItem } from '../../services/ShopService';
 import { useCart } from '../../context/CartContext';
 import { useNotifications } from '../../context/NotificationsContext';
@@ -158,9 +158,7 @@ export default function HomeScreen({ navigation }: any) {
         </View>
 
         {loading ? (
-          <View style={{ paddingVertical: 48, alignItems: 'center' }}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-          </View>
+          <HomeSkeleton />
         ) : error ? (
           <View style={styles.emptyBlock}>
             <Text style={styles.emptyText}>{error}</Text>
