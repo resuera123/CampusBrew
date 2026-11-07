@@ -9,6 +9,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Switch,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +23,10 @@ import {
   AddOnOption,
 } from '../../services/ShopService';
 import { showAlert } from '../../components/AppAlert';
+import { pickPhoto } from '../../utils/photos';
+
+// Item photos load with every menu and the Home "popular" row, so they're kept small.
+const ITEM_PHOTO_SIDE = 480;
 
 interface Props {
   visible: boolean;
@@ -59,6 +64,19 @@ export default function ItemEditorModal({ visible, shopId, item, onClose, onSave
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [image, setImage] = useState('');
+  const [processingPhoto, setProcessingPhoto] = useState(false);
+
+  const choosePhoto = async (source: 'camera' | 'library') => {
+    try {
+      setProcessingPhoto(true);
+      const uri = await pickPhoto(source, 'back', ITEM_PHOTO_SIDE);
+      if (uri) setImage(uri);
+    } catch (e: any) {
+      showAlert('Could not add photo', e.message ?? 'Please try again.');
+    } finally {
+      setProcessingPhoto(false);
+    }
+  };
   const [isAvailable, setIsAvailable] = useState(true);
 
   const [sizes, setSizes] = useState<SizeOption[]>([]);
@@ -127,7 +145,8 @@ export default function ItemEditorModal({ visible, shopId, item, onClose, onSave
             price: priceNum,
             description: description.trim() || undefined,
             category: category.trim(),
-            image: image.trim() || undefined,
+            // An empty string removes the photo.
+            image,
             isAvailable,
             customizationOptions,
           },
@@ -141,7 +160,7 @@ export default function ItemEditorModal({ visible, shopId, item, onClose, onSave
             price: priceNum,
             description: description.trim() || undefined,
             category: category.trim(),
-            image: image.trim() || undefined,
+            image: image || undefined,
             isAvailable,
             customizationOptions,
           },
@@ -177,7 +196,39 @@ export default function ItemEditorModal({ visible, shopId, item, onClose, onSave
           <Field label="Price (₱) *" value={price} onChangeText={setPrice} placeholder="0.00" keyboardType="decimal-pad" />
           <Field label="Category *" value={category} onChangeText={setCategory} placeholder="Coffee, Milk Tea, ..." />
           <Field label="Description" value={description} onChangeText={setDescription} placeholder="Optional" multiline />
-          <Field label="Image URL" value={image} onChangeText={setImage} placeholder="https://..." />
+          <View style={styles.field}>
+            <Text style={styles.label}>Item Photo</Text>
+            <View style={styles.photoRow}>
+              <View style={styles.photoBox}>
+                {processingPhoto ? (
+                  <ActivityIndicator color={COLORS.primary} />
+                ) : image ? (
+                  <Image source={{ uri: image }} style={styles.photo} />
+                ) : (
+                  <Ionicons name="cafe-outline" size={28} color={COLORS.textSecondary} />
+                )}
+              </View>
+              <View style={{ flex: 1, gap: 8 }}>
+                <Text style={styles.photoHint}>Optional. A clear photo of the drink helps customers choose.</Text>
+                <View style={styles.photoButtons}>
+                  <TouchableOpacity style={styles.photoBtn} onPress={() => choosePhoto('camera')} disabled={processingPhoto}>
+                    <Ionicons name="camera-outline" size={16} color={COLORS.primary} />
+                    <Text style={styles.photoBtnText}>Take photo</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.photoBtn} onPress={() => choosePhoto('library')} disabled={processingPhoto}>
+                    <Ionicons name="images-outline" size={16} color={COLORS.primary} />
+                    <Text style={styles.photoBtnText}>Upload</Text>
+                  </TouchableOpacity>
+                  {!!image && (
+                    <TouchableOpacity style={[styles.photoBtn, styles.photoBtnRemove]} onPress={() => setImage('')} disabled={processingPhoto}>
+                      <Ionicons name="trash-outline" size={16} color={COLORS.destructive} />
+                      <Text style={[styles.photoBtnText, { color: COLORS.destructive }]}>Remove</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            </View>
+          </View>
 
           <View style={styles.toggleRow}>
             <View>
@@ -321,7 +372,7 @@ export default function ItemEditorModal({ visible, shopId, item, onClose, onSave
           </TouchableOpacity>
         </ScrollView>
 
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving || processingPhoto}>
           {saving
             ? <ActivityIndicator color={COLORS.white} />
             : <Text style={styles.saveBtnText}>{item ? 'Save Changes' : 'Add to Menu'}</Text>}
@@ -416,6 +467,14 @@ const styles = StyleSheet.create({
   topBarTitle: { flex: 1, fontSize: 16, fontWeight: '600', color: COLORS.text, textAlign: 'center' },
   content: { padding: SIZES.screenPadding, paddingBottom: 32 },
   field: { marginBottom: 16 },
+  photoRow: { flexDirection: 'row', gap: 12 },
+  photoBox: { width: 88, height: 88, borderRadius: 10, backgroundColor: COLORS.backgroundSecondary, justifyContent: 'center', alignItems: 'center', overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border },
+  photo: { width: '100%', height: '100%' },
+  photoHint: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, lineHeight: 17 },
+  photoButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  photoBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, borderWidth: 1, borderColor: COLORS.primary },
+  photoBtnRemove: { borderColor: COLORS.destructive },
+  photoBtnText: { fontSize: SIZES.smallSize, color: COLORS.primary, fontWeight: '600' },
   label: { fontSize: SIZES.captionSize, color: COLORS.text, fontWeight: '500', marginBottom: 6 },
   subLabel: { fontSize: SIZES.captionSize, color: COLORS.text, fontWeight: '600', marginBottom: 8 },
   input: {
