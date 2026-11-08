@@ -211,7 +211,9 @@ export default function DeliveryDashboardScreen({ navigation }: any) {
             <Text style={styles.salesValue}>₱{(earnings?.totalEarnings ?? 0).toFixed(2)}</Text>
             <Text style={styles.salesSubtitle}>
               {earnings?.totalDeliveries ?? 0} delivered ·{' '}
-              {earnings?.incentiveActive ? '₱15 / delivery (incentive)' : '₱10 / delivery'}
+              {earnings?.incentiveActive
+                ? `₱${profile?.incentiveFee ?? 15} / delivery (incentive)`
+                : `₱${profile?.standardFee ?? 10} / delivery`}
             </Text>
           </View>
         </View>
@@ -226,7 +228,13 @@ export default function DeliveryDashboardScreen({ navigation }: any) {
             <Text style={styles.statValue}>{profile?.totalDeliveries ?? 0}</Text>
             <Text style={styles.statLabel}>Deliveries completed</Text>
           </View>
-          <View style={styles.statCard}>
+          <TouchableOpacity
+            style={styles.statCard}
+            onPress={() => navigation.navigate('IncentiveProgress')}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Incentive status, open progress"
+          >
             <View style={styles.incentiveValueRow}>
               {profile?.incentiveActive ? (
                 <>
@@ -236,12 +244,17 @@ export default function DeliveryDashboardScreen({ navigation }: any) {
               ) : (
                 <>
                   <Ionicons name="lock-closed" size={16} color={COLORS.textSecondary} />
-                  <Text style={styles.statValue}>{profile?.totalDeliveries ?? 0}/10</Text>
+                  <Text style={styles.statValue}>
+                    {profile?.weeklyDeliveries ?? 0}/{profile?.incentiveThreshold ?? 5}
+                  </Text>
                 </>
               )}
             </View>
-            <Text style={styles.statLabel}>Incentive status</Text>
-          </View>
+            <View style={styles.incentiveLabelRow}>
+              <Text style={styles.statLabel}>Incentive this week</Text>
+              <Ionicons name="chevron-forward" size={14} color={COLORS.textSecondary} />
+            </View>
+          </TouchableOpacity>
         </View>
 
         <Text style={styles.sectionTitle}>Settings</Text>
@@ -440,6 +453,7 @@ const styles = StyleSheet.create({
   },
   statValue: { fontSize: 20, fontWeight: '700', color: COLORS.text },
   incentiveValueRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  incentiveLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   statLabel: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, marginTop: 2 },
   sectionTitle: { fontSize: SIZES.bodySize, fontWeight: '600', color: COLORS.text, marginBottom: 10 },
   actionRow: {

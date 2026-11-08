@@ -36,6 +36,7 @@ import PickupRangeScreen from '../screens/delivery/PickupRangeScreen';
 import AssignedDeliveryScreen from '../screens/delivery/AssignedDeliveryScreen';
 import DeliveryTabScreen from '../screens/delivery/DeliveryTabScreen';
 import DeliveryHistoryScreen from '../screens/delivery/DeliveryHistoryScreen';
+import IncentiveProgressScreen from '../screens/delivery/IncentiveProgressScreen';
 
 // Shop screens
 import ShopDashboardScreen from '../screens/shop/ShopDashboardScreen';
@@ -145,6 +146,7 @@ export function DeliveryStack() {
       <Stack.Screen name="ScheduleSettings" component={ScheduleSettingsScreen} />
       <Stack.Screen name="PickupRange" component={PickupRangeScreen} />
       <Stack.Screen name="DeliveryHistory" component={DeliveryHistoryScreen} />
+      <Stack.Screen name="IncentiveProgress" component={IncentiveProgressScreen} />
       <Stack.Screen name="AssignedDelivery" component={AssignedDeliveryScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen name="RateOrder" component={RateOrderScreen} />

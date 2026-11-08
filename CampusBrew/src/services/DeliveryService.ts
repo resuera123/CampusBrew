@@ -21,6 +21,9 @@ export interface EarningsTotal {
   totalEarnings: number;
   totalDeliveries: number;
   incentiveActive: boolean;
+  /** Deliveries this week (resets every Monday). */
+  weeklyDeliveries?: number;
+  incentiveThreshold?: number;
 }
 
 export interface DeliveryPersonnelProfile {
@@ -32,7 +35,14 @@ export interface DeliveryPersonnelProfile {
   locationUpdatedAt?: string | null;
   weeklySchedule?: DaySchedule[] | null;
   totalDeliveries: number;
+  /** This week's count reached the threshold: full delivery fee, no commission. */
   incentiveActive: boolean;
+  /** Weekly incentive (resets every Monday, PH time). */
+  weeklyDeliveries?: number;
+  incentiveThreshold?: number;
+  standardFee?: number;
+  incentiveFee?: number;
+  incentiveResetsAt?: string;
   currentOrderId?: string | null;
   pickupRangeMeters?: number | null; // v2.0 FR-3.1
   ratingAvg?: number | null; // v2.0 FR-3.6 — null until enough ratings
