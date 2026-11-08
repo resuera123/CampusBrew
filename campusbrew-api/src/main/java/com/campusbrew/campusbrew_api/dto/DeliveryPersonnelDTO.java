@@ -31,6 +31,16 @@ public class DeliveryPersonnelDTO {
     @JsonProperty("incentiveActive")
     private boolean incentiveActive;
 
+    // Weekly incentive progress (set by DeliveryPersonnelService).
+    private int weeklyDeliveries;
+    private int incentiveThreshold;
+    /** What the dasher earns per delivery before the incentive (delivery fee − commission). */
+    private double standardFee;
+    /** Per delivery once unlocked: the full delivery fee, no commission. */
+    private double incentiveFee;
+    /** When this week's count resets (next Monday 00:00 PH time). */
+    private Date incentiveResetsAt;
+
     private String currentOrderId;
 
     // v2.0 FR-3.1 — null = campus default.

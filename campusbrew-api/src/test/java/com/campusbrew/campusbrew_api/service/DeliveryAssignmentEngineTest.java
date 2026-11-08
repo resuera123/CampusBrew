@@ -117,7 +117,9 @@ class DeliveryAssignmentEngineTest {
     @Test
     void incentiveActiveDasherEarnsFullFee() {
         DeliveryPersonnel postIncentive = dp("in", new GeoJsonPoint(LNG, LAT), null);
-        postIncentive.setIncentiveActive(true);
+        // Reached this week's threshold (5).
+        postIncentive.setWeeklyDeliveries(5);
+        postIncentive.setIncentiveWeekStart(IncentivePolicy.weekStart(java.time.Instant.now()));
         activeDps(postIncentive);
 
         engine.assignOrder(readyOrder());

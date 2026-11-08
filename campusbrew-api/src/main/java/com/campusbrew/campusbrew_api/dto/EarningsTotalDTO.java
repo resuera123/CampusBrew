@@ -11,4 +11,6 @@ public class EarningsTotalDTO {
     private double totalEarnings;
     private int totalDeliveries;
     private boolean incentiveActive;
+    private int weeklyDeliveries;
+    private int incentiveThreshold;
 }

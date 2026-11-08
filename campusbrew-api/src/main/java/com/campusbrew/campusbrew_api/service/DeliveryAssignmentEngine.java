@@ -146,8 +146,10 @@ public class DeliveryAssignmentEngine {
             Map<String, Object> payload = new LinkedHashMap<>(base);
             payload.put("distanceMeters", distanceMeters(dp, ref));
             payload.put("earnings", earningsFor(order, dp));
-            payload.put("incentiveProgress",
-                    dp.getTotalDeliveries() + "/" + configService.getIncentiveThreshold());
+            // "3/5" toward this week's incentive; left out once it's unlocked.
+            int weekly = IncentivePolicy.weeklyDeliveries(dp, Instant.now());
+            int threshold = configService.getIncentiveThreshold();
+            if (weekly < threshold) payload.put("incentiveProgress", weekly + "/" + threshold);
             socketService.emitToUser(dp.getUserId(), "delivery:request", payload);
             upsertPendingAssignment(order.getId(), dp.getUserId(), now);
             pushNotificationService.send(dp.getUserId(), "New delivery request",
@@ -328,7 +330,7 @@ public class DeliveryAssignmentEngine {
     /** The dasher's take for this trip: their current fee rate + the full tip (FR-4.3). */
     private double earningsFor(Order order, DeliveryPersonnel dp) {
         double fee = order.getDeliveryFee();
-        double dasherFee = dp.isIncentiveActive()
+        double dasherFee = IncentivePolicy.active(dp, configService.getIncentiveThreshold(), Instant.now())
                 ? fee
                 : Math.max(fee - order.getPlatformCommission(), 0);
         return round(dasherFee + order.getTip());

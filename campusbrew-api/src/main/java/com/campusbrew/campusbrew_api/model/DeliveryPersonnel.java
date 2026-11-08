@@ -48,6 +48,11 @@ public class DeliveryPersonnel {
 
     private int totalDeliveries;
 
+    // Weekly incentive (see IncentivePolicy): deliveries in the week starting
+    // incentiveWeekStart (Monday 00:00 PH time).
+    private int weeklyDeliveries;
+    private Date incentiveWeekStart;
+
     @JsonProperty("incentiveActive")
     private boolean incentiveActive;
 

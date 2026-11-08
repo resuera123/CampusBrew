@@ -105,14 +105,15 @@ public class DeliveryFulfillmentService {
         applyTransition(order, OrderStatus.DELIVERED);
         Order saved = orderRepository.save(order);
 
-        // v2.0 FR-4.3/4.4/4.5 — incentive threshold now comes from ConfigService
-        // (default 5, was a hard-coded 10). Below the threshold: ₱5 commission /
-        // ₱10 dasher. At or above it: commission waived, dasher keeps the full fee.
-        // Check is on the post-increment count so the threshold delivery itself unlocks.
+        // v2.0 FR-4.3/4.4/4.5 — weekly incentive (IncentivePolicy). Below this week's
+        // threshold: ₱5 commission / ₱10 dasher. At or above it: commission waived,
+        // dasher keeps the full fee. Checked on the post-increment weekly count so the
+        // threshold delivery itself unlocks it. The count resets every Monday.
         int threshold = configService.getIncentiveThreshold();
         DeliveryPersonnel dp = deliveryPersonnelRepository.findByUserId(dpUserId).orElse(null);
         int newTotal = (dp == null ? 0 : dp.getTotalDeliveries()) + 1;
-        boolean incentiveActive = newTotal >= threshold;
+        int weekly = dp == null ? 1 : IncentivePolicy.recordDelivery(dp, Instant.now());
+        boolean incentiveActive = weekly >= threshold;
         double txCommission = incentiveActive ? 0.0 : saved.getPlatformCommission();
         // v2.0 FR-4.7 — the tip is credited to the dasher in full, with no commission on it.
         double tip = saved.getTip();
@@ -142,7 +143,7 @@ public class DeliveryFulfillmentService {
             log.error("Recording item sales failed for order {}: {}", saved.getId(), e.getMessage(), e);
         }
 
-        // Free up the DP, bump lifetime counter, flip incentiveActive on the doc.
+        // Free up the DP, bump the lifetime counter, mirror this week's incentive on the doc.
         if (dp != null) {
             dp.setCurrentOrderId(null);
             dp.setTotalDeliveries(newTotal);

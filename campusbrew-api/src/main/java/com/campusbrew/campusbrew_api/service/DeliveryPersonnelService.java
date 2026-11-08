@@ -28,7 +28,7 @@ public class DeliveryPersonnelService {
 
     public DeliveryPersonnelDTO getMyProfile(String userId) {
         DeliveryPersonnel dp = requireProfile(userId);
-        DeliveryPersonnelDTO dto = DeliveryPersonnelDTO.fromEntity(dp);
+        DeliveryPersonnelDTO dto = toDto(dp);
         dto.setRatingAvg(RatingDisplay.visible(
                 dp.getRatingAvg(), dp.getRatingCount(), configService.getRatingMinCountToShow()));
         return dto;
@@ -42,14 +42,14 @@ public class DeliveryPersonnelService {
         }
         dp.setActive(isActive);
         dp.setUpdatedAt(Date.from(Instant.now()));
-        return DeliveryPersonnelDTO.fromEntity(deliveryPersonnelRepository.save(dp));
+        return toDto(deliveryPersonnelRepository.save(dp));
     }
 
     public DeliveryPersonnelDTO updateSchedule(String userId, List<DaySchedule> schedule) {
         DeliveryPersonnel dp = requireProfile(userId);
         dp.setWeeklySchedule(schedule);
         dp.setUpdatedAt(Date.from(Instant.now()));
-        return DeliveryPersonnelDTO.fromEntity(deliveryPersonnelRepository.save(dp));
+        return toDto(deliveryPersonnelRepository.save(dp));
     }
 
     /**
@@ -64,7 +64,7 @@ public class DeliveryPersonnelService {
         DeliveryPersonnel dp = requireProfile(userId);
         dp.setPickupRangeMeters(meters);
         dp.setUpdatedAt(Date.from(Instant.now()));
-        return DeliveryPersonnelDTO.fromEntity(deliveryPersonnelRepository.save(dp));
+        return toDto(deliveryPersonnelRepository.save(dp));
     }
 
     public DeliveryPersonnelDTO updateLocation(String userId, double longitude, double latitude) {
@@ -74,7 +74,7 @@ public class DeliveryPersonnelService {
         Date now = Date.from(Instant.now());
         dp.setLocationUpdatedAt(now);
         dp.setUpdatedAt(now);
-        return DeliveryPersonnelDTO.fromEntity(deliveryPersonnelRepository.save(dp));
+        return toDto(deliveryPersonnelRepository.save(dp));
     }
 
     /**
@@ -94,11 +94,30 @@ public class DeliveryPersonnelService {
                 .stream()
                 .mapToDouble(t -> t.getDpEarnings())
                 .sum();
+        Instant now = Instant.now();
+        int threshold = configService.getIncentiveThreshold();
         return EarningsTotalDTO.builder()
                 .totalEarnings(Math.round(total * 100.0) / 100.0)
                 .totalDeliveries(dp.getTotalDeliveries())
-                .incentiveActive(dp.isIncentiveActive())
+                .incentiveActive(IncentivePolicy.active(dp, threshold, now))
+                .weeklyDeliveries(IncentivePolicy.weeklyDeliveries(dp, now))
+                .incentiveThreshold(threshold)
                 .build();
+    }
+
+    /** The profile plus this week's incentive progress and fee rates. */
+    private DeliveryPersonnelDTO toDto(DeliveryPersonnel dp) {
+        Instant now = Instant.now();
+        int threshold = configService.getIncentiveThreshold();
+        double fee = configService.getDeliveryFee();
+        DeliveryPersonnelDTO dto = DeliveryPersonnelDTO.fromEntity(dp);
+        dto.setWeeklyDeliveries(IncentivePolicy.weeklyDeliveries(dp, now));
+        dto.setIncentiveThreshold(threshold);
+        dto.setIncentiveActive(IncentivePolicy.active(dp, threshold, now));
+        dto.setStandardFee(Math.max(fee - configService.getCommission(), 0));
+        dto.setIncentiveFee(fee);
+        dto.setIncentiveResetsAt(IncentivePolicy.nextReset(now));
+        return dto;
     }
 
     private DeliveryPersonnel requireProfile(String userId) {
