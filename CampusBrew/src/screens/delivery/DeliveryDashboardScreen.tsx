@@ -30,6 +30,8 @@ export default function DeliveryDashboardScreen({ navigation }: any) {
   const [togglingActive, setTogglingActive] = useState(false);
   const [refreshingLocation, setRefreshingLocation] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Online without a location: a gentle note, not an error.
+  const [locationNote, setLocationNote] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -75,19 +77,32 @@ export default function DeliveryDashboardScreen({ navigation }: any) {
     };
   }, [socket, load]);
 
+  /**
+   * Sends the dasher's position: the current fix, or the last known one if GPS
+   * can't get a fix. Returns false (with a note) when neither is available;
+   * the dasher can still go online, since the server doesn't need a location.
+   */
   const pushLocation = async (): Promise<boolean> => {
     if (!token) return false;
     setError(null);
+    setLocationNote(null);
     setRefreshingLocation(true);
     try {
       const perm = await Location.requestForegroundPermissionsAsync();
       if (perm.status !== 'granted') {
-        setError('Location permission denied. Grant access in Settings to share your location.');
+        setLocationNote('Location access is off. Allow it in Settings so customers can track your delivery.');
         return false;
       }
-      const pos = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      let pos: Location.LocationObject | null = null;
+      try {
+        pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      } catch {
+        pos = await Location.getLastKnownPositionAsync();
+      }
+      if (!pos) {
+        setLocationNote('Turn on Location so you get offers from nearby shops and customers can track you.');
+        return false;
+      }
       const updated = await DeliveryService.updateLocation(
         pos.coords.longitude,
         pos.coords.latitude,
@@ -96,7 +111,7 @@ export default function DeliveryDashboardScreen({ navigation }: any) {
       setProfile(updated);
       return true;
     } catch (e: any) {
-      setError(e.message || 'Could not get your current location.');
+      setLocationNote('Turn on Location so you get offers from nearby shops and customers can track you.');
       return false;
     } finally {
       setRefreshingLocation(false);
@@ -107,13 +122,9 @@ export default function DeliveryDashboardScreen({ navigation }: any) {
     if (!token || !profile) return;
     setTogglingActive(true);
     try {
-      if (next) {
-        const ok = await pushLocation();
-        if (!ok) {
-          setTogglingActive(false);
-          return;
-        }
-      }
+      // Going online always works; a missing location only adds a reminder.
+      if (next) await pushLocation();
+      else setLocationNote(null);
       const updated = await DeliveryService.setAvailability(next, token);
       setProfile(updated);
     } catch (e: any) {
@@ -160,6 +171,12 @@ export default function DeliveryDashboardScreen({ navigation }: any) {
         </View>
 
         {error && <Text style={styles.errorText}>{error}</Text>}
+        {!!locationNote && (
+          <View style={styles.locationNote}>
+            <Ionicons name="location-outline" size={16} color={COLORS.textSecondary} />
+            <Text style={styles.locationNoteText}>{locationNote}</Text>
+          </View>
+        )}
 
         <View style={[styles.statusCard, profile?.isActive ? styles.statusCardActive : null]}>
           <View style={{ flex: 1 }}>
@@ -354,6 +371,16 @@ const styles = StyleSheet.create({
   greeting: { fontSize: SIZES.captionSize, color: COLORS.textSecondary },
   name: { fontSize: SIZES.titleSize, fontWeight: '700', color: COLORS.text, marginTop: 2 },
   errorText: { color: '#D93025', marginBottom: 12 },
+  locationNote: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'flex-start',
+    backgroundColor: COLORS.cream,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 12,
+  },
+  locationNoteText: { flex: 1, fontSize: SIZES.smallSize, color: COLORS.textSecondary, lineHeight: 17 },
   statusCard: {
     flexDirection: 'row',
     alignItems: 'center',
