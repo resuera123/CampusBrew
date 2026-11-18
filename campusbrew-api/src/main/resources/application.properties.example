@@ -11,7 +11,7 @@ spring.data.mongodb.database=campusbrew
 # JWT
 # Generate a strong random string (e.g. `openssl rand -base64 48`) for your local application.properties
 jwt.secret=<generate-a-long-random-secret>
-jwt.expiration=86400000
+jwt.expiration=604800000
 
 # Email (OTP sending)
 spring.mail.host=smtp.gmail.com
