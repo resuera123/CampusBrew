@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "com.campusbrew.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "backgroundColor": "#7D2726",
         "foregroundImage": "./assets/android-icon-foreground.png",
