@@ -139,17 +139,10 @@ public class DeliveryAssignmentEngine {
 
     /** Emit a per-dasher offer to each recipient and record a PENDING audit row. */
     private void broadcast(Order order, Shop shop, List<DeliveryPersonnel> recipients) {
-        double[] ref = shopReference(shop);
         Map<String, Object> base = baseOfferPayload(order, shop);
         Date now = Date.from(Instant.now());
         for (DeliveryPersonnel dp : recipients) {
-            Map<String, Object> payload = new LinkedHashMap<>(base);
-            payload.put("distanceMeters", distanceMeters(dp, ref));
-            payload.put("earnings", earningsFor(order, dp));
-            // "3/5" toward this week's incentive; left out once it's unlocked.
-            int weekly = IncentivePolicy.weeklyDeliveries(dp, Instant.now());
-            int threshold = configService.getIncentiveThreshold();
-            if (weekly < threshold) payload.put("incentiveProgress", weekly + "/" + threshold);
+            Map<String, Object> payload = offerPayloadFor(base, order, shop, dp);
             socketService.emitToUser(dp.getUserId(), "delivery:request", payload);
             upsertPendingAssignment(order.getId(), dp.getUserId(), now);
             pushNotificationService.send(dp.getUserId(), "New delivery request",
@@ -296,6 +289,48 @@ public class DeliveryAssignmentEngine {
     }
 
     // ─── Offer payload ──────────────────────────────────────────────────────
+
+    /** The offer as one dasher sees it: the shared fields plus their distance, take and incentive. */
+    private Map<String, Object> offerPayloadFor(Map<String, Object> base, Order order, Shop shop, DeliveryPersonnel dp) {
+        Map<String, Object> payload = new LinkedHashMap<>(base);
+        payload.put("distanceMeters", distanceMeters(dp, shopReference(shop)));
+        payload.put("earnings", earningsFor(order, dp));
+        // "3/5" toward this week's incentive; left out once it's unlocked.
+        int weekly = IncentivePolicy.weeklyDeliveries(dp, Instant.now());
+        int threshold = configService.getIncentiveThreshold();
+        if (weekly < threshold) payload.put("incentiveProgress", weekly + "/" + threshold);
+        return payload;
+    }
+
+    /**
+     * Offers this dasher was sent that are still open: order still awaiting a rider,
+     * not declined, and inside the countdown of the latest broadcast (the first offer,
+     * or the 60s re-broadcast). Lets the app show an offer it missed because the
+     * socket was down or the app was in the background. timeoutSeconds / expiresAt
+     * carry the time actually left, so the countdown matches the server.
+     */
+    public List<Map<String, Object>> openOffersFor(String dpUserId) {
+        DeliveryPersonnel dp = deliveryPersonnelRepository.findByUserId(dpUserId).orElse(null);
+        if (dp == null || !dp.isActive() || dp.getCurrentOrderId() != null) return List.of();
+        long windowMs = configService.getOfferRebroadcastSeconds() * 1000L;
+        long now = System.currentTimeMillis();
+        List<Map<String, Object>> out = new java.util.ArrayList<>();
+        for (DeliveryAssignment a : assignmentRepository.findByDeliveryPersonnelIdAndStatus(dpUserId, AssignmentStatus.PENDING)) {
+            Order order = orderRepository.findById(a.getOrderId()).orElse(null);
+            if (order == null || !awaitingRider(order)) continue;
+            long sentAt = a.getAssignedAt() == null ? 0 : a.getAssignedAt().getTime();
+            if (order.getRebroadcastAt() != null) sentAt = Math.max(sentAt, order.getRebroadcastAt().getTime());
+            long expiresAt = sentAt + windowMs;
+            if (expiresAt <= now) continue;
+            Shop shop = shopRepository.findById(order.getShopId()).orElse(null);
+            Map<String, Object> payload = offerPayloadFor(baseOfferPayload(order, shop), order, shop, dp);
+            payload.put("timeoutSeconds", Math.max(1, (expiresAt - now) / 1000));
+            payload.put("expiresAt", expiresAt);
+            out.add(payload);
+        }
+        out.sort(java.util.Comparator.comparingLong(p -> (Long) p.get("expiresAt")));
+        return out;
+    }
 
     /** Fields common to every recipient of this order's offer. */
     private Map<String, Object> baseOfferPayload(Order order, Shop shop) {

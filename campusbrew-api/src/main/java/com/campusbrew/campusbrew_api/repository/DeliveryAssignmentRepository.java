@@ -10,4 +10,7 @@ import java.util.List;
 public interface DeliveryAssignmentRepository extends MongoRepository<DeliveryAssignment, String> {
 
     List<DeliveryAssignment> findByOrderId(String orderId);
+
+    List<DeliveryAssignment> findByDeliveryPersonnelIdAndStatus(String deliveryPersonnelId,
+            com.campusbrew.campusbrew_api.model.AssignmentStatus status);
 }

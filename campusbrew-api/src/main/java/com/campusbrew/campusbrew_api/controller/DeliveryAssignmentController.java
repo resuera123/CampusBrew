@@ -17,6 +17,16 @@ public class DeliveryAssignmentController {
     private final DeliveryAssignmentEngine engine;
     private final JwtService jwtService;
 
+    /** Offers still open for this dasher, so the app can show one it missed. */
+    @GetMapping("/open")
+    public ResponseEntity<?> open(@RequestHeader("Authorization") String authHeader) {
+        try {
+            return ResponseEntity.ok(engine.openOffersFor(userIdFrom(authHeader)));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PutMapping("/{orderId}/accept")
     public ResponseEntity<?> accept(
             @RequestHeader("Authorization") String authHeader,

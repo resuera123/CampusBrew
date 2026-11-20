@@ -67,6 +67,16 @@ public class RealtimeSocketHandler extends TextWebSocketHandler {
             JsonNode node = objectMapper.readTree(message.getPayload());
             String event = node.path("event").asText();
 
+            // Heartbeat: the client pings every ~25s and reconnects if no pong comes back,
+            // so a connection that died silently (laptop sleep, network change, proxy idle
+            // timeout) is replaced instead of swallowing events.
+            if ("ping".equals(event)) {
+                synchronized (session) {
+                    session.sendMessage(new TextMessage("{\"event\":\"pong\"}"));
+                }
+                return;
+            }
+
             if ("join".equals(event) || "leave".equals(event)) {
                 handleRoomMembership(session, event, node.path("room").asText());
                 return;

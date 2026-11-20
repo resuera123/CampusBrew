@@ -169,4 +169,17 @@ class RealtimeSocketHandlerTest {
         verify(alice).sendMessage(any(TextMessage.class));
         assertThat(chat.calls).isEmpty();
     }
+
+    @Test
+    void pingIsAnsweredWithPongOnlyToTheSender() throws Exception {
+        WebSocketSession alice = session("alice");
+        WebSocketSession bob = session("bob");
+        handler.afterConnectionEstablished(alice);
+        handler.afterConnectionEstablished(bob);
+
+        handler.handleTextMessage(alice, new TextMessage("{\"event\":\"ping\"}"));
+
+        assertThat(sentFrame(alice)).isEqualTo("{\"event\":\"pong\"}");
+        verify(bob, never()).sendMessage(any(TextMessage.class));
+    }
 }

@@ -173,4 +173,60 @@ class DeliveryAssignmentEngineTest {
         verify(socket).emitToUser(eq("in"), eq("delivery:request"), payload.capture());
         assertThat(payload.getValue().get("customerRating")).isEqualTo(4.8);
     }
+
+    // ─── Open offers (catch-up for a missed delivery:request) ───────────────
+
+    private DeliveryAssignment pending(String orderId, long msAgo) {
+        return DeliveryAssignment.builder().orderId(orderId).deliveryPersonnelId("in")
+                .status(AssignmentStatus.PENDING)
+                .assignedAt(new java.util.Date(System.currentTimeMillis() - msAgo)).build();
+    }
+
+    @Test
+    void openOffersReturnsAnOfferStillInsideItsCountdown() {
+        when(dpRepo.findByUserId("in")).thenReturn(Optional.of(dp("in", new GeoJsonPoint(LNG, LAT), null)));
+        when(assignmentRepo.findByDeliveryPersonnelIdAndStatus("in", AssignmentStatus.PENDING))
+                .thenReturn(List.of(pending("o1", 20_000)));
+        when(orderRepo.findById("o1")).thenReturn(Optional.of(readyOrder()));
+
+        List<Map<String, Object>> offers = engine.openOffersFor("in");
+
+        assertThat(offers).hasSize(1);
+        assertThat(offers.get(0).get("orderId")).isEqualTo("o1");
+        assertThat(offers.get(0).get("shopName")).isEqualTo("Brew");
+        long left = (Long) offers.get(0).get("timeoutSeconds");
+        assertThat(left).isBetween(38L, 40L); // 60s window, sent 20s ago
+        assertThat(offers.get(0).get("earnings")).isEqualTo(20.0); // 15 - 5 commission + 10 tip
+    }
+
+    @Test
+    void openOffersSkipsExpiredClaimedAndBusyCases() {
+        when(dpRepo.findByUserId("in")).thenReturn(Optional.of(dp("in", null, null)));
+        Order claimed = readyOrder(); claimed.setId("o2"); claimed.setDeliveryPersonnelId("other");
+        claimed.setOrderStatus(OrderStatus.ASSIGNED);
+        when(assignmentRepo.findByDeliveryPersonnelIdAndStatus("in", AssignmentStatus.PENDING))
+                .thenReturn(List.of(pending("o1", 61_000), pending("o2", 5_000)));
+        when(orderRepo.findById("o1")).thenReturn(Optional.of(readyOrder()));
+        when(orderRepo.findById("o2")).thenReturn(Optional.of(claimed));
+
+        assertThat(engine.openOffersFor("in")).isEmpty(); // o1 timed out, o2 already taken
+
+        DeliveryPersonnel busy = dp("in", null, null); busy.setCurrentOrderId("o9");
+        when(dpRepo.findByUserId("in")).thenReturn(Optional.of(busy));
+        assertThat(engine.openOffersFor("in")).isEmpty(); // already on a delivery
+    }
+
+    @Test
+    void openOffersCountsTheCountdownFromTheRebroadcast() {
+        when(dpRepo.findByUserId("in")).thenReturn(Optional.of(dp("in", null, null)));
+        Order order = readyOrder();
+        order.setRebroadcastAt(new java.util.Date(System.currentTimeMillis() - 10_000));
+        when(assignmentRepo.findByDeliveryPersonnelIdAndStatus("in", AssignmentStatus.PENDING))
+                .thenReturn(List.of(pending("o1", 90_000))); // first offer long expired
+        when(orderRepo.findById("o1")).thenReturn(Optional.of(order));
+
+        List<Map<String, Object>> offers = engine.openOffersFor("in");
+        assertThat(offers).hasSize(1);
+        assertThat((Long) offers.get(0).get("timeoutSeconds")).isBetween(48L, 50L);
+    }
 }
