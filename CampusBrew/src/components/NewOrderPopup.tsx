@@ -11,6 +11,9 @@ import { navigate } from '../navigation/navigationRef';
 import { showAlert } from './AppAlert';
 import { useConfirm } from './ConfirmDialog';
 
+/** Backup check for waiting orders while the app is open (the socket is the fast path). */
+const BACKUP_CHECK_MS = 20000;
+
 /**
  * Shop side (FR-3.4): a card that slides down over any shop screen when an order
  * comes in, with Decline / Accept. It shows the shop's oldest order still waiting
@@ -48,12 +51,26 @@ export default function NewOrderPopup() {
     }
   }, [token, isShop]);
 
-  // A new order, or any change to one (accepted in the queue, cancelled, expired).
+  // A new order, or any change to one (accepted in the queue, cancelled, expired),
+  // and every (re)connect, which may follow a gap where events were missed.
   useEffect(() => {
     if (!socket || !isShop) return;
     socket.on('order:statusUpdate', refresh);
-    return () => socket.off('order:statusUpdate', refresh);
+    socket.on('connect', refresh);
+    return () => {
+      socket.off('order:statusUpdate', refresh);
+      socket.off('connect', refresh);
+    };
   }, [socket, isShop, refresh]);
+
+  // Backup check while the app is open, in case an event still slips through.
+  useEffect(() => {
+    if (!isShop) return;
+    const t = setInterval(() => {
+      if (AppState.currentState === 'active') refresh();
+    }, BACKUP_CHECK_MS);
+    return () => clearInterval(t);
+  }, [isShop, refresh]);
 
   // On login and whenever the app comes back to the foreground.
   useEffect(() => {

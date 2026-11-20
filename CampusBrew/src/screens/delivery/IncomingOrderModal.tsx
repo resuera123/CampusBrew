@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Modal,
   View,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -52,6 +53,43 @@ export default function IncomingOrderModal() {
   // Only render the modal for delivery personnel.
   const isDP = user?.role === 'DELIVERY_PERSONNEL';
 
+  // The offer on screen (for the catch-up check, which runs outside React state),
+  // and offers this dasher already closed: orderId -> that offer's expiresAt, so
+  // the catch-up doesn't bring back one they declined or let run out.
+  const offerRef = useRef<DeliveryOffer | null>(null);
+  const closed = useRef(new Map<string, number>());
+  useEffect(() => { offerRef.current = offer; }, [offer]);
+
+  const closeOffer = (o: DeliveryOffer | null) => {
+    if (o) closed.current.set(o.orderId, o.expiresAt ?? Date.now());
+    setOffer(null);
+  };
+
+  /**
+   * Catch-up: asks the server for offers still open for this dasher and shows
+   * the first one. Covers a delivery:request missed while the socket was down or
+   * the app was in the background. Runs on every (re)connect, on return to the
+   * foreground, and every 20s while the app is open.
+   */
+  const checkOpenOffers = useCallback(async () => {
+    if (!token || !isDP || offerRef.current) return;
+    try {
+      const offers: DeliveryOffer[] = await DeliveryService.getOpenOffers(token);
+      if (offerRef.current) return;
+      const next = offers.find((o) => {
+        const seen = closed.current.get(o.orderId);
+        // A re-broadcast gets a later expiresAt, so it shows again; the same offer doesn't.
+        return seen == null || (o.expiresAt ?? 0) > seen + 5000;
+      });
+      if (next) {
+        setOffer(next);
+        setSecondsLeft(next.timeoutSeconds ?? 60);
+      }
+    } catch {
+      // Offline or server asleep — the next check or the live event will catch it.
+    }
+  }, [token, isDP]);
+
   useEffect(() => {
     if (!socket || !isDP) return;
 
@@ -62,17 +100,31 @@ export default function IncomingOrderModal() {
 
     const onClaimed = (payload: { orderId?: string }) => {
       // Another DP got there first — close the modal if it's showing this order.
+      if (payload?.orderId) closed.current.set(payload.orderId, Number.MAX_SAFE_INTEGER);
       setOffer((current) => (current && current.orderId === payload?.orderId ? null : current));
     };
 
     socket.on('delivery:request', onRequest);
     socket.on('delivery:claimed', onClaimed);
+    socket.on('connect', checkOpenOffers);
 
     return () => {
       socket.off('delivery:request', onRequest);
       socket.off('delivery:claimed', onClaimed);
+      socket.off('connect', checkOpenOffers);
     };
-  }, [socket, isDP]);
+  }, [socket, isDP, checkOpenOffers]);
+
+  // Return to the foreground, plus a backup check every 20s while the app is open.
+  useEffect(() => {
+    if (!isDP) return;
+    checkOpenOffers();
+    const sub = AppState.addEventListener('change', (s) => { if (s === 'active') checkOpenOffers(); });
+    const t = setInterval(() => {
+      if (AppState.currentState === 'active') checkOpenOffers();
+    }, 20000);
+    return () => { sub.remove(); clearInterval(t); };
+  }, [isDP, checkOpenOffers]);
 
   // Countdown ticker.
   useEffect(() => {
@@ -86,7 +138,7 @@ export default function IncomingOrderModal() {
         if (s <= 1) {
           // Server will fire its own timeout; we just close the UI when ours hits zero.
           if (tickRef.current) clearInterval(tickRef.current);
-          setOffer(null);
+          closeOffer(offerRef.current);
           return 0;
         }
         return s - 1;
@@ -105,7 +157,7 @@ export default function IncomingOrderModal() {
       // NFR-P8 — go straight to the claimed order. (The server's `order:assigned`
       // event goes to the customer and shop only, so waiting for it left the
       // dasher on whatever screen they were on.)
-      setOffer(null);
+      closeOffer(offer);
       navigate('AssignedDelivery');
     } catch (e: any) {
       showAlert('Could not accept', e.message || 'Please try again.');
@@ -119,7 +171,7 @@ export default function IncomingOrderModal() {
     setSubmitting(true);
     try {
       await DeliveryService.declineAssignment(offer.orderId, token);
-      setOffer(null);
+      closeOffer(offer);
     } catch (e: any) {
       showAlert('Could not decline', e.message || 'Please try again.');
     } finally {

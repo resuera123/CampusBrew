@@ -141,6 +141,16 @@ export const DeliveryService = {
     }
   },
 
+  /** Offers still open for this dasher (to show one missed while offline or in the background). */
+  async getOpenOffers(token: string): Promise<any[]> {
+    const res = await fetch(`${API_BASE_URL}/api/delivery/assignments/open`, {
+      headers: authHeaders(token),
+    });
+    const json = await safeJson(res);
+    if (!res.ok) throw new Error(json.error || 'Failed to load offers');
+    return Array.isArray(json) ? json : [];
+  },
+
   async declineAssignment(orderId: string, token: string): Promise<void> {
     const res = await fetch(`${API_BASE_URL}/api/delivery/assignments/${orderId}/decline`, {
       method: 'PUT',
