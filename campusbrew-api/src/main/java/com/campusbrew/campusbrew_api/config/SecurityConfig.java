@@ -31,6 +31,9 @@ public class SecurityConfig {
                 // Spring's error page: without this, a request that fails validation
                 // is forwarded here and blocked, reaching the app as an empty 403.
                 .requestMatchers("/error").permitAll()
+                // NFR-M2 — API documentation (OpenAPI JSON and Swagger UI). It only describes
+                // the endpoints; each endpoint still checks its own JWT.
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 // Verification and user endpoints accept JWT manually in controller,
                 // so we permit them here and validate the token in the controller itself.
                 .requestMatchers("/api/verification/**").permitAll()

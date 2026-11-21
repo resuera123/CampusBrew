@@ -61,6 +61,9 @@ public class DeliveryFulfillmentService {
 
         Map<String, Object> payload = statusPayload(saved);
         socketService.emitToUser(saved.getCustomerId(), "order:outForDelivery", payload);
+        // The customer's tracking screen and notification list listen for order:statusUpdate
+        // on the customer's own feed (like every other status change), so send it there too.
+        socketService.emitToUser(saved.getCustomerId(), "order:statusUpdate", payload);
         socketService.emitToOrder(saved.getId(), "order:statusUpdate", payload);
         pushNotificationService.send(saved.getCustomerId(), "On the way",
                 "Your order is out for delivery — track it live.",
@@ -154,6 +157,7 @@ public class DeliveryFulfillmentService {
 
         Map<String, Object> payload = statusPayload(saved);
         socketService.emitToUser(saved.getCustomerId(), "order:delivered", payload);
+        socketService.emitToUser(saved.getCustomerId(), "order:statusUpdate", payload);
         socketService.emitToOrder(saved.getId(), "order:statusUpdate", payload);
         shopRepository.findById(saved.getShopId()).ifPresent(s -> {
             socketService.emitToUser(s.getOperatorId(), "order:delivered", payload);
