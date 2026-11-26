@@ -22,6 +22,18 @@ public class DeliveryPersonnelController {
     private final DeliveryPersonnelService deliveryPersonnelService;
     private final com.campusbrew.campusbrew_api.service.CodSettlementService codSettlementService;
     private final JwtService jwtService;
+    private final com.campusbrew.campusbrew_api.service.DeliveryAssignmentEngine deliveryAssignmentEngine;
+
+    /** How many dashers are online and free, so checkout can warn before a GCash order. */
+    @GetMapping("/available-count")
+    public ResponseEntity<?> availableCount(@RequestHeader("Authorization") String authHeader) {
+        try {
+            userIdFrom(authHeader);
+            return ResponseEntity.ok(Map.of("available", deliveryAssignmentEngine.countAvailableDashers()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid token"));
+        }
+    }
 
     @GetMapping("/me")
     public ResponseEntity<?> getMyProfile(@RequestHeader("Authorization") String authHeader) {

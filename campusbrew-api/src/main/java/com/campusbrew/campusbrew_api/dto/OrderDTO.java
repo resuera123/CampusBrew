@@ -44,6 +44,8 @@ public class OrderDTO {
     private List<StatusHistoryEntry> statusHistory;
     private Date readyAt;
     private Date riderSearchAt;
+    // GCash pay-after-claim: when the customer's payment window closes (null when not awaiting payment).
+    private Date paymentDueAt;
     private Date createdAt;
     private Date updatedAt;
 
@@ -83,6 +85,7 @@ public class OrderDTO {
                 .statusHistory(order.getStatusHistory())
                 .readyAt(order.getReadyAt())
                 .riderSearchAt(order.getRiderSearchAt())
+                .paymentDueAt(order.getPaymentDueAt())
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
                 .build();

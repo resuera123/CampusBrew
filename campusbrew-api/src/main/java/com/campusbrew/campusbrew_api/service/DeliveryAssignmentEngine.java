@@ -6,6 +6,7 @@ import com.campusbrew.campusbrew_api.model.DeliveryPersonnel;
 import com.campusbrew.campusbrew_api.model.Order;
 import com.campusbrew.campusbrew_api.model.OrderStatus;
 import com.campusbrew.campusbrew_api.model.PaymentMethod;
+import com.campusbrew.campusbrew_api.model.PaymentStatus;
 import com.campusbrew.campusbrew_api.model.Shop;
 import com.campusbrew.campusbrew_api.model.User;
 import com.campusbrew.campusbrew_api.repository.DeliveryAssignmentRepository;
@@ -125,6 +126,12 @@ public class DeliveryAssignmentEngine {
 
     /** Frees a dasher whose order was cancelled before pickup, so they can take new offers. */
     public void releaseDasher(String dpUserId, String orderId) {
+        releaseDasher(dpUserId, orderId,
+                "The shop cancelled the order you accepted. You're free to take another.");
+    }
+
+    /** As above, with the reason shown in the dasher's notification. */
+    public void releaseDasher(String dpUserId, String orderId, String message) {
         deliveryPersonnelRepository.findByUserId(dpUserId).ifPresent(dp -> {
             if (orderId.equals(dp.getCurrentOrderId())) {
                 dp.setCurrentOrderId(null);
@@ -132,8 +139,7 @@ public class DeliveryAssignmentEngine {
                 deliveryPersonnelRepository.save(dp);
             }
         });
-        pushNotificationService.send(dpUserId, "Order cancelled",
-                "The shop cancelled the order you accepted. You're free to take another.",
+        pushNotificationService.send(dpUserId, "Order cancelled", message,
                 Map.of("orderId", orderId, "status", OrderStatus.CANCELLED.name()));
     }
 
@@ -166,6 +172,12 @@ public class DeliveryAssignmentEngine {
         }
         double[] ref = shopReference(shop);
         return active.stream().filter(dp -> withinRange(dp, ref)).toList();
+    }
+
+    /** Dashers online and free right now; checkout warns the customer when this is zero. */
+    public long countAvailableDashers() {
+        return mongoTemplate.count(Query.query(Criteria.where("isActive").is(true)
+                .and("currentOrderId").is(null)), DeliveryPersonnel.class);
     }
 
     public void acceptAssignment(String dpUserId, String orderId) {
@@ -221,6 +233,16 @@ public class DeliveryAssignmentEngine {
             throw new RuntimeException("This order was already claimed by another rider");
         }
 
+        // GCash pay-after-claim: the customer now has a few minutes to pay.
+        boolean payNow = order.getPaymentMethod() == PaymentMethod.GCASH
+                && order.getPaymentStatus() == PaymentStatus.AWAITING_PAYMENT;
+        if (payNow) {
+            Date due = new Date(now.getTime() + configService.getGcashPayWindowMinutes() * 60_000L);
+            mongoTemplate.updateFirst(Query.query(Criteria.where("_id").is(orderId)),
+                    new Update().set("paymentDueAt", due), Order.class);
+            order.setPaymentDueAt(due);
+        }
+
         // Mark DP as busy.
         dp.setCurrentOrderId(orderId);
         dp.setUpdatedAt(now);
@@ -259,6 +281,8 @@ public class DeliveryAssignmentEngine {
         payload.put("orderId", orderId);
         payload.put("status", OrderStatus.ASSIGNED.name());
         payload.put("deliveryPersonnel", dpInfo);
+        payload.put("paymentStatus", order.getPaymentStatus() == null ? null : order.getPaymentStatus().name());
+        if (payNow) payload.put("paymentDueAt", order.getPaymentDueAt());
 
         socketService.emitToUser(order.getCustomerId(), "order:assigned", payload);
         socketService.emitToUser(getShopOperatorUserId(order.getShopId()), "order:assigned", payload);
@@ -267,11 +291,18 @@ public class DeliveryAssignmentEngine {
         socketService.emitToOrder(order.getId(), "order:statusUpdate", payload);
         socketService.emitToUser(getShopOperatorUserId(order.getShopId()), "order:statusUpdate", payload);
         socketService.emitToUser(dpUserId, "order:statusUpdate", payload);
-        pushNotificationService.send(order.getCustomerId(), "Rider assigned",
-                (dpName == null ? "A rider" : dpName)
-                        + (dpRating == null ? "" : String.format(" (★ %.1f)", dpRating))
-                        + " will pick up your order once the shop has it ready.",
-                Map.of("orderId", orderId, "status", "ASSIGNED"));
+        String riderLabel = (dpName == null ? "A rider" : dpName)
+                + (dpRating == null ? "" : String.format(" (★ %.1f)", dpRating));
+        if (payNow) {
+            pushNotificationService.send(order.getCustomerId(), "Rider found - pay now",
+                    riderLabel + " accepted your order. Pay with GCash within "
+                            + configService.getGcashPayWindowMinutes() + " minutes to confirm it.",
+                    Map.of("orderId", orderId, "status", "ASSIGNED", "type", "pay-now"));
+        } else {
+            pushNotificationService.send(order.getCustomerId(), "Rider assigned",
+                    riderLabel + " will pick up your order once the shop has it ready.",
+                    Map.of("orderId", orderId, "status", "ASSIGNED"));
+        }
 
         // Tell every other DP that had a pending offer for this order to dismiss their modal.
         Map<String, Object> claimedPayload = Map.of("orderId", orderId);

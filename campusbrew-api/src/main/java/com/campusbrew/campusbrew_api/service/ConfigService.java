@@ -61,6 +61,10 @@ public class ConfigService {
     @Value("${chat.readOnlyAfterMinutes:30}")
     private int chatReadOnlyAfterMinutes;
 
+    // GCash pay-after-claim: minutes the customer has to pay once a dasher claims the order (FR-4.1)
+    @Value("${gcash.payWindowMinutes:5}")
+    private int gcashPayWindowMinutes;
+
     // Xendit (FR-4.1) — secrets injected from the environment; may be blank in dev.
     @Value("${xendit.secretKey:}")
     private String xenditSecretKey;

@@ -73,6 +73,13 @@ public class Order {
      */
     private Date rebroadcastAt;
 
+    /**
+     * GCash pay-after-claim: the deadline for the customer's payment, set when a dasher
+     * claims an AWAITING_PAYMENT order. Unpaid by then, the order is cancelled (nothing
+     * was charged) and the dasher is freed.
+     */
+    private Date paymentDueAt;
+
     private Date createdAt;
     private Date updatedAt;
 

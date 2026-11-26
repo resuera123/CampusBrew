@@ -34,6 +34,7 @@ public class OrderExpiryScheduler {
     private final ShopRepository shopRepository;
     private final SocketService socketService;
     private final PaymentService paymentService;
+    private final OrderService orderService;
 
     @Value("${delivery.orderExpiry.minutes:10}")
     private long expiryMinutes;
@@ -57,6 +58,12 @@ public class OrderExpiryScheduler {
             log.warn("Refund for order {} failed, will retry: {}", orderId, e.getMessage());
             return false;
         }
+    }
+
+    /** Every 20 s: cancels claimed GCash orders the customer didn't pay for in time (nothing was charged). */
+    @Scheduled(fixedRate = 20_000L, initialDelay = 20_000L)
+    public void cancelUnpaidGcashOrders() {
+        orderService.expireUnpaidGcashOrders();
     }
 
     /** Runs every 60s. fixedRate is fine — overlapping runs would no-op anyway. */

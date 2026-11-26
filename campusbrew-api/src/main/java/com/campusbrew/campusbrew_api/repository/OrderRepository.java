@@ -16,6 +16,10 @@ public interface OrderRepository extends MongoRepository<Order, String> {
 
     List<Order> findByPaymentStatus(PaymentStatus paymentStatus);
 
+    // GCash pay-after-claim: claimed orders whose payment window has closed.
+    List<Order> findByOrderStatusAndPaymentStatusAndPaymentDueAtLessThan(
+            OrderStatus orderStatus, PaymentStatus paymentStatus, java.util.Date cutoff);
+
     Page<Order> findByCustomerIdOrderByCreatedAtDesc(String customerId, Pageable pageable);
 
     List<Order> findByShopIdAndOrderStatusInOrderByCreatedAtDesc(String shopId, Collection<OrderStatus> statuses);

@@ -51,6 +51,10 @@ public class DeliveryFulfillmentService {
         if (order.getOrderStatus() == OrderStatus.ASSIGNED) {
             throw new RuntimeException("The shop hasn't marked this order ready yet");
         }
+        if (order.getPaymentMethod() == PaymentMethod.GCASH
+                && order.getPaymentStatus() == PaymentStatus.AWAITING_PAYMENT) {
+            throw new RuntimeException("The customer hasn't paid with GCash yet");
+        }
         if (order.getOrderStatus() != OrderStatus.READY_FOR_PICKUP) {
             throw new RuntimeException("Order is in status " + order.getOrderStatus()
                     + ", expected READY_FOR_PICKUP");

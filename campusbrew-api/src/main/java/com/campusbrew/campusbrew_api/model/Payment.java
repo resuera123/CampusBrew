@@ -57,6 +57,9 @@ public class Payment {
      */
     private Order orderDraft;
 
+    // The Xendit checkout page, kept so a pay-after-claim charge can be reopened instead of re-created.
+    private String checkoutUrl;
+
     // When the refund was sent back to the customer's GCash (status REFUNDED).
     private Date refundedAt;
 

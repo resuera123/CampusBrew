@@ -39,6 +39,9 @@ public class PaymentWebhookController {
             if (outcome.isShouldCreateOrder()) {
                 orderService.createPaidOrderFromDraft(outcome.getPayment());
             }
+            if (outcome.isShouldMarkOrderPaid()) {
+                orderService.markGcashOrderPaid(outcome.getPayment()); // pay-after-claim
+            }
             if (outcome.isShouldCreditTip()) {
                 tipService.creditTip(outcome.getPayment()); // v2.0 FR-4.7
             }

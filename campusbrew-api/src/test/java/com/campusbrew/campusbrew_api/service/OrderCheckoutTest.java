@@ -147,15 +147,12 @@ class OrderCheckoutTest {
     @Test
     void tipIsAddedToTheTotal() {
         menuItemPriced(100); // 100 + 15 fee + 20 tip = 135
-        when(paymentService.initiateGcashCheckout(any(), anyString(), anyString()))
-                .thenAnswer(inv -> {
-                    Order draft = inv.getArgument(0);
-                    return OrderDTO.paymentRequired(draft, "Brew", "pay1", "http://checkout");
-                });
-
+        // GCash is pay-after-claim: the order is saved now, charged once a dasher claims it.
         OrderDTO result = service.createOrder("cust1", dto(PaymentMethod.GCASH, 20.0));
         assertThat(result.getTip()).isEqualTo(20.0);
         assertThat(result.getTotalAmount()).isEqualTo(135.0);
-        assertThat(result.isPaymentRequired()).isTrue();
+        assertThat(result.isPaymentRequired()).isFalse();
+        assertThat(result.getPaymentStatus()).isEqualTo(PaymentStatus.AWAITING_PAYMENT);
+        verify(paymentService, never()).initiateGcashCheckout(any(), anyString(), anyString());
     }
 }

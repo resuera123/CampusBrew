@@ -2,6 +2,8 @@ package com.campusbrew.campusbrew_api.model;
 
 public enum PaymentStatus {
     PENDING,
+    // GCash order placed; the customer pays once a dasher has claimed it (no charge before that).
+    AWAITING_PAYMENT,
     PAID_GCASH,
     PENDING_COD,
     PAID_COD,

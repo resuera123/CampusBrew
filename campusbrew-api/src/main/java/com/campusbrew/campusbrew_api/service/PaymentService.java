@@ -57,7 +57,7 @@ public class PaymentService {
         return new PaymentInitResult(PaymentStatus.PENDING, null);
     }
 
-    // ---- GCash: payment-first (FR-4.1) ----
+    // ---- GCash: payment-first (legacy; kept so drafts from older app builds still complete) ----
 
     /**
      * Persist a PENDING payment carrying the order draft, open a Xendit GCash charge,
@@ -83,6 +83,47 @@ public class PaymentService {
         paymentRepository.save(payment);
 
         return OrderDTO.paymentRequired(draft, shopName, payment.getId(), charge.checkoutUrl());
+    }
+
+    // ---- GCash pay-after-claim (FR-4.1) ----
+
+    /**
+     * Open (or reopen) the GCash charge for an existing order that a dasher has
+     * claimed. Reuses the order's PENDING payment so tapping "Pay now" twice never
+     * creates two charges. The order is marked paid by the webhook.
+     */
+    public OrderCharge startOrderCharge(Order order) {
+        Payment open = paymentRepository.findByOrderIdAndType(order.getId(), PaymentType.ORDER).stream()
+                .filter(p -> p.getStatus() == PaymentRecordStatus.PENDING && p.getCheckoutUrl() != null)
+                .findFirst().orElse(null);
+        if (open != null) {
+            return new OrderCharge(open.getId(), open.getCheckoutUrl());
+        }
+        Payment payment = paymentRepository.save(Payment.builder()
+                .orderId(order.getId())
+                .userId(order.getCustomerId())
+                .type(PaymentType.ORDER)
+                .method(PaymentMethod.GCASH)
+                .amount(order.getTotalAmount())
+                .status(PaymentRecordStatus.PENDING)
+                .webhookEvents(new ArrayList<>())
+                .createdAt(Date.from(Instant.now()))
+                .build());
+        XenditClient.ChargeResult charge = xenditClient.createGcashCharge(payment.getId(), payment.getAmount());
+        payment.setGatewayChargeId(charge.chargeId());
+        payment.setCheckoutUrl(charge.checkoutUrl());
+        paymentRepository.save(payment);
+        return new OrderCharge(payment.getId(), charge.checkoutUrl());
+    }
+
+    /** The order's unpaid charges are closed when its payment window lapses. A late PAID webhook still refunds. */
+    public void expireOrderCharges(String orderId) {
+        paymentRepository.findByOrderIdAndType(orderId, PaymentType.ORDER).stream()
+                .filter(p -> p.getStatus() == PaymentRecordStatus.PENDING)
+                .forEach(p -> {
+                    p.setStatus(PaymentRecordStatus.EXPIRED);
+                    paymentRepository.save(p);
+                });
     }
 
     // ---- GCash tip after delivery (FR-4.7) ----
@@ -162,9 +203,11 @@ public class PaymentService {
             Payment saved = paymentRepository.save(payment);
             // Create the order only for an ORDER payment that has not already produced one;
             // a TIP is credited to the dasher. PAID is terminal, so each happens once.
+            // A pay-after-claim payment already belongs to an order: mark that order paid.
             boolean createOrder = saved.getType() == PaymentType.ORDER && saved.getOrderId() == null;
+            boolean markOrderPaid = saved.getType() == PaymentType.ORDER && saved.getOrderId() != null;
             boolean creditTip = saved.getType() == PaymentType.TIP;
-            return new WebhookOutcome(saved, createOrder, creditTip);
+            return new WebhookOutcome(saved, createOrder, creditTip, markOrderPaid);
         }
 
         if (isFailed(status)) {
@@ -288,10 +331,19 @@ public class PaymentService {
         private Payment payment;
         private boolean shouldCreateOrder;
         private boolean shouldCreditTip;
+        private boolean shouldMarkOrderPaid;
+
+        public WebhookOutcome(Payment payment, boolean shouldCreateOrder, boolean shouldCreditTip) {
+            this(payment, shouldCreateOrder, shouldCreditTip, false);
+        }
 
         static WebhookOutcome noop() {
-            return new WebhookOutcome(null, false, false);
+            return new WebhookOutcome(null, false, false, false);
         }
+    }
+
+    /** A started (or reopened) pay-after-claim charge: the payment to poll and the checkout to open. */
+    public record OrderCharge(String paymentId, String paymentUrl) {
     }
 
     /** A started tip charge: the payment to poll and the GCash checkout to open. */

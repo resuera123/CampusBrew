@@ -152,14 +152,12 @@ public class OrderService {
                 .updatedAt(now)
                 .build();
 
-        // v2.0 FR-4.1 — GCash is payment-first: no order is persisted here. The order
-        // is created by the webhook once Xendit confirms PAID (see createPaidOrderFromDraft).
-        if (order.getPaymentMethod() == PaymentMethod.GCASH) {
-            order.setPaymentStatus(PaymentStatus.PENDING);
-            return paymentService.initiateGcashCheckout(order, userId, shop.getShopName());
-        }
-
-        PaymentService.PaymentInitResult payment = paymentService.initiate(order);
+        // v2.0 FR-4.1 — GCash is pay-after-claim: the order is placed now but nothing is
+        // charged until a dasher claims it (see payForOrder). If no dasher is found the
+        // order is cancelled with no money taken, so no refund is needed.
+        PaymentService.PaymentInitResult payment = order.getPaymentMethod() == PaymentMethod.GCASH
+                ? new PaymentService.PaymentInitResult(PaymentStatus.AWAITING_PAYMENT, null)
+                : paymentService.initiate(order);
         order.setPaymentStatus(payment.getStatus());
 
         Order saved = orderRepository.save(order);
@@ -392,6 +390,9 @@ public class OrderService {
         if (current.getOrderStatus() == OrderStatus.PREPARING && current.getDeliveryPersonnelId() == null) {
             throw new RuntimeException("Wait for a rider to accept the order before marking it ready");
         }
+        if (awaitingGcash(current)) {
+            throw new RuntimeException("Wait for the customer's GCash payment before marking it ready");
+        }
         OrderDTO updated = transitionShopOrder(operatorUserId, orderId, OrderStatus.ASSIGNED, OrderStatus.READY_FOR_PICKUP);
         orderRepository.findById(orderId).ifPresent(o -> {
             o.setReadyAt(Date.from(Instant.now()));
@@ -403,6 +404,115 @@ public class OrderService {
             }
         });
         return updated;
+    }
+
+    // ─── GCash pay-after-claim (FR-4.1) ─────────────────────────────────────
+
+    static boolean awaitingGcash(Order order) {
+        return order.getPaymentMethod() == PaymentMethod.GCASH
+                && order.getPaymentStatus() == PaymentStatus.AWAITING_PAYMENT;
+    }
+
+    /**
+     * The customer pays for a GCash order once a dasher has claimed it. Opens (or
+     * reopens) the Xendit checkout; the webhook then marks the order paid.
+     */
+    public Map<String, Object> payForOrder(String userId, String orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+        if (!userId.equals(order.getCustomerId())) {
+            throw new RuntimeException("Not your order");
+        }
+        if (order.getOrderStatus() == OrderStatus.CANCELLED) {
+            throw new RuntimeException("This order was cancelled, so there's nothing to pay");
+        }
+        if (!awaitingGcash(order)) {
+            throw new RuntimeException("This order isn't waiting for a GCash payment");
+        }
+        if (order.getOrderStatus() != OrderStatus.ASSIGNED || order.getDeliveryPersonnelId() == null) {
+            throw new RuntimeException("You can pay once a rider has accepted your order");
+        }
+        if (order.getPaymentDueAt() != null && order.getPaymentDueAt().before(new Date())) {
+            throw new RuntimeException("The payment window has closed");
+        }
+        PaymentService.OrderCharge charge = paymentService.startOrderCharge(order);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("paymentId", charge.paymentId());
+        body.put("paymentUrl", charge.paymentUrl());
+        body.put("paymentDueAt", order.getPaymentDueAt());
+        return body;
+    }
+
+    /**
+     * Webhook: a pay-after-claim payment is PAID. The order moves to PAID_GCASH and the
+     * shop and dasher are told to go ahead. If the order was already cancelled (paid
+     * after the window closed, or the shop cancelled), the money is sent straight back.
+     */
+    public void markGcashOrderPaid(com.campusbrew.campusbrew_api.model.Payment payment) {
+        Order order = orderRepository.findById(payment.getOrderId()).orElse(null);
+        if (order == null) {
+            log.error("PAID payment {} points at missing order {}", payment.getId(), payment.getOrderId());
+            return;
+        }
+        if (order.getOrderStatus() == OrderStatus.CANCELLED) {
+            boolean refunded = refundNow(order.getId());
+            order.setPaymentStatus(refunded ? PaymentStatus.REFUNDED : PaymentStatus.REFUND_PENDING);
+            order.setUpdatedAt(new Date());
+            orderRepository.save(order);
+            log.info("Payment {} arrived for cancelled order {} - refund {}", payment.getId(), order.getId(),
+                    refunded ? "sent" : "pending");
+            return;
+        }
+        if (!awaitingGcash(order)) {
+            return; // already marked paid (duplicate)
+        }
+        Date now = new Date();
+        order.setPaymentStatus(PaymentStatus.PAID_GCASH);
+        order.setPaymentDueAt(null);
+        order.setUpdatedAt(now);
+        Order saved = orderRepository.save(order);
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("orderId", saved.getId());
+        payload.put("status", saved.getOrderStatus().name());
+        payload.put("paymentStatus", PaymentStatus.PAID_GCASH.name());
+        payload.put("timestamp", now);
+        socketService.emitToUser(saved.getCustomerId(), "order:statusUpdate", payload);
+        socketService.emitToOrder(saved.getId(), "order:statusUpdate", payload);
+        String ref = "Order #" + shortId(saved.getId());
+        shopRepository.findById(saved.getShopId()).ifPresent(s -> {
+            socketService.emitToUser(s.getOperatorId(), "order:statusUpdate", payload);
+            pushNotificationService.send(s.getOperatorId(), "Payment received",
+                    ref + " is paid with GCash. You can prepare it now.",
+                    Map.of("orderId", saved.getId(), "status", saved.getOrderStatus().name()));
+        });
+        if (saved.getDeliveryPersonnelId() != null) {
+            socketService.emitToUser(saved.getDeliveryPersonnelId(), "order:statusUpdate", payload);
+            pushNotificationService.send(saved.getDeliveryPersonnelId(), "Customer paid",
+                    ref + " is paid. Head to the shop for pickup.",
+                    Map.of("orderId", saved.getId(), "status", saved.getOrderStatus().name()));
+        }
+    }
+
+    /**
+     * Cancels claimed GCash orders whose payment window closed unpaid: nothing was
+     * charged, the dasher is freed, and open charges are closed. Run by OrderExpiryScheduler.
+     */
+    public int expireUnpaidGcashOrders() {
+        List<Order> due = orderRepository.findByOrderStatusAndPaymentStatusAndPaymentDueAtLessThan(
+                OrderStatus.ASSIGNED, PaymentStatus.AWAITING_PAYMENT, new Date());
+        for (Order order : due) {
+            paymentService.expireOrderCharges(order.getId());
+            String dasher = order.getDeliveryPersonnelId();
+            if (dasher != null) {
+                deliveryAssignmentEngine.releaseDasher(dasher, order.getId(),
+                        "The customer didn't pay in time, so the order was cancelled. You're free to take another.");
+            }
+            order.setPaymentDueAt(null);
+            applyStatusTransition(order, OrderStatus.CANCELLED);
+            log.info("Cancelled order {}: GCash payment window closed unpaid", order.getId());
+        }
+        return due.size();
     }
 
     private static String shortId(String id) {
@@ -525,7 +635,7 @@ public class OrderService {
 
         // v2.0 FR-3.4 — also push to the customer so they're informed when the app
         // is closed. Best-effort; the socket emit above is the in-app path.
-        String[] msg = customerStatusMessage(next);
+        String[] msg = customerStatusMessage(next, order);
         if (msg != null) {
             pushNotificationService.send(order.getCustomerId(), msg[0], msg[1],
                     Map.of("orderId", order.getId(), "status", next.name()));
@@ -558,11 +668,16 @@ public class OrderService {
     }
 
     /** Customer-facing push copy per order status, or null when no push is warranted. */
-    private String[] customerStatusMessage(OrderStatus status) {
+    private String[] customerStatusMessage(OrderStatus status, Order order) {
+        boolean unpaid = awaitingGcash(order);
         return switch (status) {
-            case PREPARING -> new String[]{"Order accepted", "The shop is preparing your order while we find you a rider."};
+            case PREPARING -> unpaid
+                    ? new String[]{"Order accepted", "We're finding you a rider. You'll pay with GCash once one accepts - nothing is charged before that."}
+                    : new String[]{"Order accepted", "The shop is preparing your order while we find you a rider."};
+            case CANCELLED -> unpaid
+                    ? new String[]{"Order cancelled", "Your order was cancelled. You weren't charged."}
+                    : new String[]{"Order cancelled", "Your order was cancelled."};
             case READY_FOR_PICKUP -> new String[]{"Ready for pickup", "Your order is ready and your rider is picking it up."};
-            case CANCELLED -> new String[]{"Order cancelled", "Your order was cancelled."};
             default -> null; // PLACED is the customer's own action; others push elsewhere
         };
     }

@@ -75,6 +75,18 @@ public class OrderController {
         }
     }
 
+    /** GCash pay-after-claim: open (or reopen) the checkout once a rider has accepted the order. */
+    @PostMapping("/{id}/pay")
+    public ResponseEntity<?> pay(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable String id) {
+        try {
+            return ResponseEntity.ok(orderService.payForOrder(userIdFrom(authHeader), id));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PutMapping("/{id}/confirm-payment")
     public ResponseEntity<?> confirmPayment(
             @RequestHeader("Authorization") String authHeader,
