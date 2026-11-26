@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../constants/theme';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
-import { PaymentMethod } from '../../services/OrderService';
+import { PaymentMethod, OrderService } from '../../services/OrderService';
 import { placeOrderWithPayment } from '../../services/PaymentService';
 import { showAlert } from '../../components/AppAlert';
 
@@ -36,6 +36,12 @@ export default function CheckoutScreen({ navigation }: any) {
   const [dasherInstructions, setDasherInstructions] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('GCASH');
   const [tip, setTip] = useState(0);
+  // Riders online and free right now; null until known (or if the check fails).
+  const [ridersOnline, setRidersOnline] = useState<number | null>(null);
+  useEffect(() => {
+    if (!token) return;
+    OrderService.getAvailableDasherCount(token).then(setRidersOnline).catch(() => setRidersOnline(null));
+  }, [token]);
   const [customTip, setCustomTip] = useState('');
   const [placing, setPlacing] = useState(false);
 
@@ -69,9 +75,8 @@ export default function CheckoutScreen({ navigation }: any) {
 
     setPlacing(true);
     try {
-      // v2.0 FR-4.1 — placeOrderWithPayment handles both paths: COD returns an order
-      // id immediately; GCash opens the Xendit checkout, waits for PAID, then returns
-      // the id of the order the webhook created. The order only exists once paid.
+      // v2.0 FR-4.1 — both COD and GCash orders are created right away. GCash is
+      // pay-after-claim: the customer pays on the tracking screen once a rider accepts.
       const result = await placeOrderWithPayment(
         {
           shopId,
@@ -241,6 +246,11 @@ export default function CheckoutScreen({ navigation }: any) {
               </View>
             }
           />
+          {paymentMethod === 'GCASH' && (
+            <Text style={styles.payNote}>
+              You'll pay with GCash once a rider accepts your order. Nothing is charged before that.
+            </Text>
+          )}
           <PaymentRow
             selected={paymentMethod === 'COD'}
             onPress={() => {
@@ -265,6 +275,15 @@ export default function CheckoutScreen({ navigation }: any) {
             }
           />
         </View>
+
+        {ridersOnline === 0 && (
+          <View style={styles.noRiders}>
+            <Ionicons name="alert-circle-outline" size={18} color="#7A5A00" />
+            <Text style={styles.noRidersText}>
+              No riders are online right now. You can still order, but it may be cancelled if no rider accepts within 10 minutes.
+            </Text>
+          </View>
+        )}
 
         {/* Summary */}
         <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Order Summary</Text>
@@ -353,6 +372,12 @@ const styles = StyleSheet.create({
   contentContainer: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 },
 
   sectionTitle: { fontSize: 14, fontWeight: '600', color: COLORS.text, marginBottom: 8 },
+  payNote: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, marginTop: -4, marginLeft: 4 },
+  noRiders: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16,
+    backgroundColor: '#FFF4D6', borderRadius: 8, padding: 12,
+  },
+  noRidersText: { color: '#7A5A00', flex: 1, fontSize: SIZES.smallSize },
 
   cartItem: { flexDirection: 'row', backgroundColor: COLORS.background, borderRadius: 12, padding: 12, alignItems: 'center' },
   cartItemName: { fontSize: 14, fontWeight: '600', color: COLORS.text },

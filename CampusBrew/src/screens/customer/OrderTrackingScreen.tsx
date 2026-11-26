@@ -20,6 +20,7 @@ import { OrderService, Order, OrderStatus, StatusHistoryEntry } from '../../serv
 import LiveMapView from '../../components/LiveMapView';
 import RatingBadge from '../../components/RatingBadge';
 import { showAlert } from '../../components/AppAlert';
+import { PaymentService } from '../../services/PaymentService';
 
 const TIMELINE_STEPS: { status: OrderStatus; label: string; description: string }[] = [
   { status: 'PLACED', label: 'Order Placed', description: 'Your order has been sent to the shop.' },
@@ -29,6 +30,12 @@ const TIMELINE_STEPS: { status: OrderStatus; label: string; description: string 
   { status: 'OUT_FOR_DELIVERY', label: 'Out for Delivery', description: 'On the way to you.' },
   { status: 'DELIVERED', label: 'Delivered', description: 'Enjoy!' },
 ];
+
+// GCash is paid after a rider accepts, so the shop prepares it only after payment.
+const GCASH_STEP_TEXT: Partial<Record<OrderStatus, string>> = {
+  PREPARING: "The shop accepted it. We're finding you a rider.",
+  ASSIGNED: "Rider found. The shop prepares it once you've paid.",
+};
 
 interface StatusUpdatePayload {
   orderId: string;
@@ -53,6 +60,19 @@ export default function OrderTrackingScreen({ route, navigation }: any) {
   const [etaSeconds, setEtaSeconds] = useState<number | null>(null);
   const [locDelayed, setLocDelayed] = useState(false);
   const lastLocAt = useRef<number>(0);
+  // GCash pay-after-claim
+  const [paying, setPaying] = useState(false);
+  const [now, setNow] = useState(Date.now());
+  const awaitingPay = order?.paymentMethod === 'GCASH' && order?.paymentStatus === 'AWAITING_PAYMENT'
+    && order?.orderStatus !== 'CANCELLED';
+  const payOpen = awaitingPay && order?.orderStatus === 'ASSIGNED';
+
+  // Tick the payment countdown once a second while the customer has to pay.
+  useEffect(() => {
+    if (!payOpen) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [payOpen]);
 
   // Mark the location "delayed" if no update arrives for 30s.
   useEffect(() => {
@@ -87,6 +107,29 @@ export default function OrderTrackingScreen({ route, navigation }: any) {
       showAlert('Could not confirm', e.message || 'Please try again.');
     } finally {
       setConfirming(false);
+    }
+  };
+
+  // GCash pay-after-claim: open the checkout, wait for the result, then refresh.
+  const handlePay = async () => {
+    if (!order || !token) return;
+    setPaying(true);
+    try {
+      const charge = await OrderService.payForOrder(order.id, token);
+      const due = order.paymentDueAt ? new Date(order.paymentDueAt).getTime() : Date.now() + 5 * 60_000;
+      const result = await PaymentService.payWithGcash(charge, token, {
+        timeoutMs: Math.max(due - Date.now(), 0) + 60_000,
+      });
+      if (result.status === 'PAID') {
+        showAlert('Payment received', 'Thanks! The shop will now prepare your order.');
+      } else if (result.status === 'FAILED' || result.status === 'EXPIRED') {
+        showAlert('Payment not completed', 'Your GCash payment didn\'t go through. You can try again before the timer ends.');
+      }
+    } catch (e: any) {
+      showAlert('Could not start the payment', e.message || 'Please try again.');
+    } finally {
+      setPaying(false);
+      load();
     }
   };
 
@@ -262,10 +305,46 @@ export default function OrderTrackingScreen({ route, navigation }: any) {
             <Text style={styles.cancelledText}>
               This order was cancelled.
               {order.paymentStatus === 'REFUND_PENDING' ? ' Refund is pending.' : ''}
+              {order.paymentStatus === 'REFUNDED' ? ' Your GCash payment was refunded.' : ''}
+              {order.paymentStatus === 'AWAITING_PAYMENT' ? ' You weren\'t charged.' : ''}
             </Text>
           </View>
         ) : (
           <>
+            {payOpen && (() => {
+              const left = order.paymentDueAt
+                ? Math.max(0, Math.floor((new Date(order.paymentDueAt).getTime() - now) / 1000)) : null;
+              return (
+                <View style={styles.payCard}>
+                  <View style={styles.payHeader}>
+                    <Ionicons name="wallet-outline" size={20} color={COLORS.primary} />
+                    <Text style={styles.payTitle}>Rider found – pay now</Text>
+                    {left !== null && (
+                      <Text style={styles.payTimer}>{Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}</Text>
+                    )}
+                  </View>
+                  <Text style={styles.paySub}>
+                    Pay with GCash to confirm your order. The shop starts preparing it once you've paid.
+                    If you don't pay in time, the order is cancelled and you aren't charged.
+                  </Text>
+                  <TouchableOpacity style={styles.confirmBtn} onPress={handlePay} disabled={paying || left === 0}>
+                    {paying
+                      ? <ActivityIndicator color={COLORS.white} />
+                      : <Text style={styles.confirmBtnText}>Pay ₱{order.totalAmount.toFixed(2)} with GCash</Text>}
+                  </TouchableOpacity>
+                </View>
+              );
+            })()}
+
+            {awaitingPay && !payOpen && (
+              <View style={styles.infoBanner}>
+                <Ionicons name="information-circle-outline" size={20} color={COLORS.primary} />
+                <Text style={styles.infoText}>
+                  You'll pay with GCash once a rider accepts your order. Nothing is charged before that.
+                </Text>
+              </View>
+            )}
+
             {noDriver && (
               <View style={styles.warnBanner}>
                 <Ionicons name="alert-circle-outline" size={20} color="#7A5A00" />
@@ -294,7 +373,7 @@ export default function OrderTrackingScreen({ route, navigation }: any) {
                   <TimelineRow
                     key={step.status}
                     label={step.label}
-                    description={step.description}
+                    description={(order.paymentMethod === 'GCASH' && GCASH_STEP_TEXT[step.status]) || step.description}
                     timestamp={ts}
                     reached={reached}
                     current={isCurrent}
@@ -477,6 +556,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF4D6', borderRadius: 8, padding: 12, marginBottom: 12,
   },
   warnText: { color: '#7A5A00', flex: 1, fontSize: SIZES.captionSize },
+  infoBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: COLORS.white, borderRadius: 8, padding: 12, marginBottom: 12,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  infoText: { color: COLORS.text, flex: 1, fontSize: SIZES.captionSize },
+  payCard: {
+    backgroundColor: COLORS.white, borderRadius: 12, padding: 14, marginBottom: 16, gap: 10,
+    borderWidth: 1.5, borderColor: COLORS.primary,
+  },
+  payHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  payTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: COLORS.text },
+  payTimer: { fontSize: 15, fontWeight: '700', color: COLORS.primary, fontVariant: ['tabular-nums'] },
+  paySub: { fontSize: SIZES.smallSize, color: COLORS.textSecondary, lineHeight: 18 },
   dasherCard: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: COLORS.white, borderRadius: SIZES.cardRadius, padding: 14, marginBottom: 12,

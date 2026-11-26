@@ -117,9 +117,11 @@ export default function NewOrderPopup() {
     if (!token) return;
     const ok = await confirm({
       title: 'Decline order?',
-      message: order.paymentMethod === 'GCASH'
+      message: order.paymentMethod === 'GCASH' && order.paymentStatus === 'PAID_GCASH'
         ? 'The customer will be notified and their GCash payment refunded.'
-        : 'The customer will be notified.',
+        : order.paymentMethod === 'GCASH'
+          ? "The customer will be notified. They haven't been charged."
+          : 'The customer will be notified.',
       confirmLabel: 'Decline',
       cancelLabel: 'Keep',
       destructive: true,
@@ -149,9 +151,11 @@ export default function NewOrderPopup() {
     ? `${first.itemName} × ${first.quantity}${first.size ? ` · ${first.size}` : ''}`
     : 'New order';
   const more = order.items.length - 1;
-  const payment = order.paymentMethod === 'GCASH'
-    ? `GCash · paid · ₱${order.totalAmount.toFixed(2)}`
-    : `Cash on delivery · ₱${order.totalAmount.toFixed(2)}`;
+  const payment = order.paymentMethod !== 'GCASH'
+    ? `Cash on delivery · ₱${order.totalAmount.toFixed(2)}`
+    : order.paymentStatus === 'AWAITING_PAYMENT'
+      ? `GCash · paid once a rider accepts · ₱${order.totalAmount.toFixed(2)}`
+      : `GCash · paid · ₱${order.totalAmount.toFixed(2)}`;
 
   return (
     <>

@@ -206,7 +206,8 @@ export default function AssignedDeliveryScreen({ navigation }: any) {
             <SectionTitle text="Drop-off" />
             <View style={styles.card}>
               <Row label="Location" value={order.deliveryLocation} />
-              <Row label="Payment" value={order.paymentMethod === 'COD' ? 'Cash on Delivery' : 'GCash (prepaid)'} />
+              <Row label="Payment" value={order.paymentMethod === 'COD' ? 'Cash on Delivery'
+                : order.paymentStatus === 'AWAITING_PAYMENT' ? 'GCash (customer is paying now)' : 'GCash (prepaid)'} />
               {order.paymentMethod === 'COD' ? (
                 <Row label="Collect" value={`₱${order.totalAmount.toFixed(2)}`} highlight />
               ) : (
@@ -243,7 +244,11 @@ export default function AssignedDeliveryScreen({ navigation }: any) {
       {order && order.orderStatus === 'ASSIGNED' && (
         <View style={[styles.primaryBtn, styles.waitingBtn]}>
           <Ionicons name="time-outline" size={18} color={COLORS.textSecondary} />
-          <Text style={styles.waitingText}>Waiting for the shop to finish preparing</Text>
+          <Text style={styles.waitingText}>
+            {order.paymentMethod === 'GCASH' && order.paymentStatus === 'AWAITING_PAYMENT'
+              ? 'Waiting for the customer to pay with GCash'
+              : 'Waiting for the shop to finish preparing'}
+          </Text>
         </View>
       )}
 

@@ -10,6 +10,7 @@ import ReportProblemCard from '../../components/ReportProblemCard';
 
 const PAYMENT_STATUS: Record<string, string> = {
   PAID_GCASH: 'Paid (GCash)',
+  AWAITING_PAYMENT: 'GCash – not paid yet (customer pays once a rider accepts)',
   PAID_COD: 'Paid (cash)',
   PENDING_COD: 'Cash on delivery',
   REFUNDED: 'Refunded',

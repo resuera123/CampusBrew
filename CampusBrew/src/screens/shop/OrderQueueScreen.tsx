@@ -200,6 +200,7 @@ function OrderCard({
   onChat: () => void;
 }) {
   const total = order.items.reduce((sum, it) => sum + (it.quantity || 0), 0);
+  const unpaidGcash = order.paymentMethod === 'GCASH' && order.paymentStatus === 'AWAITING_PAYMENT';
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
@@ -213,7 +214,7 @@ function OrderCard({
             )}
           </View>
           <Text style={styles.orderMeta}>
-            {total} item{total !== 1 ? 's' : ''} • ₱{order.totalAmount.toFixed(2)} • {order.paymentMethod}
+            {total} item{total !== 1 ? 's' : ''} • ₱{order.totalAmount.toFixed(2)} • {paymentLabel(order)}
           </Text>
           {order.deliveryPersonnelName && (
             <Text style={styles.riderLine}>
@@ -224,6 +225,17 @@ function OrderCard({
         </View>
         <StatusBadge status={order.orderStatus} />
       </View>
+
+      {unpaidGcash && order.orderStatus !== 'CANCELLED' && (
+        <View style={styles.unpaidNote}>
+          <Ionicons name="time-outline" size={14} color="#7A5A00" />
+          <Text style={styles.unpaidText}>
+            {order.orderStatus === 'ASSIGNED'
+              ? 'Waiting for the customer to pay with GCash. Prepare it once it says Paid.'
+              : "Don't prepare yet – the customer pays with GCash once a rider accepts."}
+          </Text>
+        </View>
+      )}
 
       <View style={styles.itemsList}>
         {order.items.map((it, idx) => (
@@ -297,7 +309,22 @@ function OrderCard({
           </>
         )}
 
-        {order.orderStatus === 'ASSIGNED' && (
+        {order.orderStatus === 'ASSIGNED' && unpaidGcash && (
+          <>
+            <TouchableOpacity
+              style={[styles.btn, styles.btnSecondary]}
+              onPress={onReject}
+              disabled={busy}
+            >
+              <Text style={styles.btnSecondaryText}>Cancel</Text>
+            </TouchableOpacity>
+            <View style={[styles.btn, styles.btnDisabled]}>
+              <Text style={styles.btnDisabledText}>Waiting for payment</Text>
+            </View>
+          </>
+        )}
+
+        {order.orderStatus === 'ASSIGNED' && !unpaidGcash && (
           <>
             <TouchableOpacity
               style={[styles.btn, styles.btnSecondary]}
@@ -343,6 +370,14 @@ function OrderCard({
       </View>
     </View>
   );
+}
+
+/** "GCash (paid)", "GCash (not paid yet)" or "COD" for the order line. */
+function paymentLabel(order: Order): string {
+  if (order.paymentMethod !== 'GCASH') return order.paymentMethod;
+  if (order.paymentStatus === 'AWAITING_PAYMENT') return 'GCash (not paid yet)';
+  if (order.paymentStatus === 'PAID_GCASH') return 'GCash (paid)';
+  return 'GCash';
 }
 
 function StatusBadge({ status }: { status: OrderStatus }) {
@@ -468,5 +503,10 @@ const styles = StyleSheet.create({
   btnSecondary: { backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.primary },
   btnSecondaryText: { color: COLORS.primary, fontWeight: '600', fontSize: SIZES.captionSize },
   btnDisabled: { backgroundColor: COLORS.backgroundSecondary },
+  unpaidNote: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#FFF4D6', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginTop: 8,
+  },
+  unpaidText: { color: '#7A5A00', flex: 1, fontSize: SIZES.smallSize },
   btnDisabledText: { color: COLORS.textSecondary, fontWeight: '500', fontSize: SIZES.captionSize },
 });

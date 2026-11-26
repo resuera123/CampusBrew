@@ -3,6 +3,7 @@ import { API_BASE_URL } from '../constants/api';
 export type PaymentMethod = 'GCASH' | 'COD';
 export type PaymentStatus =
   | 'PENDING'
+  | 'AWAITING_PAYMENT' // GCash: pay once a rider accepts; nothing charged before that
   | 'PAID_GCASH'
   | 'PENDING_COD'
   | 'PAID_COD'
@@ -90,6 +91,8 @@ export interface Order {
   readyAt?: string;
   // When the shop accepted and the rider search began (the 10-minute timer starts here).
   riderSearchAt?: string;
+  // GCash pay-after-claim: when the customer's payment window closes.
+  paymentDueAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -159,6 +162,27 @@ export const OrderService = {
     const json = await safeJson(res);
     if (!res.ok) throw new Error(json.error || 'Failed to place order');
     return json;
+  },
+
+  /** GCash pay-after-claim: open (or reopen) the checkout once a rider has accepted. */
+  async payForOrder(orderId: string, token: string): Promise<{ paymentId: string; paymentUrl: string; paymentDueAt?: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/pay`, {
+      method: 'POST',
+      headers: authHeaders(token),
+    });
+    const json = await safeJson(res);
+    if (!res.ok) throw new Error(json.error || 'Could not start the payment');
+    return json;
+  },
+
+  /** Dashers online and free right now (checkout warns when there are none). */
+  async getAvailableDasherCount(token: string): Promise<number> {
+    const res = await fetch(`${API_BASE_URL}/api/delivery/available-count`, {
+      headers: authHeaders(token),
+    });
+    const json = await safeJson(res);
+    if (!res.ok) throw new Error(json.error || 'Could not check riders');
+    return Number(json.available ?? 0);
   },
 
   async getOrderById(orderId: string, token: string): Promise<Order> {

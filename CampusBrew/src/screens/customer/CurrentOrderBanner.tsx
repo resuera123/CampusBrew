@@ -115,7 +115,12 @@ export default function CurrentOrderBanner({ navigation }: { navigation: any }) 
 
   if (!order) return null;
 
-  const blurb = STATUS_BLURBS[order.orderStatus] ?? { label: order.orderStatus, tone: 'info' };
+  const unpaidGcash = order.paymentMethod === 'GCASH' && order.paymentStatus === 'AWAITING_PAYMENT';
+  const blurb = unpaidGcash && order.orderStatus === 'ASSIGNED'
+    ? { label: 'Rider found · pay now', tone: 'info' as const }
+    : unpaidGcash && order.orderStatus === 'PREPARING'
+      ? { label: 'Finding a rider', tone: 'progress' as const }
+      : STATUS_BLURBS[order.orderStatus] ?? { label: order.orderStatus, tone: 'info' };
   const itemCount = order.items.reduce((sum, i) => sum + (i.quantity || 0), 0);
   const reached = mapStatusHistory(order.statusHistory ?? []);
 

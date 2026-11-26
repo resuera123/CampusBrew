@@ -4,6 +4,7 @@ import { API_BASE_URL } from '../constants/api';
 const STATUS_LABELS: Record<string, string> = {
   PAID: 'Paid',
   PAID_GCASH: 'Paid',
+  AWAITING_PAYMENT: 'Pay after rider accepts',
   PAID_COD: 'Paid (cash)',
   PENDING: 'Pending',
   PENDING_COD: 'Cash on delivery',
